@@ -24,10 +24,7 @@ var fs = require('fs');
  * NOTE: can't use this with Heroku deployment!
  */
 
-//var port = normalizePort(process.env.PORT || config.port);
-//app.set('port', port);
-
-var port = normalizePort(process.env.PORT);
+var port = normalizePort(process.env.PORT || config.port);
 app.set('port', port);
 
 // Actually create the server

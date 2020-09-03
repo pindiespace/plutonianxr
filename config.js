@@ -8,7 +8,7 @@
 
 const config = {
     port: 3000,
-    useSSL: true,
+    useSSL: false,
     portSecure: 443,
     appName: 'Plutonian XR',
     appTagline: 'A WebXR experience built with BabylonJS',
