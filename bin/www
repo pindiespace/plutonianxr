@@ -1,0 +1,149 @@
+#!/usr/bin/env node
+
+/**
+ * Module dependencies.
+ * Note: split config.js away from app.js (not default express-install setup)
+ */
+
+// Configuration (load app modules)
+
+// Configuration (load config variables)
+const config = require('../config').config;
+
+// require app.js in parent directory
+var app   = require('../app').app; 
+var debug = require('debug')('plutonianxr:server');
+var http  = require('http');
+
+// HTTPS support
+var https = require('https');
+var fs = require('fs');
+
+/**
+ * Get port from environment and store in Express.
+ */
+
+var port = normalizePort(process.env.PORT || config.port);
+app.set('port', port);
+
+// Actually create the server
+var server = http.createServer(app);
+
+/**
+ * Listen on provided port, on all network interfaces.
+ */
+
+server.listen(port);
+server.on('error', onError);
+server.on('listening', onListening);
+
+/**
+ * Create HTTP server. Need to create valid keys and certificate in 
+ * the ./certs folder of this app using openssl. Note that this is a locally-generated 
+ * certificate, so you'll still get warnings in modern browsers. Replace with authenticated
+ * certificate in production.
+ * ========================================
+ * (navigate to ./certs directory)
+ * openssl genrsa -out ssl-key.pem 2048
+ * openssl req -new -key ssl-key.pem -out certrequest.csr //bunch of prompts
+ * openssl x509 -req -in certrequest.csr -signkey ssl-key.pem -out ssl-cert.pem
+ * ========================================
+ * Node syntax for newer ExpressJS is: 
+ * .createServer( {options}, app );
+ * https://stackoverflow.com/questions/8605720/how-to-force-ssl-https-in-express-js
+ */
+
+if(config.useSSL) {
+  var securePort = config.portSecure;
+
+  //Read the certificate and key
+
+  var sslkey  = fs.readFileSync('./certs/ssl-key.pem');
+  var sslcert = fs.readFileSync('./certs/ssl-cert.pem')
+
+  var options = {
+      key: sslkey,
+      cert: sslcert
+  };
+
+  var serverSecure = https.createServer(options, app);
+
+  serverSecure.listen(securePort);
+  serverSecure.on('listening', onSecureListening);
+}
+
+/**
+ * Normalize a port into a number, string, or false.
+ */
+
+function normalizePort(val) {
+  var port = parseInt(val, 10);
+
+  if (isNaN(port)) {
+    // named pipe
+    return val;
+  }
+
+  if (port >= 0) {
+    // port number
+    return port;
+  }
+
+  return false;
+}
+
+/**
+ * Event listener for HTTP server "error" event.
+ */
+
+function onError(error) {
+  if (error.syscall !== 'listen') {
+    throw error;
+  }
+
+  var bind = typeof port === 'string'
+    ? 'Pipe ' + port
+    : 'Port ' + port;
+
+  // handle specific listen errors with friendly messages
+  switch (error.code) {
+    case 'EACCES':
+      console.error(bind + ' requires elevated privileges');
+      process.exit(1);
+      break;
+    case 'EADDRINUSE':
+      console.error(bind + ' is already in use');
+      process.exit(1);
+      break;
+    default:
+      throw error;
+  }
+}
+
+/**
+ * Event listener for HTTP server "listening" event.
+ */
+
+function onListening() {
+  var addr = server.address();
+  var bind = typeof addr === 'string'
+    ? 'pipe ' + addr
+    : 'port ' + addr.port;
+  debug('Listening on ' + bind);
+  console.log('Listening at ', server.address().port)
+}
+
+function onSecureListening() {
+  var addr = serverSecure.address();
+  var bind = typeof addr === 'string'
+    ? 'pipe ' + addr
+    : 'port ' + addr.port;
+  debug('Secure Listening on ' + bind);
+  console.log('Secure Listening at ', serverSecure.address().port)
+}
+
+/**
+ * Export for testing in Mocha?
+ * Already exported in ../app.js
+ */
+module.exports = app;

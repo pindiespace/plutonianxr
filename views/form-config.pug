@@ -1,0 +1,18 @@
+extends layout
+
+block content
+  h1= title
+  p #{message} #{title}
+
+  // https://medium.com/@nima.2004hkh/create-your-first-login-page-with-exprerssjs-pug-f42250229486
+
+  main
+    section.page-config
+      form(class="form-config" method="POST" action="/users/config")
+        label( for="inputEmail" class="sr-only") Email address
+        input(type="email" name="username" id="inputEmail" class="form-control" placeholder="Email address" required autofocus)
+
+        - var buttonClass=['btn', 'btn-lg', 'btn-primary', 'btn-block'];
+        button(class=buttonClass type="submit") Sign in
+
+

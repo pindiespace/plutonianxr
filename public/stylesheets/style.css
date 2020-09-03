@@ -1,0 +1,137 @@
+/* 
+ * Styles for the app
+ */
+html, body, main {
+  font: 14px "Lucida Grande", Helvetica, Arial, sans-serif;
+  overflow: hidden;
+  position: relative;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0; }
+
+a {
+  color: #00B7FF; }
+
+h1 {
+  color: #ddd; }
+
+h2 {
+  color: #ff0000; }
+
+/**
+ * Positioning
+ */
+/* Set to flex display */
+.flex {
+  display: flex; }
+
+/* vertically align the child elements */
+.flex-vertical {
+  align-items: center; }
+
+/* horizontally align the child elements */
+.flex-horizontal {
+  justify-content: center;
+  width: 100%; }
+
+/** 
+ * Elements on the page
+ */
+/* page header at top */
+.floating-header {
+  position: absolute;
+  z-index: 1;
+  width: 100%;
+  top: 0;
+  padding: 8px;
+  border-bottom: 1px solid #ccc;
+  background-color: rgba(200, 10, 10, 0.2); }
+
+.floating-header h1 {
+  font-size: 2.5em;
+  margin: 0.2em 0 0.2em 0; }
+
+.floating-header p {
+  color: #ddd; }
+
+/* Loader dialog */
+/* .scene-loader-wrapper { 
+ z-index: 5;
+display: flex;
+  width:100%;
+  height: 100%;
+  justify-content: center; 
+  align-items: center; 
+
+  display: absolute;
+  width:100%;
+  height:100%;
+  top:0;
+  bottom:0;
+}   */
+.scene-loader-dialog {
+  width: 150px;
+  position: absolute;
+  text-align: center;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  padding: 8px 35px;
+  font-size: 30px;
+  color: green;
+  border: 10px solid green; }
+
+/* wrapper around the canvas (which fills screen, underlies header and footer) */
+.render-xr-canvas-wrapper, .scene-loader-wrapper {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  top: 0;
+  bottom: 0; }
+
+.render-xr.canvas.wrapper {
+  z-index: 0; }
+
+.scene-loader-wrapper {
+  z-index: 5; }
+
+/* the WebXR <canvas> inside the wrapper */
+.render-xr-canvas {
+  width: 100%;
+  height: 100%; }
+
+/* wrapper for VR->screen toggle button */
+.xr-toggle {
+  position: fixed;
+  z-index: 4;
+  width: 110px;
+  height: 110px;
+  right: 10px;
+  bottom: 10px; }
+
+/* fixed VR->screen toggle button */
+.xr-toggle-button {
+  display: inline-block;
+  background: url(../images/icons/icon_vr_smartphone_notext.svg);
+  text-indent: -9999px;
+  width: 100px;
+  height: 100px;
+  background-size: 100px 100px; }
+
+/* page footer at bottom */
+.floating-footer {
+  position: absolute;
+  z-index: 5;
+  width: 100%;
+  height: 30px;
+  bottom: 0;
+  border-top: 1px solid #ccc;
+  background-color: rgba(200, 10, 10, 0.2); }
+
+/* FPS panel */
+.xr-fps-panel {
+  display: flex;
+  justify-items: center; }
+
+/*# sourceMappingURL=style.css.map */

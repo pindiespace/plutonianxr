@@ -1,0 +1,28 @@
+extends layout
+
+block content
+  header(class='floating-header')
+    h1= title
+    h2 Welcome to #{title}
+    p #{tagline}
+    
+  main
+
+    // fullscreen canvas, under header and footer
+    section(class='render-xr-canvas-wrapper')
+      canvas(id='render-canvas' class='render-xr-canvas')
+
+      // Custom VR Button doesn't work
+      //section(class='xr-toggle')
+        //div(id='customVRButton' class='xr-toggle-button')
+  
+    // putting this below the canvas ensures canvas will be fullscreen
+    div(class='scene-loader-wrapper')
+      div(class='scene-loader-dialog')
+        h1= Loader
+
+    include components/babylon-scripts.pug
+
+  footer(class='floating-footer')
+    ul(class='xr-fps-panel')
+    p(class='app-info') copyright Vegan Meat market.

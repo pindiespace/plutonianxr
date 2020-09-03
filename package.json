@@ -1,0 +1,40 @@
+{
+  "name": "plutonianxr",
+  "version": "0.0.0",
+  "private": true,
+  "scripts": {
+    "start": "node ./bin/www",
+    "startdev": "nodemon ./bin/www",
+    "startdebug": "SET DEBUG=plutonianxr:* & npm run startdev",
+    "tests": "ava tests/**/*.test.js --verbose"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/pindiespace/plutonian-xr.git"
+  },
+  "dependencies": {
+    "cookie-parser": "latest",
+    "serve-favicon": "latest",
+    "debug": "latest",
+    "express": "latest",
+    "http-errors": "latest",
+    "morgan": "latest",
+    "node-sass-middleware": "latest",
+    "pug": "latest"
+  },
+  "devDependencies": {
+    "@11ty/eleventy": "^0.11.0",
+    "ava": "latest",
+    "express-sessions": "^1.0.6",
+    "fs": "0.0.1-security",
+    "got": "^11.5.2",
+    "http": "0.0.1-security",
+    "https": "^1.0.0",
+    "nodemon": "latest",
+    "pug": "^3.0.0",
+    "test-listen": "^1.1.0"
+  },
+  "engines": {
+    "node": ">= 12"
+  }
+}

@@ -1,0 +1,358 @@
+{
+    "key": "local_group",
+    "dname": "local_group",
+    "name": "Local Group",
+    "description": "Milky Way and nearby galaxies",
+    "data": {
+        "diameter": 1000000,
+        "distance": 0,
+        "ra": 0,
+        "dec": 0,
+        "rotation": 0,
+        "color": [0, 255, 255, 0.2]
+    },
+    "dark_matter": [],
+    "galaxies": [
+        {
+            "key": "large_magellanic",
+            "dname": "large_magellanic",
+            "name": "Large Magellanic Cloud",
+            "description": "Large partly spiral satellite galaxy.",
+            "data": {
+                "type": "galaxy",
+                "diameter": 0,
+                "distance": 49970,
+                "models": {}
+            },
+            "references": [],
+            "globular_clusters": [],
+            "open_clusters": [],
+            "nebula": [],
+            "star_systems": []
+        },
+        {
+            "key": "small_magellanic",
+            "dname": "small_magellanic",
+            "name": "Small Magellanic Cloud",
+            "description": "Irregular satellite galaxy of Milky Way.",
+            "data": {
+                "type": "galaxy",
+                "diameter": 0,
+                "distance": 61700,
+                "models": {}
+            },
+            "references": [],
+            "globular_clusters": [],
+            "open_clusters": [],
+            "nebula": [],
+            "star_systems": []
+        },
+        {
+            "key": "andromeda",
+            "dname": "andromeda",
+            "name": "Andromeda galaxy",
+            "description": "Large sister galaxy to Milky Way.",
+            "data": {
+                "type": "galaxy",
+                "diameter": 0,
+                "distance": 770000,
+                "models": {}
+            },
+            "references": [],
+            "globular_clusters": [],
+            "open_clusters": [],
+            "nebula": [],
+            "star_systems": []
+        },
+        {
+            "key": "milky_way",
+            "dname": "milky_way",
+            "name": "Milky Way Galaxy",
+            "description": "Home Galaxy for the solar system, NOTE: actually 30,000 parsecs, but set to 200,000 to render all HYG3 stars",
+            "data": {
+                "type": "galaxy",
+                "diameter": 200000,
+                "ra": "60",
+                "dec": "0",
+                "distance": 0,
+                "rotation": [0, 0, 0],
+                "color": [0, 255, 0, 0.2],
+                "models": {
+                    "default": {
+                        "cubemap": "eso0932a"
+                    },
+                    "eso": {
+                        "cubemap": "eso0932a"
+                    },
+                    "gaia": {
+                        "cubemap": "esagaia2019dim"
+                    }
+                },
+                "references": [
+                    "https://www.eso.org/public/images/eso0932a/",
+                    "https://jaxry.github.io/panorama-to-cubemap/",
+                    "https://en.wikipedia.org/wiki/Galactic_coordinate_system",
+                    "https://sci.esa.int/web/gaia/-/60196-gaia-s-sky-in-colour-equirectangular-projection"
+                ]
+            },
+            "stardomes": [
+                {
+                    "key": "hyg",
+                    "dname": "hyg",
+                    "name": "Hyg stellar data, full database",
+                    "data": {
+                        "type": "star3d",
+                        "diameter": 100000,
+                        "distance": 0,
+                        "ra": 0,
+                        "dec": 0,
+                        "models": {
+                            "sprite20": {
+                                "hyg": "hyg_20.json",
+                                "spritesheet": "star_sprite128.png",
+                                "size": 128
+                            },
+                            "sprite120": {
+                                "hyg": "hyg_120.json",
+                                "spritesheet": "star_sprite256.png",
+                                "size": 256
+                            },
+                            "point": {
+                                
+                            }
+                        },
+                        "references": [
+                            "https://astronexus.com/hyg",
+                            "https://github.com/astronexus/HYG-Database/blob/master/README.md",
+                            "http://simbad.cfa.harvard.edu/simbad/sim-fid",
+                            "https://gea.esac.esa.int/archive/",
+                            "http://exoplanet.eu/catalog/"
+                        ]
+                    }
+                }
+            ],
+            "globular_clusters": [],
+            "open_clusters": [],
+            "nebula": [
+                {
+                    "key": "orion_nebula",
+                    "dname": "orion_nebula",
+                    "name": "Orion Nebula",
+                    "description": "A large dust cloud condensing into stars.",
+                    "data": {
+                        "models": {
+                            "nebula": {},
+                            "starcluster": {}
+                        },
+                        "references": []
+                    }
+                }
+            ],
+            "star_systems": [
+                {
+                    "key": "solar_system",
+                    "dname": "solar_system",
+                    "name": "Solar System",
+                    "description": "Our home star system.",
+                    "data": {
+                        "type": "star_system",
+                        "diameter": 10,
+                        "ra": 0,
+                        "dec": 0,
+                        "distance": 0,
+                        "color": [255, 0, 0, 0.2],
+                        "models": {
+                        }
+                    },
+                    "comets": [],
+                    "asteroids": [],
+                    "kuipers": [],
+                    "stars": [
+                        {
+                            "key": "sol",
+                            "dname": "sol",
+                            "name": "The Sun (Sol)",
+                            "description": "G-class Star.",
+                            "data": {
+                                "type": "star",
+                                "diameter": 5000,
+                                "hygID": "51926",
+                                "ra": 0.005,
+                                "dec": 0,
+                                "distance": 0,
+                                "rotation": 0.002,
+                                "spectral_type": "G2V",
+                                "color": [255, 245, 242],
+                                "models": {
+                                    "default": {
+                                        "surface": "sol.jpg",
+                                        "emissive": "true",
+                                        "specular": 0
+                                    }
+                                },
+                                "references": []
+                            },
+                            "planets": [
+                                {
+                                    "key": "pluto",
+                                    "dname": "pluto",
+                                    "name": "Pluto",
+                                    "description": "Dwarf Planet, innermost member of Kuiper belt",
+                                    "data": {
+                                        "type": "planet",
+                                        "diameter": 2370,
+                                        "distance": 10000,
+                                        "barycenter":1195,
+                                        "tilt": 0,
+                                        "rotation": 0.002,
+                                        "models": {
+                                            "default": {
+                                                "surface": "pluto.jpg",
+                                                "emissive": false,
+                                                "specular": 0.2
+                                            },
+                                            "gltf":{},
+                                            "aliasObj": {}
+                                        }
+                                    },
+                                    "moons": [
+                                        {
+                                            "key": "charon",
+                                            "dname": "charon",
+                                            "name": "Charon",
+                                            "description": "Largest moon of Pluto.",
+                                            "data": {
+                                                "type": "planet",
+                                                "diameter": 1208,
+                                                "distance": 19570,
+                                                "barycenter":0,
+                                                "tilt": 0,
+                                                "rotation": 0.002,
+                                                "models": {
+                                                    "default": {
+                                                        "surface": "charon.png",
+                                                        "emissive": false,
+                                                        "specular": 0.2
+                                                    },
+                                                    "gltf": {},
+                                                    "aliasObj": {}
+                                                }
+                                            },
+                                            "moons": [],
+                                            "artifacts": []
+                                        }
+                                    ],
+                                    "artifacts": []
+                                }
+                            ],
+                            "artifacts": []
+                        }
+                    ],
+                    "artifacts": []
+                },
+                {
+                    "key": "centauri_system",
+                    "dname": "centauri_system",
+                    "name": "Centauri Star System",
+                    "description": "Closest star system to the solar system",
+                    "data": {
+                        "diameter": 10,
+                        "ra": 14.66115128,
+                        "dec": -60.83730923,
+                        "distance": 1.347490972,
+                        "color": [255, 255, 0]
+                    },
+                    "stars": [
+                        {
+                            "key": "alpha",
+                            "dname": "alpha",
+                            "name": "Alpha Centauri A",
+                            "description": "Brightest of system, Sunlike star.",
+                            "data": {
+                                "type": "star",
+                                "hygID": "71456",
+                                "diameter": "1",
+                                "ra":"14.660765",
+                                "dec":"-60.833976",
+                                "distance": "1.347490972",
+                                "spectral_type": "G2V",
+                                "color": [255, 245, 242],
+                                "models": {
+                                    "star": {}
+                                },
+                                "references": [
+                                    "https://en.wikipedia.org/wiki/Alpha_Centauri"
+                                ]
+                            },
+                            "planets": [],
+                            "artifacts": []
+                        },
+                        {
+                            "key": "beta",
+                            "dname": "beta",
+                            "name": "Alpha Centauri B",
+                            "description": "Secondary star of system, smaller and cooler than Sun.",
+                            "data": {
+                                "type": "star",
+                                "hygID": "71454",
+                                "diameter": "0.7",
+                                "ra": "14.66094188",
+                                "dec": "-60.83947139",
+                                "distance": "1.347490972",
+                                "spectral_type": "K1V",
+                                "color": [255, 224, 188],
+                                "models": {
+                                    "star": {}
+                                },
+                                "references": []
+                            },
+                            "planets": [],
+                            "artifacts": []
+                        },
+                        {
+                            "key": "proxima",
+                            "dname": "proxima",
+                            "name": "Proxima Centauri",
+                            "description": "Small, 11th magnitude red dwarf, flare star.",
+                            "data": {
+                                "type": "star",
+                                "hygID": 70666,
+                                "diameter": 0.1,
+                                "ra": 14.4965965,
+                                "dec": -62.68135207,
+                                "distance": 1.294783318,
+                                "spectral_type": "M5Ve",
+                                "color": [255, 204, 111],
+                                "models": {
+                                    "star": {}
+                                },
+                                "references": []
+                            },
+                            "planets": [
+                                {
+                                    "key": "proxima_b",
+                                    "dname": "proxima_b",
+                                    "name": "Proxima Centauri B",
+                                    "description": "Rocky exoplanet orbiting in habitable zone.",
+                                    "data": {
+                                        "type": "exoplanet",
+                                        "models": {
+                                            "planet": {}
+                                        },
+                                        "references": [
+                                            "https://en.wikipedia.org/wiki/Proxima_Centauri_b"
+                                        ],
+                                        "moons": [],
+                                        "artifacts": []
+                                    }
+                                }
+                            ],
+                            "artifacts": []
+                        }
+                    ],
+                    "artifacts": []
+                }
+            ]
+        }
+    ]
+}
