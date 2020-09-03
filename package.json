@@ -26,7 +26,6 @@
     "@11ty/eleventy": "^0.11.0",
     "ava": "latest",
     "express-session": "^1.17.1",
-    "express-sessions": "^1.0.6",
     "fs": "0.0.1-security",
     "got": "^11.5.2",
     "http": "0.0.1-security",
