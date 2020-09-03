@@ -18,19 +18,19 @@
     "debug": "latest",
     "express": "latest",
     "http-errors": "latest",
+    "express-session": "latest",
     "morgan": "latest",
     "node-sass-middleware": "latest",
     "pug": "latest"
   },
   "devDependencies": {
     "@11ty/eleventy": "^0.11.0",
-    "ava": "latest",
-    "express-session": "^1.17.1",
+    "ava": "^3.12.1",
     "fs": "0.0.1-security",
     "got": "^11.5.2",
     "http": "0.0.1-security",
     "https": "^1.0.0",
-    "nodemon": "latest",
+    "nodemon": "^2.0.4",
     "pug": "^3.0.0",
     "test-listen": "^1.1.0"
   },

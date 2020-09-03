@@ -9,8 +9,8 @@
 var createError = require('http-errors');
 var express = require('express');
 var path = require('path');
-var session = require('express-session') 
-var favicon = require('serve-favicon')
+var session = require('express-session');
+var favicon = require('serve-favicon');
 var logger = require('morgan');
 var sassMiddleware = require('node-sass-middleware');
 
