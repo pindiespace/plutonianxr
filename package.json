@@ -3,7 +3,7 @@
   "version": "0.0.0",
   "private": true,
   "scripts": {
-    "start": "serve -s ./bin/www",
+    "start": "node ./bin/www",
     "startdev": "nodemon ./bin/www",
     "startdebug": "SET DEBUG=plutonianxr:* & npm run startdev",
     "tests": "ava tests/**/*.test.js --verbose"
@@ -21,7 +21,6 @@
     "morgan": "latest",
     "node-sass-middleware": "latest",
     "pug": "latest",
-    "serve": "^11.3.2",
     "serve-favicon": "latest"
   },
   "devDependencies": {
