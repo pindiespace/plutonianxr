@@ -84,6 +84,12 @@
                     "eso": {
                         "cubemap": "eso0932a"
                     },
+                    "gaiadim": {
+                        "cubemap": "esagaia2019dim"
+                    },
+                    "gaiasmalldim": {
+                        "cubemap": "esagaia2019smalldim"
+                    }
                     "gaia": {
                         "cubemap": "esagaia2019dim"
                     }

@@ -99,5 +99,8 @@ String.prototype.stripLeft = function (charlist) {
 
   String.prototype.strip = function (charlist) {
     return this.trimLeft(charlist).trimRight(charlist);
-  }
+  };
+
+  // performance
+  // https://www.digitalocean.com/community/tutorials/js-js-performance-api
 
