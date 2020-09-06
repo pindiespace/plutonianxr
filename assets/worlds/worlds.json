@@ -9,7 +9,8 @@
         "ra": 0,
         "dec": 0,
         "rotation": 0,
-        "color": [0, 255, 255, 0.2]
+        "color": [0, 255, 255, 0.2],
+        "models": {}
     },
     "dark_matter": [],
     "galaxies": [
@@ -79,21 +80,27 @@
                 "color": [0, 255, 0, 0.2],
                 "models": {
                     "default": {
-                        "cubemap": "eso0932a"
+                        "cubemap": "eso0932a",
+                        "active": true
                     },
                     "eso": {
-                        "cubemap": "eso0932a"
+                        "cubemap": "eso0932a",
+                        "active": false
                     },
                     "gaiadim": {
-                        "cubemap": "esagaia2019dim"
+                        "cubemap": "esagaia2019dim",
+                        "active": false
                     },
                     "gaiasmalldim": {
-                        "cubemap": "esagaia2019smalldim"
-                    }
+                        "cubemap": "esagaia2019smalldim",
+                        "active": false
+                    },
                     "gaia": {
-                        "cubemap": "esagaia2019dim"
+                        "cubemap": "esagaia2019dim",
+                        "active": false
                     }
                 },
+                "mesh": null,
                 "references": [
                     "https://www.eso.org/public/images/eso0932a/",
                     "https://jaxry.github.io/panorama-to-cubemap/",
@@ -116,17 +123,24 @@
                             "sprite20": {
                                 "hyg": "hyg_20.json",
                                 "spritesheet": "star_sprite128.png",
-                                "size": 128
+                                "colors": "star_colors.json",
+                                "size": 128,
+                                "active":false
                             },
                             "sprite120": {
                                 "hyg": "hyg_120.json",
                                 "spritesheet": "star_sprite256.png",
-                                "size": 256
+                                "size": 256,
+                                "colors": "star_colors.json",
+                                "active":true
                             },
-                            "point": {
-                                
+                            "point20": {
+                                "hyg": "hyg_20.json",
+                                "colors": "star_colors.json",
+                                "active": false
                             }
                         },
+                        "mesh": null,
                         "references": [
                             "https://astronexus.com/hyg",
                             "https://github.com/astronexus/HYG-Database/blob/master/README.md",
@@ -167,8 +181,7 @@
                         "dec": 0,
                         "distance": 0,
                         "color": [255, 0, 0, 0.2],
-                        "models": {
-                        }
+                        "models": {}
                     },
                     "comets": [],
                     "asteroids": [],
@@ -193,9 +206,11 @@
                                     "default": {
                                         "surface": "sol.jpg",
                                         "emissive": "true",
-                                        "specular": 0
+                                        "specular": 0,
+                                        "active": true
                                     }
                                 },
+                                "mesh": null,
                                 "references": []
                             },
                             "planets": [
@@ -215,11 +230,13 @@
                                             "default": {
                                                 "surface": "pluto.jpg",
                                                 "emissive": false,
-                                                "specular": 0.2
+                                                "specular": 0.2,
+                                                "active": true
                                             },
                                             "gltf":{},
                                             "aliasObj": {}
-                                        }
+                                        },
+                                        "mesh": null
                                     },
                                     "moons": [
                                         {
@@ -238,11 +255,13 @@
                                                     "default": {
                                                         "surface": "charon.png",
                                                         "emissive": false,
-                                                        "specular": 0.2
+                                                        "specular": 0.2,
+                                                        "active": true
                                                     },
                                                     "gltf": {},
                                                     "aliasObj": {}
-                                                }
+                                                },
+                                                "mesh": null
                                             },
                                             "moons": [],
                                             "artifacts": []
@@ -283,9 +302,7 @@
                                 "distance": "1.347490972",
                                 "spectral_type": "G2V",
                                 "color": [255, 245, 242],
-                                "models": {
-                                    "star": {}
-                                },
+                                "models": {},
                                 "references": [
                                     "https://en.wikipedia.org/wiki/Alpha_Centauri"
                                 ]
@@ -307,9 +324,7 @@
                                 "distance": "1.347490972",
                                 "spectral_type": "K1V",
                                 "color": [255, 224, 188],
-                                "models": {
-                                    "star": {}
-                                },
+                                "models": {},
                                 "references": []
                             },
                             "planets": [],
@@ -329,9 +344,7 @@
                                 "distance": 1.294783318,
                                 "spectral_type": "M5Ve",
                                 "color": [255, 204, 111],
-                                "models": {
-                                    "star": {}
-                                },
+                                "models": {},
                                 "references": []
                             },
                             "planets": [
@@ -342,9 +355,7 @@
                                     "description": "Rocky exoplanet orbiting in habitable zone.",
                                     "data": {
                                         "type": "exoplanet",
-                                        "models": {
-                                            "planet": {}
-                                        },
+                                        "models": {},
                                         "references": [
                                             "https://en.wikipedia.org/wiki/Proxima_Centauri_b"
                                         ],

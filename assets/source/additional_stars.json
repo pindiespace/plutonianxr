@@ -1,3 +1,29 @@
+/*
+
+mix es5 and es6
+
+stop picked mesh afte first "hit"
+
+rename 'scaleToPlutonian'
+
+setLabel (in scene.js)
+
+MergeMeshes() ?
+
+Mesh optimization (simple)
+
+Determine if Sprite is visible
+
+alpha in Sprte shader
+
+Blending of skybox
+
+Bring in skybox to 1000 units for VR.
+
+*/
+
+
+
 {
 	"AbsMag":"0.615",
 	"Dec":"31.888276",

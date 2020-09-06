@@ -1,3 +1,231 @@
+///////////////////////////////////////////////////////////////////////////
+// optimized and unoptimzed meshes
+
+//UNOPTIMIZED:
+import {AfterViewInit, Component, ElementRef, OnDestroy, OnInit, ViewChild} from '@angular/core';
+import {SolarSystem} from '../solar-system.service';
+import {AbstractMesh, ActionManager, ExecuteCodeAction, MeshBuilder, Scene} from '@babylonjs/core';
+import {PreferenceService} from '../../services/preference.service';
+import {combineLatest, Subject} from 'rxjs';
+import {debounceTime, takeUntil} from 'rxjs/operators';
+import {AsteroidConfiguration, MeshConfiguration} from '../../models';
+import {LoadingService} from '../../services/loading.service';
+import {InteractionService} from '../../services/interaction.service';
+
+const FPS = 60;
+
+@Component({
+  selector: 'app-unoptimized',
+  templateUrl: './unoptimized.component.html',
+})
+export class UnoptimizedComponent implements AfterViewInit, OnDestroy, OnInit {
+  @ViewChild('rCanvas', {static: true})
+  canvasRef: ElementRef<HTMLCanvasElement>;
+
+  // cleanup our subscriptions
+  protected readonly destroy = new Subject<boolean>();
+  // store configurations for easy access
+  protected asteroidConfig: AsteroidConfiguration;
+  protected meshConfig: MeshConfiguration;
+  // store asteroids to clean up on changes
+  protected readonly asteroids: AbstractMesh[] = [];
+
+  constructor(
+    protected readonly solarSystem: SolarSystem,
+    protected readonly preferences: PreferenceService,
+    protected readonly loading: LoadingService,
+    protected readonly interaction: InteractionService,
+  ) {
+  }
+
+  ngOnInit(): void {
+    this.loading.message$.next('Initialising Scene ...');
+    this.initScene();
+
+    // subscribe to the preferences and handle them accordingly
+    // we don't have a need to distinguish what event fires because the path afterwards is the same
+    combineLatest(this.preferences.asteroidConfig, this.preferences.meshConfig).pipe(takeUntil(this.destroy), debounceTime(400))
+      .subscribe(([asteroidConfig, meshConfig]) => {
+        // update config
+        this.asteroidConfig = asteroidConfig;
+        this.meshConfig = meshConfig;
+        // change / update asteroids
+        this.manageAsteroids();
+      });
+
+    this.preferences.materialConfig.pipe(takeUntil(this.destroy)).subscribe(conf => conf.freeze
+      ? this.solarSystem.scene.freezeMaterials()
+      : this.solarSystem.scene.unfreezeMaterials());
+  }
+
+  initScene() {
+    // get the scene object
+    const scene = this.solarSystem.createScene(this.canvasRef);
+    // by setting blockfreeActiveMeshesAndRenderingGroups we tell the engine to
+    // insert all meshes without indexing and checking them
+    scene.blockfreeActiveMeshesAndRenderingGroups = true;
+    this.addPlanets(scene);
+    // we have to set it back to its original state
+    scene.blockfreeActiveMeshesAndRenderingGroups = false;
+
+  }
+
+  ngAfterViewInit(): void {
+    // start the engine
+    // be aware that we have to setup the scene before
+    this.solarSystem.start(this.preferences.useNgZone.getValue());
+  }
+
+  ngOnDestroy(): void {
+    // stop the engine and clean up
+    this.solarSystem.stop();
+    this.destroy.next(true);
+  }
+
+  manageAsteroids() {
+    this.loading.message$.next('Managing Asteroids ...');
+    // unfreeze, our changes shouold be mirrored to the engine.
+    this.solarSystem.scene.unfreezeActiveMeshes();
+    this.solarSystem.scene.unfreezeMaterials();
+    // as above, by setting blockfreeActiveMeshesAndRenderingGroups we tell the engine to
+    // insert all meshes without indexing and checking them
+    this.solarSystem.scene.blockfreeActiveMeshesAndRenderingGroups = this.meshConfig.batch;
+    // clean the "old" asteroids, it is easier for the demo to recreate them with the
+    // desired configuration than to patch every single one
+    this.clearAsteroids();
+    this.loading.message$.next('Adding Asteroids ...');
+    // due to the possible blocking calculation a timeout is needed to display the message
+    setTimeout(() => {
+      this.addAsteroids(this.solarSystem.scene, this.asteroidConfig.amount);
+
+      // by freezing the meshes and materials we can skip a lot of change observations
+      // basically we tell the engine those things won't change
+      if (this.preferences.materialConfig.getValue().freeze) {
+        this.loading.message$.next('Freezing Materials ...');
+        this.solarSystem.scene.freezeMaterials();
+      }
+      if (this.meshConfig.freeze) {
+        this.loading.message$.next('Freezing Meshes ...');
+        this.solarSystem.scene.freezeActiveMeshes(); // 5-10 fps
+      }
+
+      this.solarSystem.scene.blockfreeActiveMeshesAndRenderingGroups = false;
+      this.loading.message$.next(null);
+    }, 30);
+
+  }
+
+  clearAsteroids() {
+    this.loading.message$.next('Removing Asteroids ...');
+    // instruct the engine to remove this object and remove our reference too
+    this.asteroids.slice().forEach((asteroid) => {
+      asteroid.dispose();
+      this.asteroids.pop();
+    });
+  }
+
+  addAsteroids(scene: Scene, amount: number) {
+    for (let i = 0; i < amount; i++) {
+      const s = MeshBuilder.CreateSphere(`sphere${i}`, {segments: this.asteroidConfig.segments, diameter: 1}, scene);
+      this.solarSystem.addRandomMaterial(s);
+      this.solarSystem.makeAsteroid(s, i);
+      this.asteroids.push(s);
+      s.isVisible = true;
+    }
+  }
+
+  addPlanets(scene: Scene) {
+    scene.beginAnimation(this.solarSystem.createPlanetInSystem('mercury', .3, 4, [.5, .5, .5]), 0, FPS, true, 0.25);
+    scene.beginAnimation(this.solarSystem.createPlanetInSystem('venus', .4, 5, [.9, .9, 0]), 0, FPS, true, 0.2);
+    scene.beginAnimation(this.solarSystem.createPlanetInSystem('earth', .6, 6.1, [0, 0, 1]), 0, FPS, true, 0.12);
+    scene.beginAnimation(this.solarSystem.createPlanetInSystem('mars', .5, 7.3, [1, 0, 0]), 0, FPS, true, 0.1);
+
+    const jupyter = this.solarSystem.createPlanetInSystem('jupyter', 1.3, 10.5, [.95, .95, .85]);
+    jupyter.actionManager = new ActionManager(this.solarSystem.scene);
+    jupyter.actionManager.registerAction(new ExecuteCodeAction(ActionManager.OnPickUpTrigger,
+      () => this.interaction.onJupyterClick.next())
+    );
+    scene.beginAnimation(jupyter, 0, FPS, true, 0.05);
+  }
+}
+
+OPTIMIZED:
+
+import {Component} from '@angular/core';
+import {AbstractMesh, Mesh, MeshBuilder, Scene} from '@babylonjs/core';
+import {UnoptimizedComponent} from '../1_unoptimized/unoptimized.component';
+
+@Component({
+  selector: 'app-mesh-optimized',
+  templateUrl: './mesh-optimized.component.html',
+})
+export class MeshOptimizedComponent extends UnoptimizedComponent {
+  addAsteroids(scene: Scene, amount: number) {
+    const baseSphere = this.getBaseSphere();
+
+    this.loading.message$.next('Adding Asteroids ...');
+    for (let i = 0; i < amount; i++) {
+      const asteroid = baseSphere.clone('instance' + i);
+      this.asteroids.push(asteroid);
+      this.solarSystem.makeAsteroid(asteroid, i);
+      asteroid.isVisible = true;
+    }
+
+    if (!this.meshConfig.merge) {
+      return;
+    }
+
+    this.loading.message$.next('Grouping Asteroids ...');
+    const groupSize = 300;
+    const merged = [];
+    for (let i = 0; i < amount; i += groupSize) {
+      const upper = i + groupSize > this.asteroids.length ? this.asteroids.length : i + groupSize;
+      const mergedMesh = Mesh.MergeMeshes(this.asteroids.slice(i, upper) as Mesh[], true);
+      if (mergedMesh) {
+        mergedMesh.parent = this.solarSystem.sun;
+        this.solarSystem.addRandomMaterial(mergedMesh);
+        merged.push(mergedMesh);
+      }
+    }
+    this.loading.message$.next('Clearing "single" asteroids ...');
+    this.clearAsteroids();
+    this.loading.message$.next('Adding "merged" asteroids ...');
+    this.asteroids.push(...merged);
+  }
+
+  getBaseSphere(suffix = ''): Mesh {
+    const baseSphere = MeshBuilder.CreateSphere('BaseSphere' + suffix, {
+      segments: this.asteroidConfig.segments,
+      diameter: 1
+    }, this.solarSystem.scene);
+    if (this.meshConfig.index) {
+      baseSphere.convertToUnIndexedMesh();
+    } // TEUER BEI VIELEN MESHES - 1-3fps
+    if (this.meshConfig.flat) {
+      baseSphere.convertToFlatShadedMesh();
+    } // TEUER BEI VIELEN MESHES - 1-3fps
+    baseSphere.cullingStrategy = AbstractMesh.CULLINGSTRATEGY_OPTIMISTIC_INCLUSION_THEN_BSPHERE_ONLY;
+    baseSphere.isVisible = false;
+    if (this.meshConfig.normals) {
+      baseSphere.freezeNormals();
+    }
+    if (this.meshConfig.edge) {
+      baseSphere.disableEdgesRendering();
+    }
+    if (this.meshConfig.boundings) {
+      baseSphere.doNotSyncBoundingInfo = true;
+    } // 5-10 fps;
+    this.solarSystem.addRandomMaterial(baseSphere);
+    return baseSphere;
+  }
+}
+
+
+
+
+
+
+
 
 /**
  * compute stars as a solid particle system
@@ -344,3 +572,173 @@ var computeHygSprite = function (hygData, spriteFile, size, scene) {
     return spriteManagerStars;
 
 };
+
+
+/** 
+ * Position using Plutonian JSON format, slightly different from HYG.
+ * Units may vary, since the simulation is scaled relative to real distances (which are huge)
+ */
+var setPosition = function (data, position, units) {
+
+    if(isObject(data) && isObject(position) && isNumber(units)) {
+
+        ////////////console.log(">>>>>>>>>>>POSITIONING.......")
+        //mesh.setPositionWithLocalVector(
+        //    new BABYLON.Vector3(Math.cos(B) * Math.cos(A) * dParsecUnits, 
+        //        Math.cos(B) * Math.sin(A) * dParsecUnits, 
+        //        Math.sin(B) * dParsecUnits
+        //    ));
+
+        // TODO: rotate galaxy stardome by 
+        // TODO: Galactic tilt RA = 12:52 and Dec = +26:19.
+        // TODO: Galactic rotation RA = 17:45 and Dec = -29:22
+        // TODO: http://spiff.rit.edu/classes/phys301/lectures/coords/coords.html
+
+        if (isNumber(data.x) && isNumber(data.y) && isNumber(data.z)) {
+            /////////////////console.log(">>>>>>>>>>>POSITIONIN XYZ..........")
+            position.x = data.x * dParsecUnits;
+            position.y = data.y * dParsecUnits;
+            position.z = data.z * dParsecUnits;
+            return true;
+
+        }  else if (isNumber(data.ra) && isNumber(data.dec) && isNumber(data.distance)) {
+            ////////////////console.log(">>>>>>>>>>>POSITIONING RA DEC............")
+            /*
+             * Note: we reverse the y and z axes to match the BabylonJS coordinate system
+             */
+            let A = degToRad(parseFloat(data.ra) * 15);
+            let B = degToRad(parseFloat(data.dec));
+            position.x = Math.cos(B) * Math.cos(A) * data.distance * units;
+            position.z = Math.cos(B) * Math.sin(A) * data.distance * units; // was y
+            position.y = Math.sin(B) * data.distance * units; // was z
+            return true;
+
+        } else {
+            console.error('setObject: invalid position data, no XYZ or RA Dec Distance presents');
+
+        }
+
+    } else {
+        console.error('setObject: invalid parameters: data:' + data + ' position:' + position + ' units:' + units);
+    }
+
+    return false;
+};
+
+
+
+
+
+
+/**
+ * load a mesh volume without a texture. translucent 'bubble' surrounding systems.
+ * Use boundaries, influence, e.g. solar influence, thermoclines, etc.
+ * Empty space has an invisible mesh volume, so it can act as a parent to the 
+ * objects within.
+ * @param {String}
+ */
+ var loadSpaceVolume = function (obj, dir, scene, parent) {
+
+    console.log("------------------------------");
+    console.log('creating space volume:' + obj.name)
+
+    var mesh = null;
+
+    if(isObject(obj.data)) {
+
+        let data = obj.data;
+
+        // create a spherical volume, using data or defaults
+        mesh = BABYLON.MeshBuilder.CreateSphere(
+            obj.key || dUnknown, {
+                diameter: data.diameter || dDiameter, 
+                segments: data.segments || dSegments
+                }, scene);
+
+
+
+        // there is only one model for spaceVolume - a translucent sphere, back culling off
+
+        // position the space volume
+        if(isNumber(data.ra) && isNumber(data.dec)) {
+
+            plutonianScene.setPosition(data, mesh.position, dParsecUnits); 
+
+            console.log(obj.name + " SpaceVolume position x:" + mesh.position.x + " y:" + mesh.position.y + " z:" + mesh.position.z)
+            //console.log("PARENT:"  + mesh.position.x + " y:" + mesh.position.y + " z:" + mesh.position.z)
+
+            // create material
+            var mat = new BABYLON.StandardMaterial(obj.name + '-mat', scene);
+
+            // space volumes only have color, not a texture
+            var color = plutonianScene.getColor(data.color);
+
+            if(color) {
+                mat.diffuseColor = color;
+            } else {
+                mat.diffuseColor = BABYLON.Color3.Green();
+            }
+
+            //soft specular highlight
+            mat.specularColor = new BABYLON.Color3(0.3, 0.3, 0.3); 
+
+            //NOTE: mat.alpha = 1; would work, but this function is mesh-level, not material-level
+
+            // set visibility, with a default to translucent
+            if(isNumber(data.color[3])) {
+                let c = data.color[3];
+                if(c > 1 ) c /= 255;
+                mesh.visibility = c; 
+            } else {
+                mesh.visibility = dAlpha; // default alpha value = 1
+            }
+
+            mat.backFaceCulling = false; // don't need to see inside
+
+            // set the material to the mesh
+            mesh.material = mat;
+
+        } else {
+            console.warn('WARNING: No RA, Dec for SpaceVolume ' + obj.name);
+            mesh.setPositionWithLocalVector(new BABYLON.Vector3(dPosition, dPosition, dPosition));
+        }
+
+    } else {
+        console.error('loadSpaceVolume: non-object passed');
+    }
+
+    return mesh;
+
+ }; // end of load space volume
+
+        ////////////console.log(">>>>>>>>>>>POSITIONING.......")
+        //mesh.setPositionWithLocalVector(
+        //    new BABYLON.Vector3(Math.cos(B) * Math.cos(A) * dParsecUnits, 
+        //        Math.cos(B) * Math.sin(A) * dParsecUnits, 
+        //        Math.sin(B) * dParsecUnits
+        //    ));
+
+
+    // This creates a light, aiming 0,1,0 - to the sky (non-mesh)
+    //var light = new BABYLON.HemisphericLight("light", new BABYLON.Vector3(0, 1, 0), scene);
+    //var light = new BABYLON.DirectionalLight('light', new BABYLON.Vector3(5, -0.5, 1.0), scene);
+    //var light = new BABYLON.PointLight('light', new BABYLON.Vector3(-5, -0.5, 0), scene);
+    //light.position = new BABYLON.Vector3(1, 0, -1);
+        
+    // Default intensity is 1. Let's dim the light a small amount
+    //light.intensity = 0.7;
+
+    // Shadows
+    //var shadowGenerator = new BABYLON.ShadowGenerator(1024, light);
+    //shadowGenerator.useBlurExponentialShadowMap = true;
+    //shadowGenerator.blurKernel = 32;
+    //shadowGenerator.addShadowCaster(sphere, true);
+
+    // Our built-in 'sphere' shape.
+    //var sphere = BABYLON.MeshBuilder.CreateSphere('pluto', {diameter: 1.4, segments: 32}, scene);    
+    //sphere.position.y = 1;
+    //sphere.material = new BABYLON.StandardMaterial('plutoMat', scene);
+    //sphere.material.diffuseTexture = new BABYLON.Texture('worlds/milky_way/solar_system/sol/pluto/charon/charon.png', scene );
+    //sphere.material.specularColor = new BABYLON.Color3( 0.2, 0.2, 0.2 ); //gets rid of highlight
+
+    //const environment = scene.createDefaultEnvironment();
