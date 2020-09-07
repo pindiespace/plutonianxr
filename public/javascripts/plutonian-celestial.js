@@ -41,86 +41,145 @@ var PCelestial = (function () {
         // Stellar colors (JSON)
         this.hygColors         = []; // full set, in JSON file
         this.dHygColors        = [];  // one-letter
-        this.setDefaultStarColors();
-
+        this.dHygAbsMag        = [];
         this.dHygSpriteIndex   = []; //index for sprite image
-        this.setDefaultStarColors();
+
+        // SpriteManager and scene
+        this.assetManager = null;
+        this.starSprites = null;
+        this.scene = null;
+        this.camera = null;
 
         // computations of planetary positions over time
         this.orrey = new POrrey();
 
     };
 
+    // private static variables
+
+    var dStarColors = [];
+        dStarColors['o'] = {r:0.598529412, g: 0.683578431, b: 1},
+        dStarColors['b'] = {r:0.680490196, g: 0.759068627, b: 1},
+        dStarColors['a'] = {r:0.790196078, g: 0.839607843, b: 1},
+        dStarColors['f'] = {r:0.933382353, g: 0.930392157, b: 0.991470588},
+        dStarColors['g'] = {r:1, g: 0.925686274, b: 0.830882353},
+        dStarColors['k'] = {r:1, g: 0.836421569, b: 0.629656863},
+        dStarColors['m'] = {r:1, g: 0.755686275, b: 0.421764706},
+        dStarColors['n'] = {r:0.987654321, g: 0.746356814, b: 0.416557734},
+        dStarColors['w'] = {r:0.598529412, g: 0.683578431, b: 1},
+        dStarColors['r'] = {r:1, g: 0.868921569, b: 0.705735294},
+        dStarColors['c'] = {r:1, g: 0.828186274, b: 0.576078431},
+        dStarColors['s'] = {r:1, g: 0.755686275, b: 0.421764706},
+        dStarColors['d'] = {r:0.798823529, g: 0.834901961, b: 0.984313726};
+
+    var dAbsMag = [];
+        dAbsMag['o'] = -10, // standard
+        dAbsMag['b'] = -2,
+        dAbsMag['a'] = 2,
+        dAbsMag['f'] = 3,
+        dAbsMag['g'] = 0
+        dAbsMag['k'] = 0,
+        dAbsMag['m'] = 6,
+        dAbsMag['n'] = 0, // less common
+        dAbsMag['w'] = -11,
+        dAbsMag['r'] = 1,
+        dAbsMag['c'] = -1,
+        dAbsMag['s'] = 4,
+        dAbsMag['d'] = 10;
+ 
+
+    var dSpriteIndex = [];
+        dSpriteIndex['o'] = 6, //standard
+        dSpriteIndex['b'] = 5,
+        dSpriteIndex['a'] = 4,
+        dSpriteIndex['f'] = 3,
+        dSpriteIndex['g'] = 2,
+        dSpriteIndex['k'] = 1,
+        dSpriteIndex['m'] = 0,
+        dSpriteIndex['n'] = 0, //less common
+        dSpriteIndex['w'] = 6,
+        dSpriteIndex['r'] = 1,
+        dSpriteIndex['c'] = 1,
+        dSpriteIndex['s'] = 0,
+        dSpriteIndex['d'] = 4;
+
+
     // functions
 
     /**
-     * Set default stellar single-letter colors, averaged from database
+     * Get default stellar single-letter colors, averaged from database
+      * @param {String} spect the stellar spectral type
      */
-    PCelestial.prototype.setDefaultStarColors = function () {
-
-        let c = this.dHygColors;
-
-        c['o'] = {r:0.598529412, g: 0.683578431, b: 1},
-        c['b'] = {r:0.680490196, g: 0.759068627, b: 1},
-        c['a'] = {r:0.790196078, g: 0.839607843, b: 1},
-        c['f'] = {r:0.933382353, g: 0.930392157, b: 0.991470588},
-        c['g'] = {r:1, g: 0.925686274, b: 0.830882353},
-        c['k'] = {r:1, g: 0.836421569, b: 0.629656863},
-        c['m'] = {r:1, g: 0.755686275, b: 0.421764706},
-        c['n'] = {r:0.987654321, g: 0.746356814, b: 0.416557734},
-        c['w'] = {r:0.598529412, g: 0.683578431, b: 1},
-        c['r'] = {r:1, g: 0.868921569, b: 0.705735294},
-        c['c'] = {r:1, g: 0.828186274, b: 0.576078431},
-        c['s'] = {r:1, g: 0.755686275, b: 0.421764706},
-        c['d'] = {r:0.798823529, g: 0.834901961, b: 0.984313726};
-
+    PCelestial.prototype.getDefaultStarColor = function (spect) {
+        return dStarColors[spect];
     };
 
-    PCelestial.prototype.setDefaultSpriteIndex = function () {
+    /** 
+     * Get an absolute magnitude for stars by stellar type, when 
+     * absolute magnitude is not available in Hyg3
+     * @param {String} spect the stellar spectral type
+     */
+    PCelestial.prototype.getDefaultAbsMag = function (spect) {
+        return dAbsMag[spect];
+    };
 
-        let si = this.dHygSpriteIndex;
-        si['o'] = 6, //standard
-        si['b'] = 5,
-        si['a'] = 4,
-        si['f'] = 3,
-        si['g'] = 2,
-        si['k'] = 1,
-        si['m'] = 0,
-        si['n'] = 0, //less common
-        si['s'] = 0,
-        si['r'] = 1,
-        si['c'] = 1,
-        si['d'] = 4,
-        si['w'] = 6;
+    /**
+     * get a sprite index for common stellar types. Implies an image 
+     * with the same number of sprites as the length of the array
+     * @param {String} spect the stellar spectral type
+     */
+    PCelestial.prototype.getDefaultSpriteIndex = function (spect) {
+        return dSpriteIndex[spect];
+    };
+
+    /**
+     * Make sure the JSON file has the minimum number of columns needed 
+     * to create Star sprites or Points. Required:
+     * id, 
+     * @param {ObjectJSON} star Hyg3 data for a particular star
+     */
+    PCelestial.prototype.checkHygData = function (hygData) {
+
+        let util = this.util;
+        let fn = 'checkHygColumns ';
+
+        if(!util.isArray(hygData)) {
+            console.error(fn + 'ERROR: Hyg data not an array');
+            return false;
+        }
+
+        if(!hygData.length) {
+            console.error(fn + 'ERROR: no data in Hyg data');
+            return false;
+        }
+
+        // look at the first Star in the array
+        let star = hygData[0];
+
+        if(!util.isString(star.id)) {
+            console.error(fn + 'ERROR: no Star');
+            return false;
+        }
+ 
+        if(!util.isString(star.proper) && 
+        (!util.isString(star.bf) || !util.isString(star.bayer) || !util.isString(star.con))) {
+            console.error(fn + 'ERROR: no Star name possible');
+        }
+
+        if(!util.isNumber(star.ra) || !util.isNumber(star.dec) || !util.isNumber(star.dist)) {
+            console.error(fn + 'ERROR: no Star RA or Dec');
+        }
+
+        return true;
 
     };
 
     /**
-     * Load stellar colors for all stellar types
+     * Get the colors by loading a JSON file
+     * @param {ObjectJSON} star Hyg3 data for a particular star
+     * @param {String} name name of star (for error message)
      */
-    PCelestial.prototype.setAllStarColors = function (assetManager, model, dir) {
-
-        let colors = dir + model.colors;
-
-        console.log("------------------------------");
-        console.log('loading colors for all stellar types:' + colors)
-
-        const loadColors = assetManager.addTextFileTask(colors.substring(0, colors.lastIndexOf(".")) + '-starcolors', colors);
-
-        loadColors.onSuccess = async function (colors) {
-            console.log('PCELESTIAL Stellar colors loaded, parsing data...')
-            celestial.setAllStarColors(colors.text);
-        };
-
-        loadColors.onTaskError = function (task) {
-            console.log('task failed', task.errorObject.message, task.errorObject.exception);
-        };
-
-    };
-
-    /**
-     * Get the colors by loading a JSON file */
-    PCelestial.prototype.getStarColorsByStellarType = function (star, name = 'unknown') {
+    PCelestial.prototype.setHygColors = function (star, name = 'unknown') {
 
         let c = null;
         let s = star.spect;
@@ -139,11 +198,31 @@ var PCelestial = (function () {
         // one-letter average default, part of this class
 
         console.warn('no stellar type found for:' + name);
-        return this.dHygColors[s.substring(0,1)];
+        c = this.getDefaultStarColor[s.substring(0,1)];
+
+        // if everything fails, make it yellow
+        if(!c) c = this.getDefaultStarColor['g'];
+
+        return c;
 
     };
 
-    PCelestial.prototype.setHygPosition = function () {
+    /**
+     * set a readable name for the star
+     * @param {ObjectJSON} star Hyg3 data for a particular star
+     */
+    PCelestial.prototype.setHygName = function (star) {
+        let n = star.proper || star.bf;
+        if(n.length) return n;
+        else if(star.bayer.length && star.con.length) return star.bayer + star.con;
+        else return star.id;
+    };
+
+    /**
+     * Set the Star position in 3D space
+     * @param {ObjectJSON} star Hyg3 data for a particular star
+     */
+    PCelestial.prototype.setHygPosition = function (star) {
 
         //we rotate the coordinate system to BabylonJS coordinates by swapping z and y
         if(star.x) {
@@ -160,11 +239,27 @@ var PCelestial = (function () {
 
     };
 
-    PCelestial.prototype.setHygMag = function () {
 
-    };
+    /**
+     * Load stellar colors for all stellar types
+     */
+    PCelestial.prototype.loadStarColors = function (assetManager, model, dir) {
 
-    PCelestial.prototype.setHygName = function () {
+        let colors = dir + model.colors;
+
+        console.log("------------------------------");
+        console.log('loading colors for all stellar types:' + colors)
+
+        const loadColors = assetManager.addTextFileTask(colors.substring(0, colors.lastIndexOf(".")) + '-starcolors', colors);
+
+        loadColors.onSuccess = async function (colors) {
+            console.log('PCELESTIAL Stellar colors loaded, parsing data...')
+            celestial.setAllStarColors(colors.text);
+        };
+
+        loadColors.onTaskError = function (task) {
+            console.log('task failed', task.errorObject.message, task.errorObject.exception);
+        };
 
     };
 
@@ -189,13 +284,16 @@ var PCelestial = (function () {
         let loadHYG = assetManager.addTextFileTask(hyg.substring(0, hyg.lastIndexOf(".")) + '-stardome', hyg);
 
         loadHYG.onSuccess = async function (stars) {
-            //loadHYG.stars = JSON.parse(stars.text);
 
+            // Async version of JSON.parse, using Fetch API
             util.asyncJSON(hyg, async function (stars) {
                 console.log('@@@@@@@@@@building stars')
-                this.spriteMgr = await celestial.computeHygSprite(stars, dir + 'sprite/textures/' + model.spritesheet, model.size, scene).then((spriteManagerStars) => {
+                if(celestial.checkHygData(stars)) {
+                    this.spriteMgr = await celestial.computeHygSprite(stars, dir + 'sprite/textures/' + model.spritesheet, model.size, scene).then((spriteManagerStars) => {
                     console.log('@@@@@@@@@@@@Hyg stardome loaded');
-                });
+                    });
+                }
+
             });
 
         };
@@ -235,6 +333,17 @@ var PCelestial = (function () {
 
         console.log("@@@@@COMPUTING HygSprite")
 
+        for (let i = 0; i < hygData.length; i++) {
+
+            let star = hygData[i];
+
+
+        }
+
+
+        ///////////////////////////////////
+        ///////////////////////////////////
+        // async is better for updates
         let i = 0;
 
         // Load sprites in async blocks
@@ -246,14 +355,12 @@ var PCelestial = (function () {
             function () {
                 console.log('all done with async load')
             }, 
-
         0);
 
-        for(let i = 0; i < 100; i++)
-        asyncLoop.executeNext(i);
-
-
-
+        //for(let i = 0; i < 100; i++)
+        //    asyncLoop.executeNext(i);
+        //////////////////////////////////
+        //////////////////////////////////
 
     };
 

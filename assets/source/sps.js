@@ -221,9 +221,46 @@ export class MeshOptimizedComponent extends UnoptimizedComponent {
 }
 
 
+/** 
+ * set user interactions for camera (non-VR)
+ * @param {Mesh} mesh
+ */
+var setPlanetActions = function (mesh) {
+    mesh.actionManager
+    .registerAction(
+        new BABYLON.InterpolateValueAction(
+            BABYLON.ActionManager.OnPickTrigger,
+            light,
+            'diffuse',
+            BABYLON.Color3.Black(),
+            1000
+        )
+    )
+    .then(
+        new BABYLON.SetValueAction(
+            BABYLON.ActionManager.NothingTrigger,
+            mesh.material,
+            'wireframe',
+            false
+        )
+    );
+}
 
+/*
+                    // highlight layer (also good for backlit atmosphere)
+                    // https://doc.babylonjs.com/how_to/highlight_layer
+                        var options = {
+                        alphaBlendingMode: 2,  // must be two
+                        blurHorizontalSize: 1, // horiz and vertical 1:1 for smooth glow
+                        blurTextureSizeRatio: 0.1, // make smaller to get extended glow
+                        blurVerticalSize: 1,
+                        mainTextureRatio: 0.9
+                    };
+                    var hl = new BABYLON.HighlightLayer("hg", scene, options);
+                    hl.innerGlow = false;
+                    hl.addMesh(mesh, new BABYLON.Color3(.9, .9, .9))
 
-
+*/
 
 
 

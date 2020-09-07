@@ -4,14 +4,11 @@
  * - 1 unit = 2370km
  */
 
-// Initialize <canvas>, attach as rendering surface
-var canvas = document.getElementsByClassName('render-xr-canvas')[0];
-
-var PScene = (function () {
+var PWorld = (function () {
 
     // constructor
 
-    function PScene() {
+    function PWorld() {
 
         this.dUSize    =   1000000;        // size of universe (not drawn beyond dVisUSize)
         this.dVisSize  =     10000;        // size of skybox
@@ -22,19 +19,27 @@ var PScene = (function () {
         this.dSegments =        32;        // default sphere segmentation
         this.dRot      =     0.002;        // default rotation speed 2000 increments with 60fps
         this.dUnknown  = 'unknown';        // unknown object, key or value
-        this.engine    =    engine;        // assign class variables
+        this.engine    =      null;        // assign class variables
+        this.canvas    =      null;
+        this.glow      =      null;        // glow layer
+        this.highLight =      null;        // highlight layer
+        
+        this.worldDir  =  'worlds';        // inside ExpressJS route '/assets'
 
         this.util = new PUtil();
         this.setup = new PSetup(this.util);
-        this.canvas = this.setup.getCanvas();
         this.celestial = new PCelestial(this.util);
+
+        // start
+        //this.init();
+
         // attach engine here
 
     };
 
     // functions
 
-    PScene.prototype.checkObject = function (pObj) {
+    PWorld.prototype.checkObject = function (pObj) {
 
         let util = this.util;
 
@@ -49,17 +54,34 @@ var PScene = (function () {
         }
 
         if(!util.isObject(pObj.data)) {
-            console.error('PObject ERROR:' + obj.name + ' missing data');
+            console.error('PObject ERROR:' + pObj.name + ' missing data');
             return false;
         }
 
         if(!util.isString(pObj.dname)) {
-            console.error('PObject ERROR:' + obj.name + ' missing data directory');
+            console.error('PObject ERROR:' + pObj.name + ' missing data directory');
             return false;
         }
 
         if(!util.isString(pObj.name)) {
             console.warn('Object WARNING: name missing');
+        }
+
+        return this.checkData(pObj);
+
+    };
+
+    /**
+     * check for required data all objects need
+     */
+    PWorld.prototype.checkData = function (pObj) {
+
+        let util = this.util;
+        let data = pObj.data;
+
+        if(!util.isObject(data)) {
+            console.error('checkData ERROR: no data object in:' + pObj.name);
+            return false;
         }
 
         return true;
@@ -69,7 +91,7 @@ var PScene = (function () {
     /**
      Confirm the models
      */
-    PScene.prototype.getActiveModel = function (models) {
+    PWorld.prototype.getActiveModel = function (models) {
 
         let util = this.util;
         let model = null;
@@ -115,7 +137,7 @@ var PScene = (function () {
      * @param{ObjectJSON} pObj
      * @param{Mesh} mesh
      */
-    PScene.prototype.setMesh = function (pObj, mesh) {
+    PWorld.prototype.setMesh = function (pObj, mesh) {
 
         let util = this.util;
 
@@ -148,7 +170,7 @@ var PScene = (function () {
     /**
      * make mesh visible and enabled, or disabled and invisible
      */
-    PScene.prototype.toggleMeshActivation = function (mesh) {
+    PWorld.prototype.toggleMeshActivation = function (mesh) {
 
         if(mesh) {
 
@@ -173,14 +195,14 @@ var PScene = (function () {
     /**
      * Set scale for star systems, galaxies.
      */
-    PScene.prototype.setPlanetScale = function (data, scale) {
+    PWorld.prototype.setPlanetScale = function (data, scale) {
 
         let util = this.util;
 
         let sData = {
-            diameter: dDiameter,
-            distance: dDistance,
-            segments: dSegments
+            diameter: this.dDiameter,
+            distance: this.dDistance,
+            segments: this.dSegments
         };
 
         if(util.isNumber(data.diameter) && data.diameter > 0) {
@@ -208,7 +230,7 @@ var PScene = (function () {
      * @returns {BABYLON.Color3 | BABYLON.Color4}
      * If a color is not in the 0-1 range, adjust it.
      */
-    PScene.prototype.getColor = function (colorArr) {
+    PWorld.prototype.getColor = function (colorArr) {
 
         var r = 0, g = 0, b = 0, a = 1, color = null;
 
@@ -248,7 +270,7 @@ var PScene = (function () {
         return color;
     };
 
-    PScene.prototype.setPositionByXYZ = function (data, vec, units = 1) {
+    PWorld.prototype.setPositionByXYZ = function (data, vec, units = 1) {
 
         let util = this.util;
 
@@ -270,7 +292,7 @@ var PScene = (function () {
 
     };
 
-    PScene.prototype.setPositionByRADec = function (data, vec, units = 1) {
+    PWorld.prototype.setPositionByRADec = function (data, vec, units = 1) {
 
         console.warn("UNITSSSSS ARE:" + units)
 
@@ -302,7 +324,7 @@ var PScene = (function () {
      * Set the position of a planet, star, galaxy, etc. in the mesh position object.
      * Used by everything but StarDomes
      */
-    PScene.prototype.setPosition = function (data, position, units = 1) {
+    PWorld.prototype.setPosition = function (data, position, units = 1) {
 
         if(this.setPositionByXYZ(data, position, units)) {
 
@@ -321,7 +343,7 @@ var PScene = (function () {
 
     };
 
-    PScene.prototype.setRotationByRADec = function (data, vec) {
+    PWorld.prototype.setRotationByRADec = function (data, vec) {
 
         // for x = x, z = y, y = z
         //data.ra = 179.2; // side to side (almost 180)
@@ -351,32 +373,27 @@ var PScene = (function () {
 
     };
 
-    PScene.prototype.setRotationbyQuat = function (data) {
+    PWorld.prototype.setRotationbyQuat = function (data) {
 
     };
 
-    PScene.prototype.setLabel = function (pObj) {
+    PWorld.prototype.setLabel = function (pObj) {
         // Use: https://www.babylonjs-playground.com/#ZI9AK7#124
     };
 
-    PScene.prototype.setDescription = function (pObj) {
+    PWorld.prototype.setDescription = function (pObj) {
 
     };
 
-    PScene.prototype.follow = function (pObj) {
+    PWorld.prototype.follow = function (pObj) {
 
     };
 
-    PScene.prototype.loadArtifact = function (pObj) {
-
-    };
-
-    PScene.prototype.loadSpaceVolume = function (pObj, dir, scene) {
+    PWorld.prototype.loadSpaceVolume = function (pObj, dir, scene) {
 
         console.log("------------------------------");
         console.log('creating space volume:' + pObj.name)
 
-        let util = this.util;
         let mesh = null;
 
         if(!this.checkObject(pObj)) {
@@ -384,18 +401,14 @@ var PScene = (function () {
             return mesh;
         }
 
+        let util = this.util;
         let data = pObj.data;
 
-        if(!util.isObject(data)) {
-            console.error('loadSkybox ERROR: no data object in:' + pObj.name);
-            return mesh;
-        }
-        
-        // create a spherical volume, using data or defaults
+        // all SpaceVolumes are the same, don't need a .model entry
         mesh = BABYLON.MeshBuilder.CreateSphere(
-            pObj.key || this.dUnknown, {
-                diameter: data.diameter || dDiameter, 
-                segments: data.segments || dSegments
+            pObj.key, {
+                diameter: data.diameter || this.dDiameter, 
+                segments: data.segments || this.dSegments
                 }, scene);
 
         /* 
@@ -414,7 +427,7 @@ var PScene = (function () {
         console.log(pObj.name + " SpaceVolume position x:" + mesh.position.x + " y:" + mesh.position.y + " z:" + mesh.position.z)
 
         // create material
-        let mat = new BABYLON.StandardMaterial(pObj.name + '-mat', scene);
+        let mat = new BABYLON.StandardMaterial(pObj.key + '-mat', scene);
 
         // space volumes only have color, not a texture
         let color = this.getColor(data.color);
@@ -455,12 +468,11 @@ var PScene = (function () {
     * @param {String} dir 
     * @param {Scene} scene
     */
-    PScene.prototype.loadSkybox = function (pObj, dir, scene) {
+    PWorld.prototype.loadSkybox = function (pObj, dir, scene) {
 
         console.log("------------------------------");
         console.log('creating skybox:' + pObj.name);
 
-        let util = this.util;
         let mesh = null;
 
         if(!this.checkObject(pObj)) {
@@ -469,12 +481,9 @@ var PScene = (function () {
         }
 
         let data = pObj.data;
+        let util = this.util;
 
-        if(!util.isObject(data)) {
-            console.error('loadSkybox ERROR: no data object in:' + pObj.name);
-            return mesh;
-        }
-
+        // get the active model
         let model = this.getActiveModel(data.models);
 
         if(!util.isObject(model)) {
@@ -502,7 +511,10 @@ var PScene = (function () {
         }
 
         // create the mesh
-        mesh = BABYLON.MeshBuilder.CreateBox(pObj.key, {size:bSize}, scene);
+        mesh = BABYLON.MeshBuilder.CreateBox(
+            pObj.key, {
+                size:bSize}, scene);
+
         mesh.infiniteDistance = true;
         mesh.freezeNormals(); // don't need to calculate
 
@@ -556,13 +568,13 @@ var PScene = (function () {
         return mesh;
     };
 
-    PScene.prototype.loadStarDome = function (pObj, dir, scene) {
+    PWorld.prototype.loadStarDome = function (pObj, dir, scene) {
+
+        console.log("------------------------------");
+        console.log("creating stardome:" + pObj.name);
 
         let util = this.util;
         let mesh = null;
-
-        console.log("------------------------------");
-        console.log("creating stardome:" + pObj.name)
 
         if(!this.checkObject(pObj)) {
             console.error('loadStarDome ERROR: invalid object passed');
@@ -571,11 +583,7 @@ var PScene = (function () {
 
         let data = pObj.data;
 
-        if(!util.isObject(data)) {
-            console.error('loadStarDome ERROR: no data object in:' + pObj.name);
-            return mesh;
-        }
-
+        // get the active model
         let model = this.getActiveModel(data.models);
 
         if(!util.isObject(model)) {
@@ -629,432 +637,301 @@ var PScene = (function () {
 
     };
 
-    PScene.prototype.loadPlanet = function (pObj, dir, scene) {
+    /** 
+     * load cloud model for Nebula
+     */
+    PWorld.prototype.loadCloudModel = function (pObj, dir, scene) {
+
+        console.log("------------------------------");
+        console.log("drawing planetModel:" + pObj.name)
+
+        let util = this.util;
+        let mesh = null;
 
     };
 
-    PScene.prototype.loadStar = function (pObj, dir, scene) {
+    PWorld.prototype.loadPlanetModel = function (pObj, dir, scene) {
 
-    };
+        console.log("------------------------------");
+        console.log("drawing planetModel:" + pObj.name)
 
-    PScene.prototype.loadStarSystem = function (pObj, dir, scene) {
+        let util = this.util;
+        let mesh = null;
 
-    };
+        if(!this.checkObject(pObj)) {
+            console.error('loadPlanetModel ERROR: invalid object passed');
+            return mesh;
+        }
 
-    PScene.prototype.loadGalaxy = function (pObj, dir, scene)  {
+        let data = pObj.data;
 
-    };
+        // get the active model
+        let model = this.getActiveModel(data.models);
 
-    PScene.prototype.loadDarkMatter = function (pObj, dir, scene) {
+        if(!util.isObject(model)) {
+            console.error('loadStarDome ERROR: no active model found');
+            return mesh;
+        }
 
-    };
+        // scale raw values to plutonian planetary system units (returnd diameter)
 
-    PScene.prototype.loadWorld = function () {
+        let scaled = this.setPlanetScale(pObj.data);
 
-    };
+        // create 'surface' model = just a sphere with 1 texture
 
-    PScene.prototype.createAssets = function () {
+        if(isString(model.surface)) {
 
-    };
+            let texDir = dir + '/textures/';
 
-    PScene.prototype.createScene = function () {
+            console.log(pObj.name + ' texture:' + texDir + model.surface)
 
-    };
+            mesh = BABYLON.MeshBuilder.CreateSphere(
+                pObj.key, {
+                    diameter:scaled.diameter, 
+                    segments: 32}, scene);
 
-    PScene.prototype.start = function () {
-
-    };
-
-   return PScene;
-
-}());
-
-var plutonianScene = new PScene();
-
-///////////////////////////////////////////////////////////
-///////////////////////////////////////////////////////////
-
-var dUSize    =   1000000;     // size of universe (not drawn beyond dVisUSize)
-var dVisSize    =   10000;     // size of skybox
-var dPosition =         0;     // default x, y, z coordinate
-var dDistance =         0;     // default distance from world center
-var dDiameter =         1;     // default = 1 unit
-var dAlpha    =       0.2;
-var dSegments =        32;     // default sphere segmentation
-var dRot      =     0.002;     // default rotation speed 2000 increments with 60fps
-var dUnknown  = 'unknown'; // unknown object, key or value
-
-// This is inside ./assets, a route defined in ExpressJS 
-var worldDir  = "worlds";
-
-/**
- * Create the Default Scene
- */
-var assetManager = null;
-
-var glow = null;
-
-var scene = null;
-var sceneToRender = null;
-
-
-
-
-/**
- * Load planetary-style models (single pherical or other 3D mesh)
- * @param {ObjectJSON} obj 
- * @param {String} dir 
- * @param {Mesh} parent 
- */
-var loadPlanetModel = function (obj, dir, scene, parent) {
-
-    console.log("------------------------------");
-    console.log('creating space volume:' + obj.name)
-
-    var mesh = null;
-    var segments = dSegments;
-
-    if(isObject(obj.data)) {
-
-    }
-
-    console.log("------------------------------");
-    console.log("drawing planetModel:" + obj.name)
-
-    if(obj && obj.data && obj.data.models) {
-
-        //console.log(obj.name + ' diameter:' + obj.data.diameter + ' distance:' + obj.data.distance)
-
-        // scale raw values to plutonian units
-
-        //let scaled = scaleToPlutonian(obj.data);
-        let scaled = plutonianScene.setPlanetScale(obj.data);
-
-        let texDir = dir + '/textures/';
-        let models = obj.data.models;
-
-        if(isString(models.gltf)) {
-
-        } else if(isString(models.aliasObj)) {
-
-        } else if(isObject(models.default)) {
-
-            let mod = models.default;
-
-            if(isString(mod.surface)) {
-
-                console.log(obj.name + ' texture:' + dir + '/textures/' + mod.surface)
-
-                mesh = BABYLON.MeshBuilder.CreateSphere(obj.key, {diameter:scaled.diameter, segments: 32}, scene);
-                
-                // TODO: stars are set via setPosition()
-                // TODO: planets are set via translation to their distance.
-                // TODO: need to modify position calculations from planetary computations so they are local
-                // TODO: set local coordinates
-
-                // TODO: this gets planets orbiting stars
-                // TODO: need to change!
-                mesh.setPositionWithLocalVector(new BABYLON.Vector3(scaled.distance, 0, 0));
+            // TODO: stars are set via setPosition()
+            // TODO: planets are set via translation to their distance.
+            // TODO: need to modify position calculations from planetary computations so they are local
+            // TODO: set local coordinates
+            // TODO: this gets planets orbiting stars, moons orbiting planets
+            // TODO: need to change!
+            mesh.setPositionWithLocalVector(new BABYLON.Vector3(scaled.distance, 0, 0));
                 ////////////////////setPosition(data, mesh.position, 1); 
 
-                // material
-                mesh.material = new BABYLON.StandardMaterial(obj.key + 'Mat', scene);
-                let mat = mesh.material;
+            // material
+            mesh.material = new BABYLON.StandardMaterial(pObj.key + 'Mat', scene);
+            let mat = mesh.material;
 
-                // check if emissive, since Stars may use this model
-                if (mod.emissive) {
+            // check if emissive, since Stars may use this model
+            if (model.emissive) {
 
-                    //mesh.freezeNormals(); // TODO: may be useful
+                //mesh.freezeNormals(); // TODO: may be useful for emissive objects
 
-                    // add a light, centered in the mesh
-                    const light = new BABYLON.PointLight(obj.name + 'Light', mesh.getAbsolutePosition(), scene);
-                    light.position = new BABYLON.Vector3(0, 0, 0);
-                    light.parent = mesh;
+                // add a light, centered in the mesh
+                const light = new BABYLON.PointLight(pObj.name + 'Light', mesh.getAbsolutePosition(), scene);
+                light.position = new BABYLON.Vector3(0, 0, 0);
+                light.parent = mesh;
 
-                    // add an emissive texture
-                    mat.emissiveTexture = new BABYLON.Texture(texDir + mod.surface, scene, true, false);
+                // add an emissive texture
+                mat.emissiveTexture = new BABYLON.Texture(texDir + model.surface, scene, true, false);
 
-                    // set colors
-                    if(obj.data.color) {
+                // set colors, emissive
+                if(data.color) {
 
-                        var c = plutonianScene.getColor(obj.data.color);
+                    var c = this.getColor(data.color);
 
-                        if(c) {
-                            mat.diffuseColor = c.clone();
-                            //mat.specularColor = c.clone();
+                    if(c) {
+                        mat.diffuseColor = c.clone();
+                        //mat.specularColor = c.clone();
 
-                        } else {
-                            mat.diffuseColor = new BABYLON.Color3(1, 1, 1);
-                        }
-
-                    } else { // not emissive
-                        mat.diffuseColor = new BABYLON.Color3(0, 0, 0);
-                    }
-
-                    // No specular for emissive objects
-                    mat.specularColor = new BABYLON.Color3(0, 0, 0);
-
-                    //https://doc.babylonjs.com/how_to/glow_layer
-                    var options = { 
-                        mainTextureRatio: 0.1,
-                        //mainTextureFixedSize: 256,
-                        blurKernelSize: 100
-                    };
-                    var gl = new BABYLON.GlowLayer('glow', scene, options);
-                    gl.intensity = 5;
-                    mat.emissiveColor = new BABYLON.Color3(0.678, 0.556, 0.423);
-                    gl.addIncludedOnlyMesh(mesh);
-
-                } else { // non-emissive
-
-                    mat.diffuseTexture = new BABYLON.Texture(texDir + mod.surface, scene);
-
-                    // specular value
-                    if(isNumber(mod.specular)) {
-                        mat.specularColor = new BABYLON.Color3(mod.specular, mod.specular, mod.specular)
                     } else {
-                        mat.specularColor = new BABYLON.Color3(0.5, 0.5, 0.5)
+                        mat.diffuseColor = new BABYLON.Color3(1, 1, 1);
                     }
 
+                } else { // not emissive
+                    mat.diffuseColor = new BABYLON.Color3(0, 0, 0);
                 }
 
-/*
-                    // highlight layer (also good for backlit atmosphere)
-                    // https://doc.babylonjs.com/how_to/highlight_layer
-                        var options = {
-                        alphaBlendingMode: 2,  // must be two
-                        blurHorizontalSize: 1, // horiz and vertical 1:1 for smooth glow
-                        blurTextureSizeRatio: 0.1, // make smaller to get extended glow
-                        blurVerticalSize: 1,
-                        mainTextureRatio: 0.9
-                    };
-                    var hl = new BABYLON.HighlightLayer("hg", scene, options);
-                    hl.innerGlow = false;
-                    hl.addMesh(mesh, new BABYLON.Color3(.9, .9, .9))
+                // No specular for emissive objects
+                mat.specularColor = new BABYLON.Color3(0, 0, 0);
 
-*/
+                //https://doc.babylonjs.com/how_to/glow_layer
+                var options = { 
+                    mainTextureRatio: 0.1,
+                    //mainTextureFixedSize: 256,
+                    blurKernelSize: 100
+                };
+                var gl = new BABYLON.GlowLayer('glow', scene, options);
+                gl.intensity = 5;
+                mat.emissiveColor = new BABYLON.Color3(0.678, 0.556, 0.423);
+                gl.addIncludedOnlyMesh(mesh);
 
-            // Axial tilt
+            } else { // non-emissive
 
-            // Runs every frame to rotate the sphere
+                mat.diffuseTexture = new BABYLON.Texture(texDir + model.surface, scene);
+
+                // specular value
+                if(isNumber(model.specular)) {
+                    mat.specularColor = new BABYLON.Color3(model.specular, model.specular, model.specular)
+                } else {
+                    mat.specularColor = new BABYLON.Color3(0.5, 0.5, 0.5)
+                }
+
+            } // end of non-emissive
+
+        } else if(model.gltf) {
+            
+            //load a gltf file
+
+        } else if(model.alias) {
+
+            // load an .alias wavefront file
+
+        }
+
+        // Runs every frame to rotate the sphere
+        if(mesh) {
+
+            // TODO: Axial tilt
+
+            // planet rotation
             scene.onBeforeRenderObservable.add(()=>{
                 mesh.rotation.y += 0.0001*scene.getEngine().getDeltaTime();
                 //mesh.rotation.x += 0.0001*scene.getEngine().getDeltaTime();
             });
 
-            }
-        } else {
-                console.error("No model for:" + obj.name);
         }
 
-    }
+        return mesh;
 
-    return mesh;
-};
+    };
 
-/** 
- * set user interactions for camera (non-VR)
- * @param {Mesh} mesh
- */
-var setPlanetActions = function (mesh) {
-    mesh.actionManager
-    .registerAction(
-        new BABYLON.InterpolateValueAction(
-            BABYLON.ActionManager.OnPickTrigger,
-            light,
-            'diffuse',
-            BABYLON.Color3.Black(),
-            1000
-        )
-    )
-    .then(
-        new BABYLON.SetValueAction(
-            BABYLON.ActionManager.NothingTrigger,
-            mesh.material,
-            'wireframe',
-            false
-        )
-    );
-}
+    /**
+     * load a (natural) moon of a planet
+     */
+    PWorld.prototype.loadMoon = function (pObj, dir, scene, parent) {
+        
+        let util = this.util;
+        let mesh = this.loadPlanetModel(pObj, dir + '/' + pObj.dname, scene, pObj);
 
-/**
- * Load human-created artifacts in space or attached to planet (might have multiple meshes)
- * @param {Object} artifact 
- * @param {Object} parent 
- */
-var loadArtifact = function (artifact, dir, parent) {
+        if(mesh) {
 
-    if(isObject(artifact)) {
-
-    }
-
-}; // end of loadArtifact
-
-/**
- * Load a Moon of a Planet
- * @param {ObjectJSON} moon 
- * @param {String} dir  
- * @param {Mesh} parent 
- */
-var loadMoon = function (moon, dir, scene, parent) {
-
-    var mesh = null;
-
-    if(isObject(moon)) {
-        if(plutonianScene.checkObject(moon)) {
-            mesh = loadPlanetModel(moon, dir + '/' + moon.dname, scene, moon);
             if(parent) {
                 mesh.parent = parent;
             }
 
+            // set additional features of moons not shared by planets (e.g. planet glow on dark side)
+
+            // load submoons
+            if(util.isArray(pObj.moons)) {
+                for(let i = 0; i< pObj.moons.length; i++) {
+                    this.loadMoon(pObj.moons[i], dir + '/' + pObj.dname + '/moons', scene, mesh);
+                }
+            }
+
+            // load artifacts
+            if(util.isArray(pObj.artifacts)) {
+                for(let i = 0; i< pObj.artifacts.length; i++) {
+                    this.loadArtifacts(pObj.artifacts[i], dir + '/' + pObj.dname + '/artifacts', scene, mesh);
+                }
+            }
         }
 
-        // A moon of a moon supported by type 'moon'
+        return mesh;
 
-    }
-    return mesh;
+    };
 
-}; // end of loadMoon
+    PWorld.prototype.loadPlanet = function (pObj, dir, scene, parent) {
 
-/**
- * Load a Planet of a Star, Galaxy, or universe
- * @param {ObjectJSON} planet
- * @param {String} dir 
- * @param {Mesh} parent 
- */
-var loadPlanet = function (planet, dir, scene, parent) {
+        let util = this.util;
+        
+        let mesh = this.loadPlanetModel(pObj, dir + '/' + pObj.dname, scene, parent);
 
-    var mesh = null;
+        if(mesh) {
 
-    if(isObject(planet)) {
-
-        // draw the planet (apart from its moons)
-        if(plutonianScene.checkObject(planet)) {
-            mesh = loadPlanetModel(planet, dir + '/' + planet.dname, scene, parent);
             if(parent) {
                 mesh.parent = parent; //only for perfectly circular orbits, or dynamic radius computation
             }
-        }
 
-        // draw the moons
+            // set additional features of planets
 
-        if(Array.isArray(planet.moons)) {
-            for(let i = 0; i< planet.moons.length; i++) {
-                loadMoon(planet.moons[i], dir + '/' + planet.dname + '/moons', scene, mesh);
+            // draw the moons
+
+            if(util.isArray(pObj.moons)) {
+                for(let i = 0; i< pObj.moons.length; i++) {
+                    this.loadMoon(pObj.moons[i], dir + '/' + pObj.dname + '/moons', scene, mesh);
+                }
             }
+
         }
-    }
-    return mesh;
 
-}; // end of loadPlanet
+        return mesh;
 
-/**
- * Load a Star of a StarSystem, Galaxy or universe
- * @param {ObjectJSON} star 
- * @param {String} dir 
- * @param {Mesh} parent 
- */
-var loadStar = function (star, dir, scene, parent) {
+    };
 
-    var mesh = null;
+    PWorld.prototype.loadStar = function (pObj, dir, scene) {
 
-    if(isObject(star)) {
+        let util = this.util;
 
         // draw the star (apart from planets, etc)
-        mesh = loadPlanetModel(star, dir + '/' + star.dname, scene, parent);
+        let mesh = this.loadPlanetModel(pObj, dir + '/' + pObj.dname, scene);
+
         if(mesh) {
-            // NOTE: we don't make the parent (planetary system) a drawing parent
-            // NOTE:since we will hide the planets if we hide its mesh
-            //mesh.parent = parent;
-            console.log("Setting parent for star:" + star.name)
-        }
 
-        // draw the planets, comets, asteroids
+            // NOTE: don't set the Star parent
 
-        if(Array.isArray(star.planets)) {
-            for(let i = 0; i< star.planets.length; i++) {
-                loadPlanet(star.planets[i], dir + '/' + star.dname +  '/planets', scene, mesh);
+            // draw the planets, comets, asteroids
+
+            if(util.isArray(pObj.planets)) {
+                for(let i = 0; i< pObj.planets.length; i++) {
+                    this.loadPlanet(pObj.planets[i], dir + '/' + pObj.dname +  '/planets', scene, mesh);
+                }
             }
+
         }
 
-    }
-    return mesh;
+        return mesh;
 
-}; // end of loadStar
+    };
 
-/**
- * Load a StarSystem
- * @param {ObjectJSON} starSystem 
- * @param {String} dir  
- * @param {Mesh} parent 
- */
-var loadStarSystem = function (starSystem, dir, scene, parent) {
+    PWorld.prototype.loadStarSystem = function (pObj, dir, scene, parent) {
 
-    var mesh = null;
+        let util = this.util;
 
-    // draw the star system (apart from stars, planets, moons)
+        console.log("STAR SYSTEM DIR:" + dir)
 
-    if(isObject(starSystem)) {
+        let mesh = this.loadSpaceVolume(pObj, dir, scene);
 
-        // draw the star system (apart from its stars)
-        // default is an invisible sphere
-        mesh = plutonianScene.loadSpaceVolume(starSystem, dir, scene);
-        // we don't make this a render parent, otherwise, it remains stationary to the viewer
-        //mesh.parent = parent;
+        if(mesh) {
 
-        // draw the stars
-
-        if(Array.isArray(starSystem.stars)) {
-            for(let i = 0; i< starSystem.stars.length; i++) {
-                loadStar(starSystem.stars[i], dir + '/' + starSystem.dname + '/stars', scene, mesh);
+            if(util.isArray(pObj.stars)) {
+                for(let i = 0; i< pObj.stars.length; i++) {
+                    this.loadStar(pObj.stars[i], dir + '/' + pObj.dname + '/stars', scene, mesh);
+                }
             }
+
         }
 
-    }
-    return mesh;
+        return mesh;
 
-}; // end of loadStarSystem
+    };
 
-/**
- * Load of a Galaxy or universe
- * @param {ObjectJSON} nebula 
- * @param {String} dir  
- * @param {Mesh} parent 
- */
-var loadNebula = function (nebula, dir, scene, parent) {
+    PWorld.prototype.loadNebula = function(pObj, dir, scene) {
 
-    if(isObject(nebula)) {
+        let util = this.util;
 
-        // draw the nebula
+        // draw the star (apart from planets, etc)
+        let mesh = this.loadCloudModel(pObj, dir + '/' + pObj.dname, scene);
 
-    }
+        if(mesh) {
 
-}; // end of LoadNebula
-
-/**
- * Load a Galaxy of the universe
- * @param {ObjectJSON} galaxy 
- * @param {String} dir  
- * @param {Mesh} parent 
- */
-var loadGalaxy = function (galaxy, dir, scene, parent) {
-
-    console.log("------------------------------");
-    console.log('creating galaxy:' + galaxy.name)
-
-    var mesh = null;
-
-    if(isObject(galaxy)) {
-
-       // TODO: WARN ON WRONG UNIVERSE SIZE
-
-        if(parent && parent.data && parent.data.diameter <= galaxy.data.diameter) {
-                console.warn('WARNING: universe smaller than galaxy');
         }
+
+        return mesh;
+
+
+    };
+
+    PWorld.prototype.loadGalaxy = function (pObj, dir, scene, parent) {
+
+        console.log("------------------------------");
+        console.log('creating galaxy:' + pObj.name)
+
+        let util = this.util;
 
         // draw the galaxy model as an infinite cubemap
         //mesh = loadSkyBox(galaxy, dir, scene);
-        mesh = plutonianScene.loadSkybox(galaxy, dir, scene);
+        let meshSky = this.loadSkybox(pObj, dir, scene);
+
+        /*
+         * 1. The mesh parent is a empty space, outside the Skybox
+         * 2. The Skybox is present for each galaxy
+         * 3. Not drawn, but needed for children
+         * 3. Since the Skybox is projected to infinity, we need a SECOND mesh
+         *    otherwise, children inherit projection to infinity
+         */
+        mesh = this.loadSpaceVolume(pObj, dir, scene);
 
         /*
         if(mesh) {
@@ -1067,164 +944,227 @@ var loadGalaxy = function (galaxy, dir, scene, parent) {
             }
         }
         */
-
-        /*
-         * 1. The mesh parent is a empty space, not drawn
-         * 2. The skybox is present for each galaxy
-         * 3. Since this is projected to infinity, we need a SECOND mesh
-         *    otherwise, children inherit projection to infinity
-         */
-        mesh = plutonianScene.loadSpaceVolume(galaxy, dir, scene);
-
         // hide for now
 
         if(mesh) {
-            plutonianScene.toggleMeshActivation(mesh);
-            //console.log("galaxy " + galaxy.name + " position:" + mesh.position.x + " y:" + mesh.position.y + " z:" + mesh.position.z);
+
+            this.toggleMeshActivation(mesh);
+
             mesh.parent = parent;
-        }
 
-        //toggleMesh(mesh)
+            // we DO NOT set the universe as the parent for the galaxy
+            // mesh.parent = parent;
 
-        // we DO NOT set the universe as the parent for the galaxy
-        // mesh.parent = parent;
-
-        if(Array.isArray(galaxy.globular_clusters)) {
-        }
-
-        if(Array.isArray(galaxy.open_clusters)) {
-        }
-
-        if(Array.isArray(galaxy.nebula)) {
-            for(let i = 0; i< galaxy.nebula.length; i++) {
-                loadNebula(galaxy.nebula[i], dir + '/nebula', scene, mesh);
-            }
-        }
-
-        if(Array.isArray(galaxy.stardomes)) {
-            for (let i = 0; i < galaxy.stardomes.length; i++) {
-                plutonianScene.loadStarDome(galaxy.stardomes[i], dir + '/stardomes', scene, mesh);
-            }
-        }
-
-        if(Array.isArray(galaxy.star_systems)) {
-            for(let i = 0; i< galaxy.star_systems.length; i++) {
-                loadStarSystem(galaxy.star_systems[i], dir + '/star_systems', scene, mesh);
-            }
-        }
-
-    }
-    return mesh;
-
-}; // end of loadGalaxy
-
-var loadDarkMatter = function (darkMatter, dir, scene, parent) {
-
-}; // end of loadDarkMatter
-
-/**
- * Load the world description from a JSON object
- * @param {Object JSON} world
- */
-var loadWorld = async function(world, scene) {
-
-    console.log("------------------------------");
-    console.log('creating world:' + world.name)
-
-    dir = worldDir;
-
-    // convert 1 unit = 1 parset
-    world.data.diameter *= dParsecUnits;
-
-    var mesh = plutonianScene.loadSpaceVolume(world, dir, scene);
-
-    // hide the universe, we only view from inside a galaxy
-    plutonianScene.toggleMeshActivation(mesh);
-
-    // Create objects in the universe
-
-    if(world) { // valid world
-
-        if(world.dark_matter) {
-            if(Array.isArray(world.dark_matter)) {
-                for(let i = 0; i < world.dark_matter.length; i++) {
-                    loadDarkMatter(world.dark_matter[i], dir + '/' + world.dname, scene, mesh);
+            if(this.util.isArray(pObj.globular_clusters)) {
+                for(let i = 0; i< pObj.globular_clusters.length; i++) {
+                    this.loadStarDome(pObj.globular_clusters[i], dir + '/globular_clusters', scene, mesh);
                 }
             }
-        } //obj.dark_matter
 
-        if(world.galaxies) {
-            if(Array.isArray(world.galaxies)) {
-                for(let i = 0; i < world.galaxies.length; i++) { // loop through galaxy array
-                    loadGalaxy(world.galaxies[i], dir + '/' + world.dname, scene, mesh);
+            if(this.util.isArray(pObj.open_clusters)) {
+                for(let i = 0; i< pObj.open_clusters.length; i++) {
+                    this.loadSpaceVolume(pObj.open_clusters[i], dir + '/open_clusters', scene, mesh);
+                }
+            }
+
+            if(this.util.isArray(pObj.nebula)) {
+                for(let i = 0; i< pObj.nebula.length; i++) {
+                    this.loadNebula(pObj.nebula[i], dir + '/nebula', scene, mesh);
+                }
+            }
+
+            if(this.util.isArray(pObj.stardomes)) {
+                for (let i = 0; i < pObj.stardomes.length; i++) {
+                    this.loadStarDome(pObj.stardomes[i], dir + '/stardomes', scene, mesh);
+                }
+            }
+
+            if(this.util.isArray(pObj.star_systems)) {
+                for(let i = 0; i< pObj.star_systems.length; i++) {
+                    this.loadStarSystem(pObj.star_systems[i], dir + '/star_systems', scene, mesh);
+                }
+            }
+
+        }
+
+        return mesh;
+
+    };
+
+    PWorld.prototype.loadDarkMatter = function (pObj, dir, scene) {
+
+    };
+
+    PWorld.prototype.loadArtifact = function (pObj) {
+
+    };
+
+
+    /**
+    * Check to see if the world can be parsed.
+    * @param {Object} world 
+    */
+    PWorld.prototype.checkWorld = function (pObj) {
+        return true;
+    };
+
+    PWorld.prototype.loadWorld = async function (pObj, scene) {
+
+        console.log("------------------------------");
+        console.log('creating world:' + pObj.name)
+
+        let util = this.util;
+
+        if(!this.checkWorld(pObj)) {
+            console.error('loadWorld ERROR: no World object');
+            return mesh;
+        }
+
+        dir = this.worldDir;
+
+        // convert 1 unit = 1 parsec
+        //////////////world.data.diameter *= dParsecUnits; //////////////////////////////////////////////////
+
+        let mesh = this.loadSpaceVolume(pObj, dir, scene);
+
+        // Create objects in the universe
+
+        if(mesh) { // valid world
+
+            // hide the universe, we only view the world from inside a galaxy
+            this.toggleMeshActivation(mesh);
+
+            if(Array.isArray(pObj.dark_matter)) {
+                for(let i = 0; i < pObj.dark_matter.length; i++) {
+                    this.loadDarkMatter(pObj.dark_matter[i], dir + '/' + pObj.dname, scene, mesh);
+                }
+            }
+
+            if(Array.isArray(pObj.galaxies)) {
+                for(let i = 0; i < pObj.galaxies.length; i++) { // loop through galaxy array
+                    this.loadGalaxy(pObj.galaxies[i], dir + '/' + pObj.dname, scene, mesh);
                 } // loop through galaxies
-            } 
-        } // obj.galaxies
+            }
 
-    } else {
-        console.error("Failed to load world information")
-    }
+        } 
 
-    return mesh;
-};
+    };
 
-/**
- * Check to see if the world can be parsed.
- * @param {Object} world 
- */
-var isValidWorld = function (world) {
-    return true;
-};
+    PWorld.prototype.createAssets = async function (scene) {
 
-/**
- * Create the scene with all objects from the top-level JSON file.
- * Initialize WebXR.
- * @param {Engine} engine 
- * @param {HTMLCanvasElement} canvas 
- */
-var createScene = async function (engine, canvas) {
+        var loadedAssets = {};
+        var pWorld = this;
 
-    // This creates a basic Babylon Scene object (non-mesh)
-    var scene = new BABYLON.Scene(engine);
+        // Begin loading assets
+        var assetManager = new BABYLON.AssetsManager(scene);
 
-    // TODO: Optimizations
-    // https://doc.babylonjs.com/how_to/how_to_use_sceneoptimizer
+        var loadJSON = assetManager.addTextFileTask('planets', 'worlds/worlds.json');
 
-    // TODO: follow camera
-    // https://doc.babylonjs.com/babylon101/cameras
+        loadJSON.onSuccess = function(world) {
 
-    // This creates and positions a free camera (non-mesh)
-    var camera = new BABYLON.FreeCamera('camera1', new BABYLON.Vector3(0, 0, 19), scene);
+            console.log('World file loaded, validating...');
 
-    camera.maxZ = dUSize * dParsecUnits; // constant, size of skybox for visible universe
-    //camera.minZ = 0.1;
+            try {
 
-    // This targets the camera to scene origin
-    camera.setTarget(BABYLON.Vector3.Zero());
+                // try to parse the world data
+                loadJSON.world = JSON.parse(world.text);
 
-    // This attaches the camera to the canvas
-    camera.attachControl(canvas, true);
+                // if parsed successfully, return JSON object describing the world
+                loadedAssets.world = loadJSON.world;
 
-    // TODO: set up controllers
-    // https://doc.babylonjs.com/how_to/webxr_controllers_support
+                // check if world can actually be loaded
+                if(pWorld.checkWorld(loadJSON.world)) {
 
-    /*
-     * Set up VR support
-     * Also see https://doc.babylonjs.com/playground/?code=customButtons
-     */
+                    let world = pWorld.loadWorld(loadJSON.world, scene).then((mesh) => {
+                    console.log("Worlds are loaded...")
+                    });
+
+                } // isValidWorld check
+
+            } catch (e) {
+
+                if (e instanceof SyntaxError) {
+
+                    printError(e, true);
+
+                } else {
+
+                    printError(e, false);
+
+                }
+            }
+
+        }; // on success loading world
+
+        // called when all tasks are done
+        assetManager.onTasksDoneObservable.add(function(tasks) {
+            console.log('onTasksDoneObservable DONE');
+            var errors = tasks.filter(function(task) {return task.taskState === BABYLON.AssetTaskState.ERROR});
+            var successes = tasks.filter(function(task) {return task.taskState !== BABYLON.AssetTaskState.ERROR});
+        });
+
+        // called when error is done
+        assetManager.onTaskErrorObservable.add((task) => {
+            console.log("onTaskErrorObservable ERROR:" + task.errorObject.message);
+        });
+
+        // TODO: shift rendering here?????????????????????????????
+        assetManager.onFinish = function(tasks) {
+            console.log('onFinish DONE')
+            //engine.runRenderLoop(function() {
+            //    scene.render();
+           // });
+        };
+
+        assetManager.load();
+
+        return loadedAssets;
+
+    };
+
+    PWorld.prototype.createScene = async function (engine, canvas) {
+
+        // This creates a basic Babylon Scene object (non-mesh)
+        var scene = new BABYLON.Scene(engine);
+
+        // TODO: Optimizations
+        // https://doc.babylonjs.com/how_to/how_to_use_sceneoptimizer
+
+        // TODO: follow camera
+        // https://doc.babylonjs.com/babylon101/cameras
+
+        // This creates and positions a free camera (non-mesh)
+        var camera = new BABYLON.FreeCamera('camera1', new BABYLON.Vector3(0, 0, 19), scene);
+
+        camera.maxZ = this.dUSize * dParsecUnits; // constant, size of skybox for visible universe
+        //camera.minZ = 0.1;
+
+        // This targets the camera to scene origin
+        camera.setTarget(BABYLON.Vector3.Zero());
+
+        // This attaches the camera to the canvas
+        camera.attachControl(canvas, true);
+
+        // TODO: set up controllers for Desktop and VR
+        // https://doc.babylonjs.com/how_to/webxr_controllers_support
+
+        /*
+         * Set up VR support
+         * Also see https://doc.babylonjs.com/playground/?code=customButtons
+         */
 
 
-    // TODO: not used yet. Check when API exposes it.
-    var HMDXRButton = document.getElementsByClassName('xr-toggle.button')[0];
+        // TODO: not used yet. Check when API exposes it.
+        var HMDXRButton = document.getElementsByClassName('xr-toggle.button')[0];
 
-    var xrHelperOptions = {
+        var xrHelperOptions = {
         //floorMeshes: [environment.ground],
         //disableDefaultUI : true
         createDeviceOrientationCamera: false
-    };
+        };
 
-    // XR
-    var xrHelper = await scene.createDefaultXRExperienceAsync(xrHelperOptions).then(helper => {
+        // XR
+        var xrHelper = await scene.createDefaultXRExperienceAsync(xrHelperOptions).then(helper => {
 
             helper.baseExperience.onStateChangedObservable.add((state) => {
                 switch(state) {
@@ -1250,82 +1190,19 @@ var createScene = async function (engine, canvas) {
 
         });
 
-    return scene;
-};
+        return scene;
 
-/**
- * Load world assets asynchronously from ./assets directory
- * @param {Scene} scene 
- */
-var createAssets = async function (scene) {
-
-    var loadedAssets = {};
-
-    // Begin loading assets
-    var assetManager = new BABYLON.AssetsManager(scene);
-
-    var loadJSON = assetManager.addTextFileTask('planets', 'worlds/worlds.json');
-
-    loadJSON.onSuccess = function(world) {
-
-        console.log('World file loaded, validating...');
-
-        try {
-
-            // try to parse the world data
-            loadJSON.world = JSON.parse(world.text);
-
-            // if parsed successfully, return JSON object describing the world
-            loadedAssets.world = loadJSON.world;
-
-            // check if world can actually be loaded
-            if(isValidWorld(loadJSON.world)) {
-
-                let world = loadWorld(loadJSON.world, scene).then((mesh) => {
-                    console.log("Worlds are loaded...")
-                });
-
-            } // isValidWorld check
-
-        } catch (e) {
-
-            if (e instanceof SyntaxError) {
-
-                printError(e, true);
-
-            } else {
-
-                printError(e, false);
-
-            }
-        }
-
-    }; // on success loading world
-
-    // called when all tasks are done
-    assetManager.onTasksDoneObservable.add(function(tasks) {
-        console.log('onTasksDoneObservable DONE');
-        var errors = tasks.filter(function(task) {return task.taskState === BABYLON.AssetTaskState.ERROR});
-        var successes = tasks.filter(function(task) {return task.taskState !== BABYLON.AssetTaskState.ERROR});
-    });
-
-    // called when error is done
-    assetManager.onTaskErrorObservable.add((task) => {
-        console.log("onTaskErrorObservable ERROR:" + task.errorObject.message);
-    });
-
-    // TODO: shift rendering here?????????????????????????????
-    assetManager.onFinish = function(tasks) {
-        console.log('onFinish DONE')
-        //engine.runRenderLoop(function() {
-        //    scene.render();
-       // });
     };
 
-    assetManager.load();
+   // return the world object
 
-    return loadedAssets;
-};
+   return PWorld;
+
+}());
+
+
+// create the scene object
+var plutonianWorld = new PWorld();
 
 /**
  * Fire loading
@@ -1333,8 +1210,13 @@ var createAssets = async function (scene) {
 
 try {
 
+    // Initialize <canvas>, attach as rendering surface
+    //var canvas = document.getElementsByClassName('render-xr-canvas')[0];
+
+    let c = plutonianWorld.setup.getCanvas();
+
     // create rendering engine
-    var engine = createDefaultEngine(canvas);
+    var engine = plutonianWorld.setup.createDefaultEngine(c);
 
     // initialize loader UI
     engine.loadingScreen = new customLoadingScreen('scene-loader-wrapper', 'scene-loader-dialog');
@@ -1343,15 +1225,17 @@ try {
     engine.loadingScreen.displayLoadingUI();
 
     // create the scene (async)
-    scene = createScene(engine, canvas).then(returnedScene => { 
+    var s = plutonianWorld.createScene(engine, c).then(returnedScene => { 
+
+        // keep a local copy
+        plutonianWorld.scene = returnedScene;
 
         returnedScene.getEngine().loadingScreen.hideLoadingUI();
 
         // load assets into the scene
-        var assets = createAssets(returnedScene).then(returnedAssets => {
+        var assets = plutonianWorld.createAssets(returnedScene).then(returnedAssets => {
 
             console.log('in .then for createAssets()');
-
 
             // Make some items pickable
             returnedScene.onPointerDown = function (evt) {
@@ -1384,18 +1268,19 @@ try {
 
             };
 
-        });
+        }); // end of createAssets()
 
-        sceneToRender = returnedScene; 
+        //sceneToRender = returnedScene;
+            // set up endless render loop
+        engine.runRenderLoop(function () {
+            if (returnedScene) {
+                returnedScene.render();
+            }
 
-    });
+        }); // end of rendering loop
 
-    // set up endless render loop
-    engine.runRenderLoop(function () {
-        if (sceneToRender) {
-            sceneToRender.render();
-        }
-    });
+    }); // end of createScene()
+
 
 } catch (e) {
 

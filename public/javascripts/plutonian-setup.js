@@ -6,6 +6,7 @@ var PSetup = (function() {
 
         this.util   = util;
         this.canvas = this.getCanvas() || null;
+        this.engine = null;
 
         // TODO: initialize engine here
 
@@ -23,30 +24,31 @@ var PSetup = (function() {
             msg = fallbackMessage;
         }
 
-    // write an epic fail to the HTML page.
-    var body = document.getElementsByTagName('body')[0];
-    fail = document.createElement('div');
-    fail.setAttribute('id', 'fail');
-    //fail.style.display = 'table-cell;';
-    fail.style.position = 'absolute';
-    fail.style.width = '400px';
-    fail.style.height = '100px';
-    fail.style.top  = ((window.innerHeight/2) - parseInt(fail.style.height)/2) + 'px';
-    fail.style.left = ((window.innerWidth/2) - parseInt(fail.style.width)/2) + 'px';
-    fail.style.padding = '4px 10px 10px 4px';
-    fail.style.borderRadius = '4px';
-    fail.style.display = 'flex';
-    fail.style.margin = 'auto';
-    fail.style.alignItems = 'center';
-    fail.style.justifyContent = 'center';
-    fail.style.textAlign = 'center';
-    fail.style.border = '1px solid white';
-    fail.style.zIndex = 1000;
-    fail.style.backgroundColor = 'rgba(255,255,255, 0.8)';
+        // write an epic fail to the HTML page.
+        var body = document.getElementsByTagName('body')[0];
+        fail = document.createElement('div');
+        fail.setAttribute('id', 'fail');
+        //fail.style.display = 'table-cell;';
+        fail.style.position = 'absolute';
+        fail.style.width = '400px';
+        fail.style.height = '100px';
+        fail.style.top  = ((window.innerHeight/2) - parseInt(fail.style.height)/2) + 'px';
+        fail.style.left = ((window.innerWidth/2) - parseInt(fail.style.width)/2) + 'px';
+        fail.style.padding = '4px 10px 10px 4px';
+        fail.style.borderRadius = '4px';
+        fail.style.display = 'flex';
+        fail.style.margin = 'auto';
+        fail.style.alignItems = 'center';
+        fail.style.justifyContent = 'center';
+        fail.style.textAlign = 'center';
+        fail.style.border = '1px solid white';
+        fail.style.zIndex = 1000;
+        fail.style.backgroundColor = 'rgba(255,255,255, 0.8)';
 
-    //put on screen
-    fail.innerHTML = '<p>' + msg + '</p>';
-    body.appendChild(fail);
+        //put on screen
+        fail.innerHTML = '<p>' + msg + '</p>';
+        body.appendChild(fail);
+
     };
 
     PSetup.prototype.fallback2D = function (canvas, fallbackMessage) {
@@ -111,9 +113,10 @@ var PSetup = (function() {
         return canvas;
     };
 
-    PSetup.prototype.createDefaultEngine = function (canvas) {
+    PSetup.prototype.createDefaultEngine = function () {
 
-        let engine = null;
+        let canvas = this.canvas; // initialized in constructor
+        let engine = this.engine = null;
 
         try {
 
@@ -216,12 +219,12 @@ var fallback2d = function(canvas, fallbackMessage) {
  * Connect Babylon to rendering canvas
  * @param {HTMLCanvas} canvas
  */
-var createDefaultEngine = function(canvas) { 
-    var engine = new BABYLON.Engine(canvas, true, { preserveDrawingBuffer: true, stencil: true });
+var createDefaultEngine = function(canvas) {
 
-    /**
-     * Init the engine and scene
-     */
+    if(!engine) {
+        engine = new BABYLON.Engine(canvas, true, { preserveDrawingBuffer: true, stencil: true });
+    }
+
     try {
 
         // Resize
@@ -237,4 +240,5 @@ var createDefaultEngine = function(canvas) {
     }
 
     return engine;
+
 };
