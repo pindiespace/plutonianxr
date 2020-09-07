@@ -107,6 +107,15 @@ var PUtil = (function () {
     };
 
     /**
+     * Error reporting
+     * @param {Error} error execution error
+     * @param {Boolean} verbose if true
+     */
+    PUtil.prototype.printError = function (error, explicit) {
+        console.log(`[${explicit ? 'Syntax Error (EXPLICIT)' : 'Error (INEXPLICIT)'}] ${error.name}: ${error.message}`);
+    };
+
+    /**
      * mock lags and delays
      */
     PUtil.prototype.sleep = function (ms) {
@@ -150,44 +159,45 @@ function isNumber (value) {
 // NOTE: Array.isArray() is already defined in modern browsers
 
 // NOTE: we don't count arrays as objects
-function isObject (value) {
-    //return ((value && typeof value === 'object') && (value.constructor === Object));
-    return (typeof value === 'object' && !Array.isArray(value) && value !== null);
-};
+//function isObject (value) {
+//    //return ((value && typeof value === 'object') && (value.constructor === Object));
+//    return (typeof value === 'object' && !Array.isArray(value) && value !== null);
+//};
 
-function isBoolean (value) {
-    return value === true || value === false || toString.call(value) === '[object Boolean]';
-};
+//function isBoolean (value) {
+//    return value === true || value === false || toString.call(value) === '[object Boolean]';
+//};
 
-function isNull (value) {
-    return value === null;
-};
+//function isNull (value) {
+//    return value === null;
+//};
 
-function isUndefined (value) {
-    return typeof value === 'undefined';
-};
+///function isUndefined (value) {
+//    return typeof value === 'undefined';
+//};
 
 /**
  * Return radians for (fractional) degrees.
  * @param {Number} n the number, in degrees (0-360).
  * @returns {Number} return the same number, in radians (0-2PI).
  */
-function degToRad( deg ) {
-    return parseFloat( deg ) * Math.PI / 180;
-};
+////function degToRad( deg ) {
+//    return parseFloat( deg ) * Math.PI / 180;
+//};
 
 /** 
  * Returns radians for (fractional) degress.
  * @param {Number} rad
  */
-function radToDeg ( rad ) {
-    return parseFloat( rad ) * 180 / Math.PI;
-}
+//function radToDeg ( rad ) {
+//    return parseFloat( rad ) * 180 / Math.PI;
+//}
 
 /**
  * Returns 0-360 degrees for a 24-hour clock, optionally
  * accurate for minutes and seconds.
  */
+/*
 function hmsToDeg ( hours = 0, minutes = 0, seconds = 0 ) {
 
         let deg = 0;
@@ -203,6 +213,7 @@ function hmsToDeg ( hours = 0, minutes = 0, seconds = 0 ) {
         return ( hours + minutes + seconds );
 
 };
+*/
 
 // augment String
 
@@ -222,7 +233,7 @@ String.prototype.stripLeft = function (charlist) {
 
 // Errors
 
-var printError = function(error, explicit) {
-    console.log(`[${explicit ? 'JSON Syntax Error (EXPLICIT)' : 'JSON Error (INEXPLICIT)'}] ${error.name}: ${error.message}`);
-}
+//var printError = function(error, explicit) {
+//    console.log(`[${explicit ? 'JSON Syntax Error (EXPLICIT)' : 'JSON Error (INEXPLICIT)'}] ${error.name}: ${error.message}`);
+//}
 

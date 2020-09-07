@@ -40,9 +40,6 @@ var PCelestial = (function () {
 
         // Stellar colors (JSON)
         this.hygColors         = []; // full set, in JSON file
-        this.dHygColors        = [];  // one-letter
-        this.dHygAbsMag        = [];
-        this.dHygSpriteIndex   = []; //index for sprite image
 
         // SpriteManager and scene
         this.assetManager = null;
@@ -179,7 +176,7 @@ var PCelestial = (function () {
      * @param {ObjectJSON} star Hyg3 data for a particular star
      * @param {String} name name of star (for error message)
      */
-    PCelestial.prototype.setHygColors = function (star, name = 'unknown') {
+    PCelestial.prototype.getHygColor = function (star, name = 'unknown') {
 
         let c = null;
         let s = star.spect;
@@ -188,20 +185,22 @@ var PCelestial = (function () {
         c = this.hygColors[s];
         if(c) return colors;
 
+        console.log('s is:' + s)
+
         // if an exact match doesn't exist, truncate, e.g. 'M5Ve'...'M5V'...'M5'
-        for (i = s.length - 2; i > 2; i--) {
+        for (i = s.length - 2; i > 1; i--) {
             let t = s.substring(0, i);
+            console.log('t is:' + t)
             c = this.hygColors[s];
             if(c) return c;
         }
 
         // one-letter average default, part of this class
-
-        console.warn('no stellar type found for:' + name);
-        c = this.getDefaultStarColor[s.substring(0,1)];
+        console.log('setting default for:' + s)
+        c = dStarColors[s.substring(0,1).toLowerCase()];
 
         // if everything fails, make it yellow
-        if(!c) c = this.getDefaultStarColor['g'];
+        if(!c) c = dStarColors['g'];
 
         return c;
 
@@ -211,7 +210,7 @@ var PCelestial = (function () {
      * set a readable name for the star
      * @param {ObjectJSON} star Hyg3 data for a particular star
      */
-    PCelestial.prototype.setHygName = function (star) {
+    PCelestial.prototype.getHygName = function (star) {
         let n = star.proper || star.bf;
         if(n.length) return n;
         else if(star.bayer.length && star.con.length) return star.bayer + star.con;
@@ -222,7 +221,7 @@ var PCelestial = (function () {
      * Set the Star position in 3D space
      * @param {ObjectJSON} star Hyg3 data for a particular star
      */
-    PCelestial.prototype.setHygPosition = function (star) {
+    PCelestial.prototype.getHygPosition = function (star) {
 
         //we rotate the coordinate system to BabylonJS coordinates by swapping z and y
         if(star.x) {
@@ -245,16 +244,17 @@ var PCelestial = (function () {
      */
     PCelestial.prototype.loadStarColors = function (assetManager, model, dir) {
 
+        let celestial = this;
         let colors = dir + model.colors;
 
         console.log("------------------------------");
         console.log('loading colors for all stellar types:' + colors)
 
-        const loadColors = assetManager.addTextFileTask(colors.substring(0, colors.lastIndexOf(".")) + '-starcolors', colors);
+        const loadColors = assetManager.addTextFileTask('starcolors', colors);
 
         loadColors.onSuccess = async function (colors) {
             console.log('PCELESTIAL Stellar colors loaded, parsing data...')
-            celestial.setAllStarColors(colors.text);
+            this.hygColors = colors;
         };
 
         loadColors.onTaskError = function (task) {
@@ -270,18 +270,23 @@ var PCelestial = (function () {
      * @param {ObjectJSON} model model parameters and asset files
      * @param {String} dir the directory for model files
      */
-    PCelestial.prototype.loadHygData = function (assetManager, model, dir, scene) {
+    PCelestial.prototype.loadHygData = function (model, dir, scene) {
 
         let celestial = this; // references for callbacks
         let util = this.util; // utilities
+
+        let assetManager = new BABYLON.AssetsManager(scene);
 
         if(!model.hyg) {
             console.error('loadHygData ERROR: invalid hyg data, dir:' + dir + ' file:' + model.hyg);
         }
 
+        // if present, load stellar colors
+        this.loadStarColors(assetManager, model, dir);
+
         // load the Hyg3 database
         let hyg = dir + model.hyg;
-        let loadHYG = assetManager.addTextFileTask(hyg.substring(0, hyg.lastIndexOf(".")) + '-stardome', hyg);
+        let loadHYG = assetManager.addTextFileTask('stardata', hyg);
 
         loadHYG.onSuccess = async function (stars) {
 
@@ -290,7 +295,7 @@ var PCelestial = (function () {
                 console.log('@@@@@@@@@@building stars')
                 if(celestial.checkHygData(stars)) {
                     this.spriteMgr = await celestial.computeHygSprite(stars, dir + 'sprite/textures/' + model.spritesheet, model.size, scene).then((spriteManagerStars) => {
-                    console.log('@@@@@@@@@@@@Hyg stardome loaded');
+                        console.log('@@@@@@@@@@@@Hyg data loaded');
                     });
                 }
 
@@ -301,6 +306,23 @@ var PCelestial = (function () {
         loadHYG.onTaskError = function (task) {
             console.log('task failed', task.errorObject.message, task.errorObject.exception);
         };
+
+        assetManager.onProgress = function(remainingCount, totalCount, lastFinishedTask) {
+                console.log('Loading Hyg database files. ' + remainingCount + ' out of ' + totalCount + ' items still need to be loaded.');
+        };
+
+        assetManager.onFinish = async function(tasks) {
+            window.tasks = tasks;
+            
+            // TODO: attach to object, look for when computing, assume loads have finished
+            //let mgr = await celestial.computeHygSprite(stars, dir + 'sprite/textures/' + model.spritesheet, model.size, scene).then((spriteManagerStars) => {
+            //    cosole.log('COMPUTED Hyg database')
+            //});
+
+            console.log('LOADED Hyg database');
+        };
+
+        assetManager.load();
 
     };
 
@@ -324,6 +346,9 @@ var PCelestial = (function () {
         let spriteSize  = size || this.dSpriteScreenSize; // set for existing scene, environment
         let maxDist     = this.dMaxHygDist / this.dParsecUnits;
         let oDist       = maxDist / 2; // cutoff for very distant stars in Hyg
+        let star        = null;
+        let name        = '';
+        let spect       = null;
         let spriteIndex = 0;
 
         // load a SpriteManager for the Stars
@@ -333,12 +358,23 @@ var PCelestial = (function () {
 
         console.log("@@@@@COMPUTING HygSprite")
 
-        for (let i = 0; i < hygData.length; i++) {
+        //for (let i = 0; i < hygData.length; i++) {
+        for(let i = 0; i < 10; i++) {
 
-            let star = hygData[i];
+            star = hygData[i];
+            name = this.getHygName(star);
+            //console.log("name is:" + name)
+            spect = this.getHygColor(star, star.name);
+            //console.log("spect is:" + spect)
+            //spriteIndex = this.getDefaultSpriteIndex(spect);
+            //console.log("index is:" + spriteIndex)
+
+            
 
 
         }
+
+        console.log("@@@@@@@@@@@@COMPUTED HygSprite")
 
 
         ///////////////////////////////////
@@ -403,6 +439,7 @@ var setHygPosition = function (star, position) {
 var setHygMag = function (star) {
 
     let aMag = star.absmag;
+    let util = this.util;
 
     let sMag = [];
     sMag ['n'] = 0,

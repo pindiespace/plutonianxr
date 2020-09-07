@@ -27,6 +27,7 @@ var PWorld = (function () {
         this.worldDir  =  'worlds';        // inside ExpressJS route '/assets'
 
         this.util = new PUtil();
+
         this.setup = new PSetup(this.util);
         this.celestial = new PCelestial(this.util);
 
@@ -308,8 +309,8 @@ var PWorld = (function () {
             return false;
         }
 
-        let A = degToRad(parseFloat(data.ra) * 15);
-        let B = degToRad(parseFloat(data.dec));
+        let A = util.degToRad(parseFloat(data.ra) * 15);
+        let B = util.degToRad(parseFloat(data.dec));
 
         // Note: we reverse the y and z axes to match the BabylonJS coordinate system
         vec.x = Math.cos(B) * Math.cos(A) * data.distance * units,
@@ -361,8 +362,8 @@ var PWorld = (function () {
             return false;
         }
 
-        let A = degToRad(parseFloat(data.ra) * 15);
-        let B = degToRad(parseFloat(data.dec));
+        let A = util.degToRad(parseFloat(data.ra) * 15);
+        let B = util.degToRad(parseFloat(data.dec));
 
         // Unlike positions, rotations are NOT flipped.
         vec.x = Math.cos(B) * Math.cos(A);
@@ -505,7 +506,7 @@ var PWorld = (function () {
          */
         let bSize = this.dVisSize;
 
-        if(isNumber(data.diameter) && data.diameter > 0) {
+        if(util.isNumber(data.diameter) && data.diameter > 0) {
             bSize = data.diameter * dParsecUnits;
             console.log('skybox for:' + pObj.name + ' using bSize:' + bSize);
         }
@@ -606,14 +607,6 @@ var PWorld = (function () {
 
             let loadHYG = assetManager.addTextFileTask(hyg.substring(0, hyg.lastIndexOf(".")) + '-stardome', hyg);
 
-            assetManager.onProgress = function(remainingCount, totalCount, lastFinishedTask) {
-                console.log('Loading Hyg database files. ' + remainingCount + ' out of ' + totalCount + ' items still need to be loaded.');
-            };
-
-            assetManager.onFinish = function(tasks) {
-                console.log('All done with loading Hyg database');
-            };
-
             loadHYG.onSuccess = async function(stars) {
 
                 loadHYG.stars = JSON.parse(stars.text);
@@ -624,8 +617,17 @@ var PWorld = (function () {
 
             }
 
-            // Load stellar colors
-            this.celestial.loadHygData(assetManager, model, domeDir, scene);
+            assetManager.onProgress = function(remainingCount, totalCount, lastFinishedTask) {
+                console.log('Loading Hyg database files. ' + remainingCount + ' out of ' + totalCount + ' items still need to be loaded.');
+            };
+
+            assetManager.onFinish = function(tasks) {
+                console.log('All done with loading Hyg database');
+            };
+
+
+            // Load Hyg and color data
+            this.celestial.loadHygData(model, domeDir, scene);
 
             assetManager.load();
 
@@ -639,6 +641,9 @@ var PWorld = (function () {
 
     /** 
      * load cloud model for Nebula
+     * @param {ObjectJSON} pObj parent of nebula (galaxy)
+     * @param {String} dir directory for nebula data in assets
+     * @param {BABYLON.Scene} current scene being rendered to
      */
     PWorld.prototype.loadCloudModel = function (pObj, dir, scene) {
 
@@ -647,6 +652,20 @@ var PWorld = (function () {
 
         let util = this.util;
         let mesh = null;
+
+        if(!this.checkObject(pObj)) {
+            console.error('loadCloudModel ERROR: invalid object passed');
+        }
+
+        let data = pObj.data;
+
+        let model = this.getActiveModel(data.models) 
+
+        if(!util.isObject(model)) {
+
+        }
+
+        return mesh;
 
     };
 
@@ -679,7 +698,7 @@ var PWorld = (function () {
 
         // create 'surface' model = just a sphere with 1 texture
 
-        if(isString(model.surface)) {
+        if(util.isString(model.surface)) {
 
             let texDir = dir + '/textures/';
 
@@ -706,7 +725,7 @@ var PWorld = (function () {
             // check if emissive, since Stars may use this model
             if (model.emissive) {
 
-                //mesh.freezeNormals(); // TODO: may be useful for emissive objects
+                mesh.freezeNormals(); // TODO: may be useful for emissive objects
 
                 // add a light, centered in the mesh
                 const light = new BABYLON.PointLight(pObj.name + 'Light', mesh.getAbsolutePosition(), scene);
@@ -752,7 +771,7 @@ var PWorld = (function () {
                 mat.diffuseTexture = new BABYLON.Texture(texDir + model.surface, scene);
 
                 // specular value
-                if(isNumber(model.specular)) {
+                if(util.isNumber(model.specular)) {
                     mat.specularColor = new BABYLON.Color3(model.specular, model.specular, model.specular)
                 } else {
                     mat.specularColor = new BABYLON.Color3(0.5, 0.5, 0.5)
@@ -798,7 +817,9 @@ var PWorld = (function () {
         if(mesh) {
 
             if(parent) {
+
                 mesh.parent = parent;
+
             }
 
             // set additional features of moons not shared by planets (e.g. planet glow on dark side)
@@ -831,7 +852,9 @@ var PWorld = (function () {
         if(mesh) {
 
             if(parent) {
+
                 mesh.parent = parent; //only for perfectly circular orbits, or dynamic radius computation
+
             }
 
             // set additional features of planets
@@ -1054,6 +1077,7 @@ var PWorld = (function () {
 
         var loadedAssets = {};
         var pWorld = this;
+        let util = this.util;
 
         // Begin loading assets
         var assetManager = new BABYLON.AssetsManager(scene);
@@ -1085,11 +1109,11 @@ var PWorld = (function () {
 
                 if (e instanceof SyntaxError) {
 
-                    printError(e, true);
+                    util.printError(e, true);
 
                 } else {
 
-                    printError(e, false);
+                    util.printError(e, false);
 
                 }
             }
@@ -1203,6 +1227,7 @@ var PWorld = (function () {
 
 // create the scene object
 var plutonianWorld = new PWorld();
+
 
 /**
  * Fire loading
