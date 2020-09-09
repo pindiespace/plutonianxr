@@ -70,19 +70,18 @@ var PCelestial = (function () {
         ARTIFACT: 'artifact'
     };
 
-
     // functions
 
     /**
      * Return pObj.data default object
       */
-    PCelestial.prototype.createCelestialData = function (type, diameter = 0, ra = 0, dec = 0, distance = 0) { 
+    PCelestial.prototype.createCelestialData = function (type, diameter = 0, ra = 0, dec = 0, dist = 0) { 
         return {
             'type': type,
             'diameter': diameter,
             'ra': ra,
             'dec': dec,
-            'distance': distance,
+            'dist': dist,
             'barycenter':0,
             'tilt': 0,
             'rotation':0,
@@ -282,7 +281,7 @@ var PCelestial = (function () {
 
         let scaled = {
             diameter: data.diameter,
-            distance: data.distance,
+            dist: data.dist,
             segments: 32
         };
 
@@ -292,7 +291,7 @@ var PCelestial = (function () {
             case t.MOON:
                 // 1 unit = 2370km, Pluto = 2370/2370 = 1.0
                 scaled.diameter /= this.dKmUnits,
-                scaled.distance /= this.dKmUnits;
+                scaled.dist /= this.dKmUnits;
                 break;
 
             case t.BROWN_DWARF:
@@ -302,7 +301,7 @@ var PCelestial = (function () {
             case t.GALAXY:
                 // 1 unit = 1/10 parsec
                 scaled.diameter /= this.dKmUnits,
-                scaled.distance *= this.dParsecUnits;
+                scaled.dist *= this.dParsecUnits;
                 break;
 
             case t.ARTIFACT:
@@ -320,11 +319,76 @@ var PCelestial = (function () {
             console.warn('.scale WARNNG: diameter very small (' + scaled.diameter + ' units');
         }
 
-        if(scaled.distance < 0.01) {
-            console.warn('.scale WARNING: distance very small (' + scaled.distance + ' units')
+        if(scaled.dist < 0.01) {
+            console.warn('.scale WARNING: distance very small (' + scaled.dist + ' units')
         }
 
         return scaled;
+
+    };
+
+    /**
+     * TODO: make color selector that tries
+     * - listed color
+     * - spectral type, if present
+     * TODO: use in celestial and scene alike (merge)
+     * @param {PCelestial.data} data
+     */
+    PCelestial.prototype.color = function (data) {
+
+        let util = this.util;
+
+        if(!util.isObject(data)) {
+            console.error('color ERROR: invalid data object passed:' + typeof data);
+            return null;
+        }
+
+        let color = data.color;
+        let c = null;
+
+        if(!util.isArray(color) || (color.length != 3 && color.length != 4)) {
+
+            // check for spectrum
+            let spec = data.spect;
+
+            if(!util.isString(spec)) {
+                console.error('color ERROR: invalid color array:' + color);
+                return null;
+            }
+
+            // load spect
+            let cv = this.getHygColor(data);
+            
+            if(!c) {
+                console.error('color ERROR: no valid color or spectrum');
+                return null;
+            }
+
+        }
+
+        // at this point, we should have an array with 3 valid colors
+
+        try {
+
+            // handle web versus BabylonJS color units
+            if(color[0] + color[1] + color[2] > 1.0) {
+                color[0] /= 255,
+                color[1] /= 255,
+                color[2] /= 255
+            }
+
+            if(color.length === 3) {
+                c = new BABYLON.Color3(color[0], color[1], color[2]);
+            }
+            else if (color.length === 4) {
+                c = new BABYLON.Color4(color[0], color[1], color[2], color[3]);
+            }
+
+        } catch (e) {
+            cosole.error('color ERROR: could not make a valid color');
+        }
+
+        return c;
 
     };
 

@@ -277,7 +277,7 @@ var PWorld = (function () {
             return false;
         }
 
-        if(!util.isNumber(data.ra) || !util.isNumber(data.dec) || !util.isNumber(data.distance)) {
+        if(!util.isNumber(data.ra) || !util.isNumber(data.dec) || !util.isNumber(data.dist)) {
             console.error('setPositionByRADec ERROR: invalid ra, dec, or distance');
             return false;
         }
@@ -286,9 +286,9 @@ var PWorld = (function () {
         let B = celestial.degToRad(parseFloat(data.dec));
 
         // Note: we reverse the y and z axes to match the BabylonJS coordinate system
-        vec.x = Math.cos(B) * Math.cos(A) * data.distance * units,
-        vec.z = Math.cos(B) * Math.sin(A) * data.distance * units, // was y
-        vec.y = Math.sin(B) * data.distance * units; // was z
+        vec.x = Math.cos(B) * Math.cos(A) * data.dist * units,
+        vec.z = Math.cos(B) * Math.sin(A) * data.dist * units, // was y
+        vec.y = Math.sin(B) * data.dist * units; // was z
 
         return true;
 
@@ -372,11 +372,12 @@ var PWorld = (function () {
         let mesh = null;
 
         if(!this.checkObject(pObj)) {
-            console.error('loadSkybox ERROR: invalid object passed');
+            console.error('loadSpaceVolume ERROR: invalid object passed');
             return mesh;
         }
 
         let util = this.util;
+        let celestial = this.celestial;
         let data = pObj.data;
 
         // all SpaceVolumes are the same, don't need a .model entry
@@ -404,13 +405,21 @@ var PWorld = (function () {
         // create material
         let mat = new BABYLON.StandardMaterial(pObj.key + '-mat', scene);
 
-        // space volumes only have color, not a texture
-        let color = this.getColor(data.color);
+        console.log(">>>>>>>>>>COLOR:" + data.color + " STARTING DATA COLOR FOR:" + pObj.name)
 
-        if(color) {
-            mat.diffuseColor = color;
+        // space volumes only have color, not a texture
+        //let clr = this.getColor(data.color);
+        let clr = celestial.color(data);
+  
+        // COLOR IS NULL
+        console.log(">>>>>>>>>>COLOR:" + clr + " STARTING DATA COLOR FOR:" + pObj.name)
+
+        if(clr) {
+            console.log(">>>>>>>>COLOR:" + clr + " MATERIAL DIFFUSE COLOR FOR:" + pObj.name)
+            mat.diffuseColor = new BABYLON.Color3(clr.r, clr.g, clr.b);
         } else {
-            mat.diffuseColor = BABYLON.Color3.Green();
+            console.log(">>>>>>>>COLOR:" + clr + " DEFAULT DIFFUSE COLOR FOR:" + pObj.name)
+            mat.diffuseColor = new BABYLON.Color3.Green();
         }
 
         // mesh visibility rather than alpha channel for color
@@ -702,14 +711,24 @@ var PWorld = (function () {
                 case t.STAR:
                 case t.BROWN_DWARF:
                 case t.EXOPLANET:
+                    //if(parent) data.dist = 0;
+                    // TODO: USE BABYLON VECTOR RATHER THAN CUSTOM 'vec'
+                    // TODO: objects should rotate around their barycenter, which is
+                    // TODO: the center of the SpaceVolume for each StarSystem
                     this.setPositionByRADec(data, mesh.position, dParsecUnits);
+
                     mesh.freezeNormals(); // TODO: may be useful for emissive objects
+
                     if(model.emissive) {
                         const light = new BABYLON.PointLight(pObj.name + 'Light', mesh.getAbsolutePosition(), scene);
                         light.position = new BABYLON.Vector3(0, 0, 0);
                         light.parent = mesh;
                         mat.emissiveTexture = new BABYLON.Texture(texDir + model.surface, scene, true, false);
-
+                        if(clr) {
+                            mat.diffuseColor = new BABYLON.Color3(clr.r, clr.g, clr.b);
+                        } else {
+                            mat.diffuseColor = new BABYLON.Color3(1, 1, 1);
+                        }
                         mat.specularColor = new BABYLON.Color3(0, 0, 0);
 
                         //https://doc.babylonjs.com/how_to/glow_layer
@@ -726,50 +745,18 @@ var PWorld = (function () {
                     break;
 
                 case t.EXOPLANET:
+                case t.PLANET:
+                    mat.diffuseTexture = new BABYLON.Texture(texDir + model.surface, scene);
+                    mesh.setPositionWithLocalVector(new BABYLON.Vector3(scaled.dist, 0, 0));
+                    if(util.isNumber(model.specular)) {
+                        mat.specularColor = new BABYLON.Color3(model.specular, model.specular, model.specular)
+                    } else {
+                        mat.specularColor = new BABYLON.Color3(0, 0, 0)
+                    }
                     break;
 
-                case t.PLANET:
-                    mesh.setPositionWithLocalVector(new BABYLON.Vector3(scaled.distance, 0, 0));
-                    break;
-                
             }
 
-            // check if emissive, since Stars may use this model
-            if (model.emissive) {
-
-                // set colors, emissive
-                if(data.color) {
-
-                    var c = this.getColor(data.color);
-
-                    if(c) {
-                        mat.diffuseColor = c.clone();
-                        //mat.specularColor = c.clone();
-
-                    } else {
-                        mat.diffuseColor = new BABYLON.Color3(1, 1, 1);
-                    }
-
-                } else { // not emissive
-                    mat.diffuseColor = new BABYLON.Color3(0, 0, 0);
-                }
-
-                // No specular for emissive objects
-                mat.specularColor = new BABYLON.Color3(0, 0, 0);
-
-
-            } else { // non-emissive
-
-                mat.diffuseTexture = new BABYLON.Texture(texDir + model.surface, scene);
-
-                // specular value
-                if(util.isNumber(model.specular)) {
-                    mat.specularColor = new BABYLON.Color3(model.specular, model.specular, model.specular)
-                } else {
-                    mat.specularColor = new BABYLON.Color3(0.5, 0.5, 0.5)
-                }
-
-            } // end of non-emissive
 
         } else if(model.gltf) {
             
@@ -808,10 +795,9 @@ var PWorld = (function () {
 
         if(mesh) {
 
+            // Moons are children to Planets
             if(parent) {
-
                 mesh.parent = parent;
-
             }
 
             // set additional features of moons not shared by planets (e.g. planet glow on dark side)
@@ -835,6 +821,9 @@ var PWorld = (function () {
 
     };
 
+    /**
+     * Load a planet or a star
+     */
     PWorld.prototype.loadPlanet = function (pObj, dir, scene, parent) {
 
         let util = this.util;
@@ -843,10 +832,9 @@ var PWorld = (function () {
 
         if(mesh) {
 
+            // Planets are children to their Star
             if(parent) {
-
                 mesh.parent = parent; //only for perfectly circular orbits, or dynamic radius computation
-
             }
 
             // set additional features of planets
@@ -865,16 +853,35 @@ var PWorld = (function () {
 
     };
 
-    PWorld.prototype.loadStar = function (pObj, dir, scene) {
+    /**
+     * Load a Star
+     */
+    PWorld.prototype.loadStar = function (pObj, dir, scene, parent) {
 
         let util = this.util;
 
         // draw the star (apart from planets, etc)
         let mesh = this.loadPlanetModel(pObj, dir + '/' + pObj.dname, scene);
 
+///////////////////////////////////////////////////////////////
+        if(pObj.key == 'luhman_16_a') {
+                window.luhman_a = mesh;
+        }
+        if(pObj.key == 'luhman_16_b') {
+                window.luhman_b = mesh;
+        }
+///////////////////////////////////////////////////////////////
+
+
         if(mesh) {
 
-            // NOTE: don't set the Star parent
+            ////////////////////mesh.lookAt = function (camera) { camera.target = this.position}
+
+            // Stars are children to their SpaceVolume
+
+            if(parent) {
+                mesh.parent = parent;
+            }
 
             // draw the planets, comets, asteroids
 
@@ -891,7 +898,8 @@ var PWorld = (function () {
     };
 
     /**
-     * Load a star system. Many stars listed in Hyg are actually multiple
+     * Load a star system, which may have more than one Star.
+     * Many stars listed in Hyg are actually multiple
      * Super-close stars:
      * @link {http://www.livingfuture.cz/stars.php}
      */
@@ -903,7 +911,14 @@ var PWorld = (function () {
 
         let mesh = this.loadSpaceVolume(pObj, dir, scene);
 
+        if(pObj.key == 'luhman_16') {
+            window.luhman = mesh;
+        }
+
         if(mesh) {
+
+            // StarSystems are NOT children to their Galaxy - they would inherit
+            // The Skybox 'infinite distance' properties
 
             if(util.isArray(pObj.stars)) {
                 for(let i = 0; i< pObj.stars.length; i++) {
@@ -953,17 +968,6 @@ var PWorld = (function () {
          */
         mesh = this.loadSpaceVolume(pObj, dir, scene);
 
-        /*
-        if(mesh) {
-            let d  = mesh.getBoundingInfo().boundingSphere.radius;
-            let pd = parent.getBoundingInfo().boundingSphere.radius;
-            if(d > pd) {
-                parent.scaling.x *= 2;
-                parent.scaling.y *= 2;
-                parent.scaling.z *= 2;
-            }
-        }
-        */
         // hide for now
 
         if(mesh) {

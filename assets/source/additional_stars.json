@@ -1,10 +1,20 @@
 /*
 
-mix es5 and es6
+rotate stars and planets about SpaceVolume (the barycenter)
+
+normalize data object between hyg sprites and scene objects
+
+move "type" OUTSIDE of data object
+
+fade lighting after a couple of parsecs
+
+scalling for size of stars, planets in different modes
+
+attach pObj to each mesh
 
 stop picked mesh afte first "hit"
 
-rename 'scaleToPlutonian'
+animation to reset scale when inside planetary system
 
 setLabel (in scene.js)
 

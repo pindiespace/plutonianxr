@@ -6,7 +6,7 @@
     "data": {
         "type": "world",
         "diameter": 1000000,
-        "distance": 0,
+        "dist": 0,
         "ra": 0,
         "dec": 0,
         "rotation": 0,
@@ -23,7 +23,7 @@
             "data": {
                 "type": "galaxy",
                 "diameter": 0,
-                "distance": 49970,
+                "dist": 49970,
                 "models": {}
             },
             "references": [],
@@ -40,7 +40,7 @@
             "data": {
                 "type": "galaxy",
                 "diameter": 0,
-                "distance": 61700,
+                "dist": 61700,
                 "models": {}
             },
             "references": [],
@@ -57,7 +57,7 @@
             "data": {
                 "type": "galaxy",
                 "diameter": 0,
-                "distance": 770000,
+                "dist": 770000,
                 "models": {}
             },
             "references": [],
@@ -76,7 +76,7 @@
                 "diameter": 200000,
                 "ra": "60",
                 "dec": "0",
-                "distance": 0,
+                "dist": 0,
                 "rotation": [0, 0, 0],
                 "color": [0, 255, 0, 0.2],
                 "models": {
@@ -117,7 +117,7 @@
                     "data": {
                         "type": "stardome",
                         "diameter": 100000,
-                        "distance": 0,
+                        "dist": 0,
                         "ra": 0,
                         "dec": 0,
                         "models": {
@@ -181,7 +181,7 @@
                         "diameter": 10,
                         "ra": 0,
                         "dec": 0,
-                        "distance": 0,
+                        "dist": 0,
                         "color": [255, 0, 0, 0.2],
                         "models": {}
                     },
@@ -200,7 +200,7 @@
                                 "hygID": "51926",
                                 "ra": 0.005,
                                 "dec": 0,
-                                "distance": 0,
+                                "dist": 0,
                                 "rotation": 0.002,
                                 "spect": "G2V",
                                 "color": [255, 245, 242],
@@ -224,7 +224,7 @@
                                     "data": {
                                         "type": "planet",
                                         "diameter": 2370,
-                                        "distance": 10000,
+                                        "dist": 10000,
                                         "barycenter":1195,
                                         "tilt": 0,
                                         "rotation": 0.002,
@@ -249,7 +249,7 @@
                                             "data": {
                                                 "type": "planet",
                                                 "diameter": 1208,
-                                                "distance": 19570,
+                                                "dist": 19570,
                                                 "barycenter":0,
                                                 "tilt": 0,
                                                 "rotation": 0.002,
@@ -286,7 +286,7 @@
                         "diameter": 10,
                         "ra": 14.66115128,
                         "dec": -60.83730923,
-                        "distance": 1.347490972,
+                        "dist": 1.347490972,
                         "color": [255, 255, 0]
                     },
                     "stars": [
@@ -301,7 +301,7 @@
                                 "diameter": "1",
                                 "ra":"14.660765",
                                 "dec":"-60.833976",
-                                "distance": "1.347490972",
+                                "dist": "1.347490972",
                                 "spect": "G2V",
                                 "color": [255, 245, 242],
                                 "models": {},
@@ -323,7 +323,7 @@
                                 "diameter": "0.7",
                                 "ra": "14.66094188",
                                 "dec": "-60.83947139",
-                                "distance": "1.347490972",
+                                "dist": "1.347490972",
                                 "spect": "K1V",
                                 "color": [255, 224, 188],
                                 "models": {},
@@ -343,7 +343,7 @@
                                 "diameter": 0.1,
                                 "ra": 14.4965965,
                                 "dec": -62.68135207,
-                                "distance": 1.294783318,
+                                "dist": 1.294783318,
                                 "spect": "M5Ve",
                                 "color": [1, 0.8, 0.435294],
                                 "models": {},
@@ -377,11 +377,13 @@
                     "name": "Luhman 16 System",
                     "description": "A pair of Brown Dwarfs, extremely close to the Sun",
                     "data": {
+                        "type": "star_system",
                         "diameter": 5,
                         "ra": "162.3280125",
                         "dec": "-53.31941",
-                        "distance": "1.9980",
-                        "color": []
+                        "dist": "1.9980",
+                        "color": [1, 0, 0]
+
                     },
                     "stars": [
                         {
@@ -392,10 +394,10 @@
                             "data": {
                                 "type": "brown_dwarf",
                                 "hygID": "",
-                                "diameter": "1000",
+                                "diameter": "300",
                                 "ra": "162.3248925",
                                 "dec": "-53.31941",
-                                "distance": "1.9980",
+                                "dist": "0.003125",
                                 "spect": "L7.5",
                                 "color": [1, 0.411764706, 0],
                                 "models": {
@@ -421,10 +423,10 @@
                             "data": {
                                 "type": "brown_dwarf",
                                 "hygID": "",
-                                "diameter": "1000",
+                                "diameter": "300",
                                 "ra": "162.3248925",
                                 "dec": "-53.31941",
-                                "distance": "1.9980",
+                                "dist": "-0.003125",
                                 "spect": "T0.5",
                                 "color": [1, 0.32549010, 0.003921],
                                 "models": {
