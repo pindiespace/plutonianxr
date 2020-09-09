@@ -78,6 +78,8 @@ https://en.wikipedia.org/wiki/Luhman_16
 
 https://en.wikipedia.org/wiki/Luhman_16
 
+// separated by: 0.00625 
+
 {
 	"AbsMag":"13.78",
 	"Dec":"-53.31941",
@@ -111,6 +113,8 @@ https://en.wikipedia.org/wiki/Luhman_16
 	"z":""
 },
 
+local_group/star_systems/luhman_16/stars/luhman_16_a/textures/luhman_16_a.png
+local_group/star_systems/luhman16/stars/luhman_16_a/textures/luhman_16_a.png
 
 {
 	"AbsMag":"3.65",

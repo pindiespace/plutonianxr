@@ -6,6 +6,8 @@
 
 var PWorld = (function () {
 
+    // static class functions and variables here. Note they are a bit slower to access
+
     // constructor
 
     function PWorld() {
@@ -30,6 +32,8 @@ var PWorld = (function () {
 
         this.setup = new PSetup(this.util);
         this.celestial = new PCelestial(this.util);
+
+        window.celestial = this.celestial; ///////////////TODO: REMOVE
 
         // start
         //this.init();
@@ -193,37 +197,6 @@ var PWorld = (function () {
 
     };
 
-    /**
-     * Set scale for star systems, galaxies.
-     */
-    PWorld.prototype.setPlanetScale = function (data, scale) {
-
-        let util = this.util;
-
-        let sData = {
-            diameter: this.dDiameter,
-            distance: this.dDistance,
-            segments: this.dSegments
-        };
-
-        if(util.isNumber(data.diameter) && data.diameter > 0) {
-            sData.diameter = data.diameter/dKmUnits;
-            if(sData.diameter < 0.01) {
-                console.warn('WARNNG: diameter very small (' + sData.diameter + ' units');
-            }
-        }
-
-        if(util.isNumber(data.distance) && data.distance != 0) {
-            sData.distance = data.distance/dKmUnits; 
-        }
-
-        if(util.isNumber(data.segments)) {
-            sData.segments = data.segments;
-        }
-
-        return sData;
-
-    };
 
     /**
      * Adjust 8-bit rgb values to BabylonJS 0-1 color
@@ -297,6 +270,7 @@ var PWorld = (function () {
     PWorld.prototype.setPositionByRADec = function (data, vec, units = 1) {
 
         let util = this.util;
+        let celestial = this.celestial;
 
         if(!util.isObject(vec) || !util.isNumber(vec.x)) {
             console.error('setPositionByRADec ERROR: invalid vector passed:' + vec);
@@ -308,8 +282,8 @@ var PWorld = (function () {
             return false;
         }
 
-        let A = util.degToRad(parseFloat(data.ra) * 15);
-        let B = util.degToRad(parseFloat(data.dec));
+        let A = celestial.degToRad(parseFloat(data.ra) * 15);
+        let B = celestial.degToRad(parseFloat(data.dec));
 
         // Note: we reverse the y and z axes to match the BabylonJS coordinate system
         vec.x = Math.cos(B) * Math.cos(A) * data.distance * units,
@@ -350,6 +324,7 @@ var PWorld = (function () {
         //data.dec = 61.2; //up and down (correct galactic degrees 60.2)
 
         let util = this.util;
+        let celestial = this.celestial;
 
         if(!util.isObject(vec) || !util.isNumber(vec.x)) {
             console.error('setRotationByRADec ERROR: invalid vector passed:' + vec)
@@ -361,8 +336,8 @@ var PWorld = (function () {
             return false;
         }
 
-        let A = util.degToRad(parseFloat(data.ra) * 15);
-        let B = util.degToRad(parseFloat(data.dec));
+        let A = celestial.degToRad(parseFloat(data.ra) * 15);
+        let B = celestial.degToRad(parseFloat(data.dec));
 
         // Unlike positions, rotations are NOT flipped.
         vec.x = Math.cos(B) * Math.cos(A);
@@ -674,6 +649,8 @@ var PWorld = (function () {
         console.log("drawing planetModel:" + pObj.name)
 
         let util = this.util;
+        let celestial = this.celestial;
+        let t = celestial.PCTYPES;
         let mesh = null;
 
         if(!this.checkObject(pObj)) {
@@ -693,7 +670,7 @@ var PWorld = (function () {
 
         // scale raw values to plutonian planetary system units (returnd diameter)
 
-        let scaled = this.setPlanetScale(pObj.data);
+        let scaled = this.celestial.scale(pObj.data);
 
         // create 'surface' model = just a sphere with 1 texture
 
@@ -703,36 +680,62 @@ var PWorld = (function () {
 
             console.log(pObj.name + ' texture:' + texDir + model.surface)
 
+            // create the mesh
+
             mesh = BABYLON.MeshBuilder.CreateSphere(
                 pObj.key, {
                     diameter:scaled.diameter, 
                     segments: 32}, scene);
 
-            // TODO: stars are set via setPosition()
-            // TODO: planets are set via translation to their distance.
-            // TODO: need to modify position calculations from planetary computations so they are local
-            // TODO: set local coordinates
-            // TODO: this gets planets orbiting stars, moons orbiting planets
-            // TODO: need to change!
-            mesh.setPositionWithLocalVector(new BABYLON.Vector3(scaled.distance, 0, 0));
-                ////////////////////setPosition(data, mesh.position, 1); 
-
             // material
+
             mesh.material = new BABYLON.StandardMaterial(pObj.key + 'Mat', scene);
             let mat = mesh.material;
 
+            // color
+            const clr = this.getColor(data.color);
+
+            // adjust mesh based on object type
+
+            switch(data.type) {
+
+                case t.STAR:
+                case t.BROWN_DWARF:
+                case t.EXOPLANET:
+                    this.setPositionByRADec(data, mesh.position, dParsecUnits);
+                    mesh.freezeNormals(); // TODO: may be useful for emissive objects
+                    if(model.emissive) {
+                        const light = new BABYLON.PointLight(pObj.name + 'Light', mesh.getAbsolutePosition(), scene);
+                        light.position = new BABYLON.Vector3(0, 0, 0);
+                        light.parent = mesh;
+                        mat.emissiveTexture = new BABYLON.Texture(texDir + model.surface, scene, true, false);
+
+                        mat.specularColor = new BABYLON.Color3(0, 0, 0);
+
+                        //https://doc.babylonjs.com/how_to/glow_layer
+                        var options = { 
+                            mainTextureRatio: 0.1,
+                            //mainTextureFixedSize: 256,
+                            blurKernelSize: 100
+                        };
+                        var gl = new BABYLON.GlowLayer('glow', scene, options);
+                        gl.intensity = 5;
+                        mat.emissiveColor = new BABYLON.Color3(0.678, 0.556, 0.423);
+                        gl.addIncludedOnlyMesh(mesh);
+                    }
+                    break;
+
+                case t.EXOPLANET:
+                    break;
+
+                case t.PLANET:
+                    mesh.setPositionWithLocalVector(new BABYLON.Vector3(scaled.distance, 0, 0));
+                    break;
+                
+            }
+
             // check if emissive, since Stars may use this model
             if (model.emissive) {
-
-                mesh.freezeNormals(); // TODO: may be useful for emissive objects
-
-                // add a light, centered in the mesh
-                const light = new BABYLON.PointLight(pObj.name + 'Light', mesh.getAbsolutePosition(), scene);
-                light.position = new BABYLON.Vector3(0, 0, 0);
-                light.parent = mesh;
-
-                // add an emissive texture
-                mat.emissiveTexture = new BABYLON.Texture(texDir + model.surface, scene, true, false);
 
                 // set colors, emissive
                 if(data.color) {
@@ -754,16 +757,6 @@ var PWorld = (function () {
                 // No specular for emissive objects
                 mat.specularColor = new BABYLON.Color3(0, 0, 0);
 
-                //https://doc.babylonjs.com/how_to/glow_layer
-                var options = { 
-                    mainTextureRatio: 0.1,
-                    //mainTextureFixedSize: 256,
-                    blurKernelSize: 100
-                };
-                var gl = new BABYLON.GlowLayer('glow', scene, options);
-                gl.intensity = 5;
-                mat.emissiveColor = new BABYLON.Color3(0.678, 0.556, 0.423);
-                gl.addIncludedOnlyMesh(mesh);
 
             } else { // non-emissive
 
@@ -1225,6 +1218,8 @@ var PWorld = (function () {
    // return the world object
 
    return PWorld;
+
+   // assign PUtil as a static class object, independent of other modules
 
 }());
 

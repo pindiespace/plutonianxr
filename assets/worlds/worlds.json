@@ -4,6 +4,7 @@
     "name": "Local Group",
     "description": "Milky Way and nearby galaxies",
     "data": {
+        "type": "world",
         "diameter": 1000000,
         "distance": 0,
         "ra": 0,
@@ -114,7 +115,7 @@
                     "dname": "hyg",
                     "name": "Hyg stellar data, full database",
                     "data": {
-                        "type": "star3d",
+                        "type": "stardome",
                         "diameter": 100000,
                         "distance": 0,
                         "ra": 0,
@@ -201,7 +202,7 @@
                                 "dec": 0,
                                 "distance": 0,
                                 "rotation": 0.002,
-                                "spectral_type": "G2V",
+                                "spect": "G2V",
                                 "color": [255, 245, 242],
                                 "models": {
                                     "default": {
@@ -301,7 +302,7 @@
                                 "ra":"14.660765",
                                 "dec":"-60.833976",
                                 "distance": "1.347490972",
-                                "spectral_type": "G2V",
+                                "spect": "G2V",
                                 "color": [255, 245, 242],
                                 "models": {},
                                 "references": [
@@ -323,7 +324,7 @@
                                 "ra": "14.66094188",
                                 "dec": "-60.83947139",
                                 "distance": "1.347490972",
-                                "spectral_type": "K1V",
+                                "spect": "K1V",
                                 "color": [255, 224, 188],
                                 "models": {},
                                 "references": []
@@ -343,7 +344,7 @@
                                 "ra": 14.4965965,
                                 "dec": -62.68135207,
                                 "distance": 1.294783318,
-                                "spectral_type": "M5Ve",
+                                "spect": "M5Ve",
                                 "color": [1, 0.8, 0.435294],
                                 "models": {},
                                 "references": []
@@ -376,7 +377,7 @@
                     "name": "Luhman 16 System",
                     "description": "A pair of Brown Dwarfs, extremely close to the Sun",
                     "data": {
-                        "diameter": 10,
+                        "diameter": 5,
                         "ra": "162.3280125",
                         "dec": "-53.31941",
                         "distance": "1.9980",
@@ -389,13 +390,13 @@
                             "name": "Luhman 16 A",
                             "description": "First dwarf of the pair.",
                             "data": {
-                                "type": "brown dwarf",
+                                "type": "brown_dwarf",
                                 "hygID": "",
-                                "diameter": "5000",
+                                "diameter": "1000",
                                 "ra": "162.3248925",
                                 "dec": "-53.31941",
                                 "distance": "1.9980",
-                                "spectral_type": "L7.5",
+                                "spect": "L7.5",
                                 "color": [1, 0.411764706, 0],
                                 "models": {
                                      "default": {
@@ -418,13 +419,13 @@
                             "name": "Luhman 16 B",
                             "description": "Secondary cloudy brown dwarf of the pair.",
                             "data": {
-                                "type": "brown dwarf",
+                                "type": "brown_dwarf",
                                 "hygID": "",
-                                "diameter": "5000",
+                                "diameter": "1000",
                                 "ra": "162.3248925",
                                 "dec": "-53.31941",
                                 "distance": "1.9980",
-                                "spectral_type": "T0.5",
+                                "spect": "T0.5",
                                 "color": [1, 0.32549010, 0.003921],
                                 "models": {
                                      "default": {

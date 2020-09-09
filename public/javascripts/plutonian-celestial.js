@@ -7,6 +7,7 @@
  * (about 10,000 of the 119,000 stars in Hyg3 fall in this category)
  */
 
+
 /**
  * Contains computations for planetary positions
  */
@@ -26,10 +27,11 @@ var PCelestial = (function () {
 
     function PCelestial (util) {
 
-        this.util                = util; // PUtil object, instantated in plutonian-scene.js
+        this.util              = util; // PUtil object, instantated in plutonian-scene.js
 
         this.dParsecUnits      =     10; // scale parsec distances to the simulation
         this.dKmUnits          =   2370; // 1 unit = 2370km, Pluto = 2370/2370 = 1.0
+        this.dMUnits           =   1000; // 1 unit = 1000 meters, Voyager 1000/1000 = 1.0
         this.dSpriteSize       =    128; // default size of sprite panel
         this.dSpriteScreenSize =      1; // default size of Star sprites
         this.dMaxHygDist       = 100000;
@@ -47,13 +49,62 @@ var PCelestial = (function () {
         this.scene = null;
         this.camera = null;
 
+        // TODO: STATIC VARIABLES ARE SLOWER, CONVERT OUR DEFAULTS
+
         // computations of planetary positions over time
         this.orrey = new POrrey();
 
     };
 
+    // information model
+    PCelestial.prototype.PCTYPES = {
+        WORLD: 'world',
+        GALAXY: 'galaxy',
+        STARDOME: 'stardome',
+        STAR_SYSTEM: 'star_system',
+        STAR: 'star',
+        BROWN_DWARF: 'brown_dwarf',
+        EXOPLANET: 'exoplanet',
+        PLANET: 'planet',
+        MOON: 'moon',
+        ARTIFACT: 'artifact'
+    };
+
+
+    // functions
+
+    /**
+     * Return pObj.data default object
+      */
+    PCelestial.prototype.createCelestialData = function (type, diameter = 0, ra = 0, dec = 0, distance = 0) { 
+        return {
+            'type': type,
+            'diameter': diameter,
+            'ra': ra,
+            'dec': dec,
+            'distance': distance,
+            'barycenter':0,
+            'tilt': 0,
+            'rotation':0,
+            'color': [],
+            'models': {},
+            'mesh': null
+        };
+
+    };
+
+    /**
+     * Check the data on a data object
+     * @param {PCData.data} data object
+     */
+    PCelestial.prototype.checkData = function (data) {
+        // TODO: write check function
+        return true;
+    };
+
     // private static variables
 
+    // default star colors
     var dStarColors = [];
         dStarColors['o'] = {r:0.598529412, g: 0.683578431, b: 1},
         dStarColors['b'] = {r:0.680490196, g: 0.759068627, b: 1},
@@ -106,10 +157,48 @@ var PCelestial = (function () {
 
     // functions
 
-    PCelestial.prototype.dmsToDecimal = function (d, m, s) {
-		if(!d) d ='0';
-		if(!m) m ='0';
-		if(!s) s ='0';
+    /**
+    * Return radians for (fractional) degrees.
+    * @param {Number} n the number, in degrees (0-360).
+    * @returns {Number} return the same number, in radians (0-2PI).
+    */
+    PCelestial.prototype.degToRad = function (deg = 0) {
+        return parseFloat(deg) * Math.PI / 180;
+    };
+
+    /** 
+    * Returns radians for (fractional) degress.
+    * @param {Number} rad
+    */
+    PCelestial.prototype.radToDeg = function (rad = 0) {
+        return parseFloat(rad) * 180 / Math.PI;
+    };
+
+    
+    /**
+    * Returns 0-360 degrees for a 24-hour clock, optionally
+    * accurate for minutes and seconds.
+    */
+    PCelestial.prototype.hmsToDeg = function (hours = 0, minutes = 0, seconds = 0) {
+
+            let deg = 0;
+
+            hours = parseFloat(hours); // force to number
+            minutes = parseFloat(minutes);
+            seconds = parseFloat(seconds);
+
+            if (hours) hours *= (360 / 24);
+            if (minutes) minutes *= (360 / 1440); // convert to fractional hours
+            if (seconds) seconds *= (360 / 86400);
+
+            return (hours + minutes + seconds);
+
+    };
+
+    /**
+     * Returns decimal degrees for degrees written as degrees, minutes, seconds
+     */
+    PCelestial.prototype.dmsToDecimal = function (d = 0, m = 0, s = 0) {
 		if(m < 0) m = -m;
 		if(s < 0) s = -s;
 		let m0 = m; 
@@ -121,9 +210,13 @@ var PCelestial = (function () {
 		return parseFloat(d)+parseFloat(m)/60+parseFloat(s)/3600;	
     };
 
-    // https://stackoverflow.com/questions/21977786/star-b-v-color-index-to-apparent-rgb-color
-    // http://www.vendian.org/mncharity/dir3/blackbody/UnstableURLs/bbr_color.html
-    // https://www.pas.rochester.edu/~emamajek/EEM_dwarf_UBVIJHK_colors_Teff.txt
+    /**
+     * Convert b-v values reported to stars to RGB color
+     * @param {Number} bv the b-v value for the star.s
+     * {@link https://stackoverflow.com/questions/21977786/star-b-v-color-index-to-apparent-rgb-color}
+     * {@link http://www.vendian.org/mncharity/dir3/blackbody/UnstableURLs/bbr_color.html}
+     * {@link https://www.pas.rochester.edu/~emamajek/EEM_dwarf_UBVIJHK_colors_Teff.txt}
+     */
     PCelestial.prototype.bvToRGB = function (bv) {
 
         var r = 0, g = 0, b = 0, t = 0;
@@ -171,6 +264,67 @@ var PCelestial = (function () {
             g: g, 
             b: b
         };
+
+    };
+
+    /** 
+     * Given a pObj, return the correct scaling
+     */
+    PCelestial.prototype.scale = function (data) {
+
+        let util = this.util;
+        let t = this.PCTYPES;
+
+        if(!this.checkData()) {
+            console.error('getScale: invalid celestial data object passed');
+            return false;
+        }
+
+        let scaled = {
+            diameter: data.diameter,
+            distance: data.distance,
+            segments: 32
+        };
+
+        switch(data.type) {
+
+            case t.PLANET:
+            case t.MOON:
+                // 1 unit = 2370km, Pluto = 2370/2370 = 1.0
+                scaled.diameter /= this.dKmUnits,
+                scaled.distance /= this.dKmUnits;
+                break;
+
+            case t.BROWN_DWARF:
+            case t.STAR:
+            case t.STARDOME:
+            case t.STAR_SYSTEM:
+            case t.GALAXY:
+                // 1 unit = 1/10 parsec
+                scaled.diameter /= this.dKmUnits,
+                scaled.distance *= this.dParsecUnits;
+                break;
+
+            case t.ARTIFACT:
+                beak;
+
+            default:
+                console.error('.scale ERROR: invalide celestial type');
+                break;
+
+        }
+
+        // warnings for objects without data yet
+
+        if(scaled.diameter < 0.01) {
+            console.warn('.scale WARNNG: diameter very small (' + scaled.diameter + ' units');
+        }
+
+        if(scaled.distance < 0.01) {
+            console.warn('.scale WARNING: distance very small (' + scaled.distance + ' units')
+        }
+
+        return scaled;
 
     };
 
@@ -543,6 +697,10 @@ var PCelestial = (function () {
 
 }());
 
+function isNumber (value) {
+    value = parseFloat(value);
+    return typeof value === 'number' && isFinite(value);
+};
 
 var dParsecUnits      =   10; // scale parsec distances to the simulation
 var dKmUnits          = 2370; // 1 unit = 2370km, Pluto = 2370/2370 = 1.0
