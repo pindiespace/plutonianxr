@@ -143,6 +143,7 @@
                         "mesh": null,
                         "references": [
                             "https://astronexus.com/hyg",
+                            "https://en.wikipedia.org/wiki/Stellar_classification#Extended_spectral_types",
                             "https://github.com/astronexus/HYG-Database/blob/master/README.md",
                             "http://simbad.cfa.harvard.edu/simbad/sim-fid",
                             "https://gea.esac.esa.int/archive/",
@@ -289,8 +290,8 @@
                     },
                     "stars": [
                         {
-                            "key": "alpha",
-                            "dname": "alpha",
+                            "key": "alpha_centauri_a",
+                            "dname": "alpha_centauri_a",
                             "name": "Alpha Centauri A",
                             "description": "Brightest of system, Sunlike star.",
                             "data": {
@@ -311,8 +312,8 @@
                             "artifacts": []
                         },
                         {
-                            "key": "beta",
-                            "dname": "beta",
+                            "key": "alpha_centauri_b",
+                            "dname": "alpha_centauri_b",
                             "name": "Alpha Centauri B",
                             "description": "Secondary star of system, smaller and cooler than Sun.",
                             "data": {
@@ -343,7 +344,7 @@
                                 "dec": -62.68135207,
                                 "distance": 1.294783318,
                                 "spectral_type": "M5Ve",
-                                "color": [255, 204, 111],
+                                "color": [1, 0.8, 0.435294],
                                 "models": {},
                                 "references": []
                             },
@@ -366,6 +367,82 @@
                             ],
                             "artifacts": []
                         }
+                    ],
+                    "artifacts": []
+                },
+                 {
+                    "key": "luhman_16",
+                    "dname": "luhman_16",
+                    "name": "Luhman 16 System",
+                    "description": "A pair of Brown Dwarfs, extremely close to the Sun",
+                    "data": {
+                        "diameter": 10,
+                        "ra": "162.3280125",
+                        "dec": "-53.31941",
+                        "distance": "1.9980",
+                        "color": []
+                    },
+                    "stars": [
+                        {
+                            "key": "luhman_16_a",
+                            "dname": "luhman_16_a",
+                            "name": "Luhman 16 A",
+                            "description": "First dwarf of the pair.",
+                            "data": {
+                                "type": "brown dwarf",
+                                "hygID": "",
+                                "diameter": "5000",
+                                "ra": "162.3248925",
+                                "dec": "-53.31941",
+                                "distance": "1.9980",
+                                "spectral_type": "L7.5",
+                                "color": [1, 0.411764706, 0],
+                                "models": {
+                                     "default": {
+                                        "surface": "luhman_16_a.png",
+                                        "emissive": "true",
+                                        "specular": 0,
+                                        "active": true
+                                    }
+                                },
+                                "references": [
+                                    "https://en.wikipedia.org/wiki/Luhman_16"
+                                ]
+                            },
+                            "planets": [],
+                            "artifacts": []
+                        },
+                        {
+                            "key": "luhman_16_b",
+                            "dname": "luhman_16_b",
+                            "name": "Luhman 16 B",
+                            "description": "Secondary cloudy brown dwarf of the pair.",
+                            "data": {
+                                "type": "brown dwarf",
+                                "hygID": "",
+                                "diameter": "5000",
+                                "ra": "162.3248925",
+                                "dec": "-53.31941",
+                                "distance": "1.9980",
+                                "spectral_type": "T0.5",
+                                "color": [1, 0.32549010, 0.003921],
+                                "models": {
+                                     "default": {
+                                        "surface": "luhman_16_b.png",
+                                        "emissive": "true",
+                                        "specular": 0,
+                                        "active": true
+                                    }
+                                },
+                                "references": [
+                                    "https://en.wikipedia.org/wiki/Luhman_16",
+                                    "https://people.ucsc.edu/~ianc/luhman16.shtml"
+                                ]
+                            },
+                            "planets": [],
+                            "artifacts": []
+                        }
+
                     ],
                     "artifacts": []
                 }

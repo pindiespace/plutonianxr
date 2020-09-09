@@ -237,33 +237,34 @@ var PWorld = (function () {
 
         let util = this.util;
 
-        if(!util.isArray(colorArr)) {
+        console.log("COLORARR IS:" + colorArr)
 
-            console.error('getColor ERROR: invalid color array passed');
+        if(!util.isArray(colorArr) || colorArr.length < 3) {
 
-        } else if(!util.isNumber(colorArr[0]) || !util.isNumber(colorArr[1]) || !util.isNumber(colorArr[2])) {
+            console.error('getColor ERROR: invalid color array passed:' + color);
+            return color;
+        }
 
-            console.error('getColor ERROR: invalid numbers in color array');
+        r = parseFloat(colorArr[0]), g = parseFloat(colorArr[1]), b = parseFloat(colorArr[2]);
 
-        } else {
+        if(!util.isNumber(r) || !util.isNumber(g) || !util.isNumber(b)) {
+            console.error('getColor ERROR: invalid numbers in color array:' + colorArr);
+            return color;
+        }
 
-            r = colorArr[0], g = colorArr[1], b = colorArr[2];
+        if((r + g + + b) > 1.0) {
 
-            if((r + g + + b) > 1.0) {
+            r /= 255, g /= 255, b /= 255;
 
-                r /= 255, g /= 255, b /= 255;
-
-                if(util.isNumber(colorArr[3])) {
-                    a = colorArr[3];
-                    if(a > 1.0) {
-                        a /= 255;
-                    }
-                    color =  new BABYLON.Color4(r, g, b, a);
-
-                } else {
-                    color = new BABYLON.Color3(r, g, b);
+            if(util.isNumber(colorArr[3])) {
+                a = colorArr[3];
+                if(a > 1.0) {
+                    a /= 255;
                 }
+                color =  new BABYLON.Color4(r, g, b, a);
 
+            } else {
+                color = new BABYLON.Color3(r, g, b);
             }
 
         }
@@ -294,8 +295,6 @@ var PWorld = (function () {
     };
 
     PWorld.prototype.setPositionByRADec = function (data, vec, units = 1) {
-
-        console.warn("UNITSSSSS ARE:" + units)
 
         let util = this.util;
 
@@ -898,6 +897,11 @@ var PWorld = (function () {
 
     };
 
+    /**
+     * Load a star system. Many stars listed in Hyg are actually multiple
+     * Super-close stars:
+     * @link {http://www.livingfuture.cz/stars.php}
+     */
     PWorld.prototype.loadStarSystem = function (pObj, dir, scene, parent) {
 
         let util = this.util;

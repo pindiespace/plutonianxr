@@ -73,6 +73,45 @@ Bring in skybox to 1000 units for VR.
 	"y":"224.809409",
 	"z":"-7.651875"
 },
+
+https://en.wikipedia.org/wiki/Luhman_16
+
+https://en.wikipedia.org/wiki/Luhman_16
+
+{
+	"AbsMag":"13.78",
+	"Dec":"-53.31941",
+	"Distance":"1.9980",
+	"HD":"",
+	"HR":"",
+	"Hip":"",
+	"Mag":"10.73",
+	"ProperName":"Luhman 16 A",
+	"RA":"162.3280125",
+	"Spectrum":"L7.5",
+	"StarID":"",
+	"x":"",
+	"y":"",
+	"z":""
+},
+{
+	"AbsMag":"13.78",
+	"Dec":"-53.31941",
+	"Distance":"1.9980",
+	"HD":"",
+	"HR":"",
+	"Hip":"",
+	"Mag":"10.73",
+	"ProperName":"Luhman 16 B",
+	"RA":"162.3280125",
+	"Spectrum":"T0.5",
+	"StarID":"",
+	"x":"",
+	"y":"",
+	"z":""
+},
+
+
 {
 	"AbsMag":"3.65",
 	"Dec":"33.88232912056897",
