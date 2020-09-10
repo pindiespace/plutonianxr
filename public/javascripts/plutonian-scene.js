@@ -702,7 +702,8 @@ var PWorld = (function () {
             let mat = mesh.material;
 
             // color
-            const clr = this.getColor(data.color);
+            //const clr = this.getColor(data.color);
+            const clr = celestial.color(data);
 
             // adjust mesh based on object type
 
@@ -725,7 +726,8 @@ var PWorld = (function () {
                         light.parent = mesh;
                         mat.emissiveTexture = new BABYLON.Texture(texDir + model.surface, scene, true, false);
                         if(clr) {
-                            mat.diffuseColor = new BABYLON.Color3(clr.r, clr.g, clr.b);
+                            /////////////////mat.diffuseColor = new BABYLON.Color3(clr.r, clr.g, clr.b);
+                            mat.diffuseColor = clr.clone();
                         } else {
                             mat.diffuseColor = new BABYLON.Color3(1, 1, 1);
                         }
@@ -740,6 +742,8 @@ var PWorld = (function () {
                         var gl = new BABYLON.GlowLayer('glow', scene, options);
                         gl.intensity = 5;
                         mat.emissiveColor = new BABYLON.Color3(0.678, 0.556, 0.423);
+                        // TODO: explore emissive color for glow.
+                        //////////////mat.emissiveColor = clr.clone();
                         gl.addIncludedOnlyMesh(mesh);
                     }
                     break;

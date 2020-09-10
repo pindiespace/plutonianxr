@@ -41,6 +41,17 @@ var PUtil = (function () {
         return typeof value === 'string' || value instanceof String;
     };
 
+    /**
+     * Check if a string looks like a URL.
+     * @param {String} str the test string
+     */
+    PUtil.prototype.isURL = function (str) {
+
+        return ( /^[\w+:\/\/]/.exec( str ) != null );
+
+    };
+
+
     PUtil.prototype.isNumber = function (value) {
         value = parseFloat(value);
         return typeof value === 'number' && isFinite(value);
@@ -67,6 +78,135 @@ var PUtil = (function () {
 
     PUtil.prototype.isUndefined = function (value) {
         return typeof value === 'undefined';
+    };
+
+    
+    /** 
+     * Check if a number is even.
+     * @param {Number} n the variable to be tested.
+     * @returns {Boolean} if even, return true, else false.
+     */
+    PUtil.prototype.isEven = function (n) {
+        return parseInt( n ) % 2 == 0;
+    };
+
+    /** 
+     * Check if a number is odd.
+     * @param {Number} n the variable to be tested.
+     * @returns {Boolean} if odd, return true, else false.
+     */
+    PUtil.prototype.isOdd = function (n) {
+        return Math.abs( parseInt( n ) % 2 ) == 1;
+    };
+
+
+    /** 
+     * Number of keys in an associative array or object.
+     * NOTE: won't work on old browsers, but we should never get here.
+     * @param {Object} obj a JS Object.
+     * @returns {Number} the number of keys.
+     */
+    PUtil.prototype.numKeys = function (obj) {
+        if ( this.isObject(obj)) {
+            return Object.keys(obj).length;
+        }
+        return 0;
+    };
+
+    /** 
+     * Given an associative arry of Number values, sort by those values, 
+     * and returns the keys. Used to sort Obj file groups, obj, and material 
+     * starts by their start positions in the overall arrays.
+     * @param {Object} obj the associative array. Values MUST be numbers.
+     * @returns {Array} a set of keys, sorted in order.
+     */
+    PUtil.prototype.getSortedKeys = function (obj) {
+        let keys = Object.keys(obj);
+        return keys.sort(function(a, b) { return obj[b] - obj[a]});
+    };
+
+
+    /** 
+     * Random seed.
+     * process between min and max. Number could be 0-10^9
+     */
+    PUtil.prototype.getSeed = function () {
+
+        let number;
+
+        try {
+
+            // If the client supports the more secure crypto lib
+            if ( Uint32Array && window.crypto && window.crypto.getRandomValues ) {
+
+                let numbers = new Uint32Array( 1 );
+                window.crypto.getRandomValues( numbers );
+                number = numbers.length ? ( numbers[0] + '' ) : null;
+
+            }
+
+        } catch(e) {
+
+        } finally {
+
+            if ( ! number ) {
+                number = Math.floor( Math.random() * 1e9 ).toString() + ( new Date().getTime() );
+            }
+
+        }
+
+        return number;
+
+    };
+
+        /** 
+     * Get an unique object id.
+     * @link https://jsfiddle.net/briguy37/2MVFd/
+     * @returns {String} a unique UUID format id.
+     */
+    PUtil.prototype.computeId = function () {
+
+        let d = new Date().getTime();
+
+        let uuid = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace( /[xy]/g, function( c ) {
+
+            let r = (d + Math.random() * 16 ) % 16 | 0;
+            d = Math.floor( d / 16 );
+            return ( c == 'x' ? r : ( r&0x3|0x8 ) ).toString( 16 );
+
+        });
+
+        return uuid;
+
+    }
+
+    /** 
+     * Get the width of the entire screen (excluding OS taskbars)
+     * @link http://ryanve.com/lab/dimensions/
+     */
+    PUtil.prototype.getScreenWidth = function () {
+        return window.screen.width;
+    };
+
+    /** 
+     * Get the height of the entire screen (excluding OS taskbars)
+     */
+    PUtil.prototype.getScreenHeight = function () {
+        return window.screen.height;
+    };
+
+    /** 
+     * get the width of the content region of the browser window.
+     */
+    PUtil.prototype.getWindowWidth = function () {
+        return window.innerWidth || document.documentElement.clientWidth || document.body.clientWidth;
+    };
+
+    /** 
+     * get the height of the content region of the browser window.
+     */
+    PUtil.prototype.getWindowHeight = function ()  {
+        return window.innerHeight || document.documentElement.clientHeight || document.body.clientHeight;
     };
 
     /**
