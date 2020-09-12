@@ -25,20 +25,19 @@ var PWorld = (function () {
         this.canvas    =      null;
         this.glow      =      null;        // glow layer
         this.highLight =      null;        // highlight layer
+
+        this.NO_VR     =      false;       // flags for VR adjustments
+        this.USE_VR    =       true;
+        this.VR_DEFAULT_SIZE =  200;       // VR skybox must be < 1000 units
+
+        this.rot       =    Math.PI; // TODO: elsewhere?
         
-        this.worldDir  =  'worlds';        // inside ExpressJS route '/assets'
+        this.worldDir  =   'worlds';        // inside ExpressJS route '/assets'
 
         this.util = new PUtil();
-
         this.setup = new PSetup(this.util);
+        this.ui = new PUI(this.util);
         this.celestial = new PCelestial(this.util);
-
-        window.celestial = this.celestial; ///////////////TODO: REMOVE
-
-        // start
-        //this.init();
-
-        // attach engine here
 
     };
 
@@ -109,25 +108,17 @@ var PWorld = (function () {
         // try to find the currently active model
 
         for(var i in models) {
-
             model = models[i];
-
             if(model.active) {
-
                 return model;
-
             } 
-
         }
 
         // no active model returned, look for default model
 
         if(models.default) {
-
             return models.default;
-
         } else {
-
             console.error('checkModels ERROR: no default model found');
 
         }
@@ -136,6 +127,86 @@ var PWorld = (function () {
 
     };
 
+    /**
+     * Search for the active Skybox. We don't use a general search function 
+     * to avoid recursion. We know that an infinite-distance Skybox is only found 
+     * for a Galaxy (we use a skydome for planet surfaces)
+     */
+    PWorld.prototype.getActiveGalaxy = function () {
+
+        let util = this.util;
+        let w = this.world;
+        let a = []; // accumulate active galaxies
+
+        if(!util.isObject(w)) {
+            console.error('getActiveSkybox ERROR: missing world');
+            return null;
+        }
+
+        if(util.isArray(w.galaxies)) {
+            for(let i = 0; i < w.galaxies.length; i++) {
+                let galaxy = w.galaxies[i];
+                if(util.isObject(galaxy.data) && util.isObject(galaxy.data.models)) {
+                    let models = galaxy.data.models;
+                    for(let j in models) {
+                        let model = models[j];
+                        if(util.isBoolean(model.active) && model.active == true) {
+                            console.log('cubemap is:'+model.cubemap)
+                            a.push({galaxy:galaxy, skybox: model});
+                        }
+                    }
+                }
+            }
+        }
+
+        if(a.length > 1) {
+            console.warn('getActiveSkybox WARNING: multiple active galaxies')
+        }
+
+        return a;
+
+    };
+
+    /**
+     * 
+     */
+    PWorld.prototype.setActiveGalaxy = function () {
+
+    };
+
+    /**
+     * Toggle the skybox to fit in the 1000 unit VR scene
+     * TODO: scaling doesn't work, so try shifting models
+     * TODO: make 2 cubes, each sharing the same cubemap
+     * TODO: toggle the cubes
+     */
+    PWorld.prototype.toggleVRSkybox = function (vr = false) {
+
+        console.log('in toggleVRSkybox')
+
+
+
+        let galaxies = this.getActiveGalaxy();
+
+        if(galaxies.length > 0) {
+            let g = galaxies[0].galaxy;
+            let d = g.data.diameter;
+            if(!d) {
+                console.error('toggleVRSkybox ERROR: missing galactic diameter')
+            }
+            let s = galaxies[0].skybox; 
+
+            if(vr == true) {
+                g.meshSkyVR.setEnabled(true);
+                g.meshSky.setEnabled(false);
+            } else {
+                g.meshSkyVR.setEnabled(false);
+                g.meshSky.setEnabled(true);
+            }
+
+        }
+
+    };
 
     /**
      * Add a mesh to the worlds Object
@@ -152,17 +223,18 @@ var PWorld = (function () {
         }
 
         if(!mesh) {
-            console.error('setMesh: invalid mesh');
+            console.error('setMesh for ' + pObj.key + ': invalid mesh');
             return false;
         }
 
         if(!mesh.isReady()) {
-            console.error('setMesh: supplied mesh not ready to use' + mesh.name);
+            console.error('setMesh for ' + pObj.key + ': supplied mesh:' + mesh.name + ' not ready to use');
             return false;
         }
 
         if(pObj.mesh) {
-            // parameters: dispose referenced materials and textures 
+            // parameters: dispose referenced materials and textures
+            // console.warn('disposing of object:' + pObj.key + ' mesh:' + mesh.name);
             pObj.mesh.dispose(false, true);
         }
         
@@ -184,13 +256,14 @@ var PWorld = (function () {
             //else m.visibility = 1;
 
             if(mesh.isEnabled()) {
-                //mesh.isVisible = false;
+                console.log('toggleMeshActivation: enabling mesh:' + mesh)
+                mesh.isVisible = false;
                 mesh.setEnabled(false);
 
             } else {
-                //mesh.isVisible = true;
+                console.log('toggleMeshActivation: disabling mesh:' + mesh)
+                mesh.isVisible = true;
                 mesh.setEnabled(true);
-
             }
 
         }
@@ -393,10 +466,6 @@ var PWorld = (function () {
          * StarSystem - only the spaceVolume mesh
          * Star - spaceVolume, Planet, and Sprite mesh possible
          */
-
-        // position the space volume
-
-        // TODO: fix dParsecUnits
         
         this.setPositionByRADec(data, mesh.position, dParsecUnits); 
 
@@ -405,20 +474,13 @@ var PWorld = (function () {
         // create material
         let mat = new BABYLON.StandardMaterial(pObj.key + '-mat', scene);
 
-        console.log(">>>>>>>>>>COLOR:" + data.color + " STARTING DATA COLOR FOR:" + pObj.name)
-
         // space volumes only have color, not a texture
         //let clr = this.getColor(data.color);
         let clr = celestial.color(data);
-  
-        // COLOR IS NULL
-        console.log(">>>>>>>>>>COLOR:" + clr + " STARTING DATA COLOR FOR:" + pObj.name)
 
         if(clr) {
-            console.log(">>>>>>>>COLOR:" + clr + " MATERIAL DIFFUSE COLOR FOR:" + pObj.name)
             mat.diffuseColor = new BABYLON.Color3(clr.r, clr.g, clr.b);
         } else {
-            console.log(">>>>>>>>COLOR:" + clr + " DEFAULT DIFFUSE COLOR FOR:" + pObj.name)
             mat.diffuseColor = new BABYLON.Color3.Green();
         }
 
@@ -452,7 +514,7 @@ var PWorld = (function () {
     * @param {String} dir 
     * @param {Scene} scene
     */
-    PWorld.prototype.loadSkybox = function (pObj, dir, scene) {
+    PWorld.prototype.loadSkybox = function (pObj, dir, scene, useVR = false) {
 
         console.log("------------------------------");
         console.log('creating skybox:' + pObj.name);
@@ -478,8 +540,8 @@ var PWorld = (function () {
         // Empirical rotations for this particular skybox
         // TODO: add to JSON file for each cubemap
 
-        data.ra = 179.25; // side to side (almost 180)
-        data.dec = 60.749; //up and down (correct galactic degrees 60.2)
+        data.ra = 179.25; // TODO: side to side (almost 180)
+        data.dec = 60.749; //TODO: up and down (correct galactic degrees 60.2)
 
         /* 
          * Create an infinite-distance skybox
@@ -489,7 +551,9 @@ var PWorld = (function () {
          */
         let bSize = this.dVisSize;
 
-        if(util.isNumber(data.diameter) && data.diameter > 0) {
+        if(useVR) {
+            bSize = this.VR_DEFAULT_SIZE;
+        } else if(util.isNumber(data.diameter) && data.diameter > 0) {
             bSize = data.diameter * dParsecUnits;
             console.log('skybox for:' + pObj.name + ' using bSize:' + bSize);
         }
@@ -548,6 +612,7 @@ var PWorld = (function () {
         }
 
         mesh.material = mat;
+        mesh.material.freeze();
 
         return mesh;
     };
@@ -652,7 +717,7 @@ var PWorld = (function () {
 
     };
 
-    PWorld.prototype.loadPlanetModel = function (pObj, dir, scene) {
+    PWorld.prototype.loadPlanetModel = function (pObj, dir, scene, systemDiameter) {
 
         console.log("------------------------------");
         console.log("drawing planetModel:" + pObj.name)
@@ -716,17 +781,32 @@ var PWorld = (function () {
                     // TODO: USE BABYLON VECTOR RATHER THAN CUSTOM 'vec'
                     // TODO: objects should rotate around their barycenter, which is
                     // TODO: the center of the SpaceVolume for each StarSystem
-                    this.setPositionByRADec(data, mesh.position, dParsecUnits);
+                    //this.setPositionByRADec(data, mesh.position, dParsecUnits);
 
-                    mesh.freezeNormals(); // TODO: may be useful for emissive objects
 
+                    if(pObj.key == 'luhman_16_b' || pObj.key == 'luhman_16_a') {
+                        console.log("LUHMAN SCALED DISTANCE:" + pObj.name + scaled.dist)
+                        mesh.bakeCurrentTransformIntoVertices();
+                    }
+
+                    // normals not needed for emissive objects (no shadows)
+                    mesh.freezeNormals();
+
+                    // set lighting, texture, color
                     if(model.emissive) {
                         const light = new BABYLON.PointLight(pObj.name + 'Light', mesh.getAbsolutePosition(), scene);
                         light.position = new BABYLON.Vector3(0, 0, 0);
+                        // light range, adjust to StarSystem SpaceVolume
+                        if(systemDiameter) {
+                            light.range = systemDiameter * dParsecUnits;
+                        } else {
+                            light.range = 4 * dParsecUnits; // emissive is always a star scales
+                        }
+                        // set the parent of the Light to star or brown dwarf
                         light.parent = mesh;
+                        // properties for emissive texture
                         mat.emissiveTexture = new BABYLON.Texture(texDir + model.surface, scene, true, false);
                         if(clr) {
-                            /////////////////mat.diffuseColor = new BABYLON.Color3(clr.r, clr.g, clr.b);
                             mat.diffuseColor = clr.clone();
                         } else {
                             mat.diffuseColor = new BABYLON.Color3(1, 1, 1);
@@ -747,11 +827,14 @@ var PWorld = (function () {
                         gl.addIncludedOnlyMesh(mesh);
                     }
                     break;
-
                 case t.EXOPLANET:
                 case t.PLANET:
-                    mat.diffuseTexture = new BABYLON.Texture(texDir + model.surface, scene);
+                    // position
                     mesh.setPositionWithLocalVector(new BABYLON.Vector3(scaled.dist, 0, 0));
+
+                    // appearance
+                    mat.diffuseTexture = new BABYLON.Texture(texDir + model.surface, scene);
+
                     if(util.isNumber(model.specular)) {
                         mat.specularColor = new BABYLON.Color3(model.specular, model.specular, model.specular)
                     } else {
@@ -760,7 +843,6 @@ var PWorld = (function () {
                     break;
 
             }
-
 
         } else if(model.gltf) {
             
@@ -775,12 +857,37 @@ var PWorld = (function () {
         // Runs every frame to rotate the sphere
         if(mesh) {
 
+            // BAKING
+
             // TODO: Axial tilt
+
+            // camera
 
             // planet rotation
             scene.onBeforeRenderObservable.add(()=>{
+
+                // update stars
+                // DOESN'T WORK, WHY? 
+                if(pObj.key == 'luhman_16_a' || pObj.key == 'luhman_16_b') {
+                    //this.celestial.orrey.computeOrbit(pObj);
+                    // try making orbit manually here
+                    // NOTE: scaled.dist is being SAVED from creation of these objects!
+                    // TODO: eliminate required saving
+                    // TODO: not sign, but rotation
+                    //console.log("SCALED DISTANCE:" + scaled.dist)
+                    mesh.position.x = scaled.dist * Math.sin(this.rot);
+                    mesh.position.z = scaled.dist * Math.cos(this.rot);
+                    //mesh.position.x = Math.sin(this.rot);
+                    //mesh.position.z = Math.cos(this.rot);
+                    this.rot += 0.0002*scene.getEngine().getDeltaTime();;
+
+                }
+
+                // baked in rotations for parents and children
                 mesh.rotation.y += 0.0001*scene.getEngine().getDeltaTime();
                 //mesh.rotation.x += 0.0001*scene.getEngine().getDeltaTime();
+
+
             });
 
         }
@@ -803,6 +910,11 @@ var PWorld = (function () {
             if(parent) {
                 mesh.parent = parent;
             }
+
+            mesh.pObj = pObj;
+            pObj.mesh = mesh;
+
+            this.ui.createLabel(pObj, scene);
 
             // set additional features of moons not shared by planets (e.g. planet glow on dark side)
 
@@ -832,7 +944,7 @@ var PWorld = (function () {
 
         let util = this.util;
         
-        let mesh = this.loadPlanetModel(pObj, dir + '/' + pObj.dname, scene, parent);
+        let mesh = this.loadPlanetModel(pObj, dir + '/' + pObj.dname, scene);
 
         if(mesh) {
 
@@ -841,7 +953,10 @@ var PWorld = (function () {
                 mesh.parent = parent; //only for perfectly circular orbits, or dynamic radius computation
             }
 
-            // set additional features of planets
+            mesh.pObj = pObj;
+            pObj.mesh = mesh;
+
+            this.ui.createLabel(pObj, scene, true, true);
 
             // draw the moons
 
@@ -860,12 +975,12 @@ var PWorld = (function () {
     /**
      * Load a Star
      */
-    PWorld.prototype.loadStar = function (pObj, dir, scene, parent) {
+    PWorld.prototype.loadStar = function (pObj, dir, scene, parent, systemDiameter) {
 
         let util = this.util;
 
-        // draw the star (apart from planets, etc)
-        let mesh = this.loadPlanetModel(pObj, dir + '/' + pObj.dname, scene);
+        // draw the star (apart from planets, etc), pass parent (StarSystem) for lighting
+        let mesh = this.loadPlanetModel(pObj, dir + '/' + pObj.dname, scene, systemDiameter);
 
 ///////////////////////////////////////////////////////////////
         if(pObj.key == 'luhman_16_a') {
@@ -876,16 +991,22 @@ var PWorld = (function () {
         }
 ///////////////////////////////////////////////////////////////
 
-
         if(mesh) {
 
-            ////////////////////mesh.lookAt = function (camera) { camera.target = this.position}
+            //
+            mesh.lookAt = function (camera) { camera.target = this.position}
 
             // Stars are children to their SpaceVolume
 
             if(parent) {
                 mesh.parent = parent;
             }
+
+            mesh.pObj = pObj;
+            pObj.mesh = mesh;
+
+            // create 2D GUI label
+            this.ui.createLabel(pObj, scene, false, false);
 
             // draw the planets, comets, asteroids
 
@@ -923,10 +1044,23 @@ var PWorld = (function () {
 
             // StarSystems are NOT children to their Galaxy - they would inherit
             // The Skybox 'infinite distance' properties
+            // mesh.parent = parent;
+
+            // reciprocally link
+            mesh.pObj = pObj;
+            pObj.mesh = mesh;
+
+            // TODO:
+            // https://doc.babylonjs.com/how_to/transformnode
+            // Create a transformNode to use for rotation of children
+            pObj.tMesh = new BABYLON.TransformNode("root"); 
+
+            // add 2 'false' to turn off visibility and pickability
+            this.ui.createLabel(pObj, scene);
 
             if(util.isArray(pObj.stars)) {
                 for(let i = 0; i< pObj.stars.length; i++) {
-                    this.loadStar(pObj.stars[i], dir + '/' + pObj.dname + '/stars', scene, mesh);
+                    this.loadStar(pObj.stars[i], dir + '/' + pObj.dname + '/stars', scene, mesh, pObj.data.diameter);
                 }
             }
 
@@ -936,7 +1070,7 @@ var PWorld = (function () {
 
     };
 
-    PWorld.prototype.loadNebula = function(pObj, dir, scene) {
+    PWorld.prototype.loadNebula = function(pObj, dir, scene, parent) {
 
         let util = this.util;
 
@@ -944,6 +1078,12 @@ var PWorld = (function () {
         let mesh = this.loadCloudModel(pObj, dir + '/' + pObj.dname, scene);
 
         if(mesh) {
+
+            if(parent) {
+                mesh.parent = parent;
+            }
+
+            mesh.pObj = pObj;
 
         }
 
@@ -959,9 +1099,15 @@ var PWorld = (function () {
 
         let util = this.util;
 
-        // draw the galaxy model as an infinite cubemap
-        //mesh = loadSkyBox(galaxy, dir, scene);
-        let meshSky = this.loadSkybox(pObj, dir, scene);
+        // draw the galaxy model as an infinite cubemap, large-format
+        let meshSky = this.loadSkybox(pObj, dir, scene, this.NO_VR);
+
+        // load a small skybox for VR, which needs under 1000 units in size
+        let meshSkyVR = this.loadSkybox(pObj, dir, scene, this.USE_VR);
+        
+        if(meshSkyVR) {
+            meshSkyVR.setEnabled(false);
+        }
 
         /*
          * 1. The mesh parent is a empty space, outside the Skybox
@@ -974,11 +1120,31 @@ var PWorld = (function () {
 
         // hide for now
 
+        window.gg = pObj; ////////////////////////////////////////
+
         if(mesh) {
 
-            this.toggleMeshActivation(mesh);
+            // attach to parent
+            if(parent) {
+                mesh.parent = parent;
+            }
 
-            mesh.parent = parent;
+            // attach to pObj;
+            pObj.mesh = mesh;
+            mesh.pObj = pObj;
+
+            if(meshSky) {
+                pObj.meshSky = meshSky;
+                meshSky.pObj = pObj;
+            }
+
+            if(meshSkyVR) {
+                meshSkyVR.name += '-VR';
+                pObj.meshSkyVR = meshSkyVR;
+                meshSkyVR.pObj = pObj;
+            }
+
+            /////////this.ui.createLabel(pObj, scene);
 
             // we DO NOT set the universe as the parent for the galaxy
             // mesh.parent = parent;
@@ -1078,9 +1244,12 @@ var PWorld = (function () {
 
     };
 
+    /**
+     * create assets from the World JSON file
+     * @param {BABYLON.Scene} scene
+     */
     PWorld.prototype.createAssets = async function (scene) {
 
-        var loadedAssets = {};
         var pWorld = this;
         let util = this.util;
 
@@ -1096,16 +1265,18 @@ var PWorld = (function () {
             try {
 
                 // try to parse the world data
-                loadJSON.world = JSON.parse(world.text);
-
-                // if parsed successfully, return JSON object describing the world
-                loadedAssets.world = loadJSON.world;
+                let w = JSON.parse(world.text);
 
                 // check if world can actually be loaded
-                if(pWorld.checkWorld(loadJSON.world)) {
+                if(pWorld.checkWorld(w)) {
 
-                    let world = pWorld.loadWorld(loadJSON.world, scene).then((mesh) => {
-                    console.log("Worlds are loaded...")
+                    pWorld.world = w;
+
+                    pWorld.mesh = pWorld.loadWorld(w, scene).then((mesh) => {
+
+                        // get back 'universe' mesh
+                        console.log('World is loaded');
+
                     });
 
                 } // isValidWorld check
@@ -1147,11 +1318,15 @@ var PWorld = (function () {
 
         assetManager.load();
 
-        return loadedAssets;
+        // return the world JSON object
+
+        return w;
 
     };
 
     PWorld.prototype.createScene = async function (engine, canvas) {
+
+        let pWorld = this;
 
         // This creates a basic Babylon Scene object (non-mesh)
         var scene = new BABYLON.Scene(engine);
@@ -1174,6 +1349,19 @@ var PWorld = (function () {
         // This attaches the camera to the canvas
         camera.attachControl(canvas, true);
 
+        // create a fullscreen UI layer
+        scene.gui = BABYLON.GUI.AdvancedDynamicTexture.CreateFullscreenUI('UI');
+
+    // adjust rendering pipeline (just for skybox?)
+    //var quality = "high";
+    //var pipeline = new BABYLON.DefaultRenderingPipeline("pipeline", false, scene, [camera]); /// name, hdrEnabled, scene, cameras
+    //if (quality != "low") {
+    //    pipeline.bloomEnabled = true;
+    //    pipeline.bloomWeight = 4;
+    //}
+    //pipeline.fxaa = new BABYLON.FxaaPostProcess('fxaa', 1, null, BABYLON.Texture.BILINEAR_SAMPLINGMODE, engine, false);
+    //pipeline.fxaaEnabled = true; // fxaa deactivated by default
+
         // TODO: set up controllers for Desktop and VR
         // https://doc.babylonjs.com/how_to/webxr_controllers_support
 
@@ -1187,32 +1375,38 @@ var PWorld = (function () {
         var HMDXRButton = document.getElementsByClassName('xr-toggle.button')[0];
 
         var xrHelperOptions = {
-        //floorMeshes: [environment.ground],
-        //disableDefaultUI : true
-        createDeviceOrientationCamera: false
+            //floorMeshes: [environment.ground],
+            //disableDefaultUI : true
+            createDeviceOrientationCamera: false
         };
 
         // XR
         var xrHelper = await scene.createDefaultXRExperienceAsync(xrHelperOptions).then(helper => {
 
             helper.baseExperience.onStateChangedObservable.add((state) => {
+
                 switch(state) {
+
                     case BABYLON.WebXRState.ENTERING_XR:
                         console.log("Entering XR:" + state)
-                        // xr is being initialized, enter XR request was made
+                        pWorld.toggleVRSkybox(true); // shrunken below 1000 unit size
                         break;
+
                     case BABYLON.WebXRState.IN_XR:
                         // XR is initialized and already submitted one frame
                         console.log("In XR:" + state)
                         break;
+
                     case BABYLON.WebXRState.EXITING_XR:
                         console.log("Exiting XR:" + state)
-                        // xr exit request was made. not yet done.
+                        pWorld.toggleVRSkybox(false); // original size
                         break;
+
                     case BABYLON.WebXRState.NOT_IN_XR:
                         console.log("Not in XR:" + state)
                         // self explanatory - either our or not yet in XR
                         break;
+
                     }
 
             });

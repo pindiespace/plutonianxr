@@ -1,18 +1,29 @@
 /*
 
 rotate stars and planets about SpaceVolume (the barycenter)
+need to compute orbits with something like:
 
-normalize data object between hyg sprites and scene objects
+explore transformnode
+https://doc.babylonjs.com/how_to/pivot
 
-move "type" OUTSIDE of data object
+explore pivot
 
-fade lighting after a couple of parsecs
+Shrink skybox when entering VR, resize on exiting VR
 
-scalling for size of stars, planets in different modes
+camera acceleration and deceleration
 
-attach pObj to each mesh
+remove light from planet mesh for anything except its own star
+
+scaling for size of stars, planets in different modes
+
+shadertoy for star surface
+
+pixel shader, determine pixels
+https://stackoverflow.com/questions/17339149/webgl-how-do-i-get-the-position-of-every-pixel-in-fragment-shader
 
 stop picked mesh afte first "hit"
+
+make everything "arrow" notation
 
 animation to reset scale when inside planetary system
 

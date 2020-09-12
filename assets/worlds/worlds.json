@@ -225,7 +225,6 @@
                                         "type": "planet",
                                         "diameter": 2370,
                                         "dist": 10000,
-                                        "barycenter":1195,
                                         "tilt": 0,
                                         "rotation": 0.002,
                                         "models": {
@@ -250,7 +249,6 @@
                                                 "type": "planet",
                                                 "diameter": 1208,
                                                 "dist": 19570,
-                                                "barycenter":0,
                                                 "tilt": 0,
                                                 "rotation": 0.002,
                                                 "models": {
@@ -298,7 +296,7 @@
                             "data": {
                                 "type": "star",
                                 "hygID": "71456",
-                                "diameter": "1",
+                                "diameter": "5000",
                                 "ra":"14.660765",
                                 "dec":"-60.833976",
                                 "dist": "1.347490972",
@@ -320,7 +318,7 @@
                             "data": {
                                 "type": "star",
                                 "hygID": "71454",
-                                "diameter": "0.7",
+                                "diameter": "3500",
                                 "ra": "14.66094188",
                                 "dec": "-60.83947139",
                                 "dist": "1.347490972",
@@ -340,7 +338,7 @@
                             "data": {
                                 "type": "star",
                                 "hygID": 70666,
-                                "diameter": 0.1,
+                                "diameter": 1000,
                                 "ra": 14.4965965,
                                 "dec": -62.68135207,
                                 "dist": 1.294783318,
@@ -392,7 +390,7 @@
                             "name": "Luhman 16 A",
                             "description": "First dwarf of the pair.",
                             "data": {
-                                "type": "brown_dwarf",
+                                "type": "star",
                                 "hygID": "",
                                 "diameter": "300",
                                 "ra": "162.3248925",

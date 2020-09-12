@@ -7,13 +7,100 @@
  * (about 10,000 of the 119,000 stars in Hyg3 fall in this category)
  */
 
+var PData = (function () {
+
+    /*
+     * A subset of the Hyg3 database fields
+     * https://github.com/astronexus/HYG-Database
+     */
+
+    /**
+     * Template for celestial data in the simulation (non-stardome sprite)
+     * @param {*} type 
+     * @param {*} diameter 
+     * @param {*} ra 
+     * @param {*} dec 
+     * @param {*} dist 
+     * @param {*} bary 
+     * @param {*} tilt 
+     * @param {*} rot 
+     */
+    function PData (type, diameter, ra, dec, dist, bary, tilt, rot) {
+
+        this.type = type || 'unknown',
+        this.hygID = '',
+        this.diameter = diameter || 0,
+        this.ra = ra || 0,
+        this.dec = dec || 0,
+        this.x = 0,
+        this.y = 0,
+        this.z = 0,
+        this.dist = dist || 0, // for a star, planet, center, for a StarSystem, the barycenter
+        this.tilt = tilt || 0, // from solar system view
+        this.rot = rot || 0,
+        this.absMag = 0,
+        this.spect = '',
+        this.color = [],
+        this.models = {},
+        this.mesh = null,
+        this.references = [];
+
+    };
+
+    return PData;
+
+}());
 
 /**
- * Contains computations for planetary positions
+ * Template for an entry in the worlds JSON file
+ * @param {String} key unique identifier for object
+ * @param {String} dname name of directory in asset store with data, images, models
+ * @param {String} name the name of the object in the UI
+ * @param {PData} data celestial data and models associated with the object
+ */
+var PObj = (function (key, dname, name, data) {
+
+    function PObj () {
+
+        this.key = null,
+        this.dname = '',
+        this.name = '',
+        this.data = new PData();
+
+    };
+
+    return PObj;
+
+}());
+
+/**
+ * Contains computations for solar system planetary positions
  */
 var POrrey = (function () {
 
     function POrrey () {
+
+        this.alpha = Math.PI;
+
+    };
+
+    /**
+     * begins here
+     * https://www.babylonjs-playground.com/#1UGDQC#5
+     */
+    POrrey.prototype.computeOrbit = function (pObj) {
+        let planet = pObj.mesh;
+        if(pObj.dist != 0) {
+
+            mesh.setPositionWithLocalVector(new BABYLON.Vector3(scaled.dist, 0, 0));
+
+            planet.position = new BABYLON.Vector3(
+            pObj.data.dist * Math.sin(this.alpha), // multiply sin or cos for ellipse
+            planet.parent.position.y, 
+            pObj.data.dist * Math.cos(this.alpha));
+            this.alpha += 0.005;
+            //console.log('positioning:' + planet.position.x)
+        }
 
     };
 
@@ -21,6 +108,9 @@ var POrrey = (function () {
 
 }());
 
+/**
+ * Build the celestial space using Hyg3 database and other sources
+ */
 var PCelestial = (function () {
 
     // constructor
@@ -50,11 +140,77 @@ var PCelestial = (function () {
         this.camera = null;
 
         // TODO: STATIC VARIABLES ARE SLOWER, CONVERT OUR DEFAULTS
+        this.setDefaults();
 
         // computations of planetary positions over time
         this.orrey = new POrrey();
 
     };
+
+    // default star colors, by one-letter stellar type
+    PCelestial.prototype.dStarColors = [];
+
+    // default absolute magnitudes, by one-letter stellar type
+    PCelestial.prototype.dAbsMag = [];
+
+    // default Sprite index for star quad image
+    PCelestial.prototype.dSpriteIndex = [];
+
+    /**
+     * Set defaults dynamically (2x faster in JavaScript than static class variable)
+     */
+    PCelestial.prototype.setDefaults = function () {
+
+        let dStarColors  = this.dStarColors;
+        let dAbsMag      = this.dAbsMag;
+        let dSpriteIndex = this.dSpriteIndex;
+
+        dStarColors['o'] = {r:0.598529412, g: 0.683578431, b: 1},
+        dStarColors['b'] = {r:0.680490196, g: 0.759068627, b: 1},
+        dStarColors['a'] = {r:0.790196078, g: 0.839607843, b: 1},
+        dStarColors['f'] = {r:0.933382353, g: 0.930392157, b: 0.991470588},
+        dStarColors['g'] = {r:1, g: 0.925686274, b: 0.830882353},
+        dStarColors['k'] = {r:1, g: 0.836421569, b: 0.629656863},
+        dStarColors['m'] = {r:1, g: 0.755686275, b: 0.421764706},
+        dStarColors['n'] = {r:0.987654321, g: 0.746356814, b: 0.416557734},
+        dStarColors['w'] = {r:0.598529412, g: 0.683578431, b: 1},
+        dStarColors['r'] = {r:1, g: 0.868921569, b: 0.705735294},
+        dStarColors['c'] = {r:1, g: 0.828186274, b: 0.576078431},
+        dStarColors['s'] = {r:1, g: 0.755686275, b: 0.421764706},
+        dStarColors['d'] = {r:0.798823529, g: 0.834901961, b: 0.984313726},
+        dStarColors['l'] = {r:1, g:0.4235294, b:0},
+        dStarColors['t'] = {r:1, g:0.219607843, b:0};
+        dStarColors['y'] = {r:1, g:0, b:0};
+
+        dAbsMag['o'] = -10, // standard
+        dAbsMag['b'] = -2,
+        dAbsMag['a'] = 2,
+        dAbsMag['f'] = 3,
+        dAbsMag['g'] = 0
+        dAbsMag['k'] = 0,
+        dAbsMag['m'] = 6,
+        dAbsMag['n'] = 0, // less common
+        dAbsMag['w'] = -11,
+        dAbsMag['r'] = 1,
+        dAbsMag['c'] = -1,
+        dAbsMag['s'] = 4,
+        dAbsMag['d'] = 10;
+
+        dSpriteIndex['o'] = 6, //standard
+        dSpriteIndex['b'] = 5,
+        dSpriteIndex['a'] = 4,
+        dSpriteIndex['f'] = 3,
+        dSpriteIndex['g'] = 2,
+        dSpriteIndex['k'] = 1,
+        dSpriteIndex['m'] = 0,
+        dSpriteIndex['n'] = 0, //less common
+        dSpriteIndex['w'] = 6,
+        dSpriteIndex['r'] = 1,
+        dSpriteIndex['c'] = 1,
+        dSpriteIndex['s'] = 0,
+        dSpriteIndex['d'] = 4;
+    };
+
 
     // information model
     PCelestial.prototype.PCTYPES = {
@@ -76,20 +232,7 @@ var PCelestial = (function () {
      * Return pObj.data default object
       */
     PCelestial.prototype.createCelestialData = function (type, diameter = 0, ra = 0, dec = 0, dist = 0) { 
-        return {
-            'type': type,
-            'diameter': diameter,
-            'ra': ra,
-            'dec': dec,
-            'dist': dist,
-            'barycenter':0,
-            'tilt': 0,
-            'rotation':0,
-            'color': [],
-            'models': {},
-            'mesh': null
-        };
-
+        return null;
     };
 
     /**
@@ -101,58 +244,7 @@ var PCelestial = (function () {
         return true;
     };
 
-    // private static variables
-
-    // default star colors
-    var dStarColors = [];
-        dStarColors['o'] = {r:0.598529412, g: 0.683578431, b: 1},
-        dStarColors['b'] = {r:0.680490196, g: 0.759068627, b: 1},
-        dStarColors['a'] = {r:0.790196078, g: 0.839607843, b: 1},
-        dStarColors['f'] = {r:0.933382353, g: 0.930392157, b: 0.991470588},
-        dStarColors['g'] = {r:1, g: 0.925686274, b: 0.830882353},
-        dStarColors['k'] = {r:1, g: 0.836421569, b: 0.629656863},
-        dStarColors['m'] = {r:1, g: 0.755686275, b: 0.421764706},
-        dStarColors['n'] = {r:0.987654321, g: 0.746356814, b: 0.416557734},
-        dStarColors['w'] = {r:0.598529412, g: 0.683578431, b: 1},
-        dStarColors['r'] = {r:1, g: 0.868921569, b: 0.705735294},
-        dStarColors['c'] = {r:1, g: 0.828186274, b: 0.576078431},
-        dStarColors['s'] = {r:1, g: 0.755686275, b: 0.421764706},
-        dStarColors['d'] = {r:0.798823529, g: 0.834901961, b: 0.984313726},
-        dStarColors['l'] = {r:1, g:0.4235294, b:0},
-        dStarColors['t'] = {r:1, g:0.219607843, b:0};
-        dStarColors['y'] = {r:1, g:0, b:0};
-
-    var dAbsMag = [];
-        dAbsMag['o'] = -10, // standard
-        dAbsMag['b'] = -2,
-        dAbsMag['a'] = 2,
-        dAbsMag['f'] = 3,
-        dAbsMag['g'] = 0
-        dAbsMag['k'] = 0,
-        dAbsMag['m'] = 6,
-        dAbsMag['n'] = 0, // less common
-        dAbsMag['w'] = -11,
-        dAbsMag['r'] = 1,
-        dAbsMag['c'] = -1,
-        dAbsMag['s'] = 4,
-        dAbsMag['d'] = 10;
- 
-
-    var dSpriteIndex = [];
-        dSpriteIndex['o'] = 6, //standard
-        dSpriteIndex['b'] = 5,
-        dSpriteIndex['a'] = 4,
-        dSpriteIndex['f'] = 3,
-        dSpriteIndex['g'] = 2,
-        dSpriteIndex['k'] = 1,
-        dSpriteIndex['m'] = 0,
-        dSpriteIndex['n'] = 0, //less common
-        dSpriteIndex['w'] = 6,
-        dSpriteIndex['r'] = 1,
-        dSpriteIndex['c'] = 1,
-        dSpriteIndex['s'] = 0,
-        dSpriteIndex['d'] = 4;
-
+    // private static variables (slower)
 
     // functions
 
@@ -392,6 +484,7 @@ var PCelestial = (function () {
 
     };
 
+
     /**
      * Make sure the JSON file has the minimum number of columns needed 
      * to create Star sprites or Points. Required:
@@ -452,8 +545,9 @@ var PCelestial = (function () {
      */
     PCelestial.prototype.getHygColor = function (star) {
 
-        let c = null;
-        let s = star.spect;
+        let   c = null;
+        let   s = star.spect;
+        let dsc = this.dStarColors;
 
         // window.bvToRGB = this. bvToRGB; ///////////////////////////////
 
@@ -474,16 +568,16 @@ var PCelestial = (function () {
 
         // one-letter average default, part of this class
         //console.log('setting default:' + s.substring(0,1).toLowerCase() + ' for:' + s)
-        c = dStarColors[s.substring(0,1).toLowerCase()];
+        c = dsc[s.substring(0,1).toLowerCase()];
 
         // if everything fails, make it white, includes 'pec' for novas
         if(!c) {
             if(s == 'pec') {
-                c = dStarColors['a']; // probably a nova, use blue-white
+                c = dsc['a']; // probably a nova, use blue-white
             }
             else {
                 //console.warn('no color for spect type:' + s)
-                c = dStarColors['f']; // whiteish
+                c = dsc['f']; // whiteish
             }
 
         }
@@ -494,12 +588,13 @@ var PCelestial = (function () {
 
 
     /**
+     * 
      * get the sprite index to display for this type
      */
     PCelestial.prototype.getHygSpriteIndex = function (star) {
         let s = star.spect;
         if(s) {
-            c = dSpriteIndex[s.substring(0,1).toLowerCase()];
+            c = this.dSpriteIndex[s.substring(0,1).toLowerCase()];
             if(this.util.isNumber(c)) {
                 return c;
             }
@@ -514,7 +609,7 @@ var PCelestial = (function () {
     };
 
     /**
-     * Get the size of the star (dwarf, giant, supergiant) from 
+     * Get the estimated size of the star (dwarf, giant, supergiant) from 
      * the spectrum.
      */
     PCelestial.prototype.getHygSize = function (spect) {
@@ -528,7 +623,7 @@ var PCelestial = (function () {
      * @param {String} spect the stellar spectral type
      */
     PCelestial.prototype.getHygAbsMag = function (spect) {
-        return dAbsMag[spect];
+        return this.dAbsMag[spect];
     };
 
     /**
@@ -1058,7 +1153,7 @@ var computeHygSprite = async function (hygData, spriteFile, size, scene) {
 
                 //if(dist < 400) { // somewhere between 400 and 600
                 if(dist < 400) {
-                    spriteManagerStars.disableDepthWrite = false;
+                    ///////spriteManagerStars.disableDepthWrite = false;
                     sprite.width = sprite.height = dSpriteScreenSize;
                     sprite.color.a = 1;
                     // TODO: alpha based on absolute magnitude
@@ -1068,7 +1163,7 @@ var computeHygSprite = async function (hygData, spriteFile, size, scene) {
                 }
                 else {
                     // this greatly reduces 'flicker' for overlapping distant stars
-                    spriteManagerStars.disableDepthWrite = true;
+                    ///////spriteManagerStars.disableDepthWrite = true;
                     // keep size > 1 pixel
                     sprite.width = sprite.height = dSpriteScreenSize + (dist/800);
                     // empirical adjustment of magnitude for best '3D' effect

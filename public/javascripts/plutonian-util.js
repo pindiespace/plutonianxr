@@ -221,6 +221,7 @@ var PUtil = (function () {
     /**
      Performance for a particular function
      * @link {https://developer.mozilla.org/en-US/docs/Web/API/Performance/now}
+     * @link {https://www.digitalocean.com/community/tutorials/js-js-performance-api}
      */
     PUtil.prototype.checkPerformance = function (fn, iterations) {
         const t0 = performance.now();
@@ -258,25 +259,36 @@ var PUtil = (function () {
 
 }());
 
-// augment String
-
+/**
+ * strip characters from the left side of a String
+ * @param {String} charlist list of characters to strip
+ */
 String.prototype.stripLeft = function (charlist) {
     if (charlist === undefined) charlist = "\s";
     return this.replace(new RegExp("^[" + charlist + "]+"), "");
   };
 
+/**
+ * strip characters from the right side of a String
+ * @param {String} charlist list of characters to strip
+ */
   String.prototype.stripRight = function (charlist) {
     if (charlist === undefined) charlist = "\s";
     return this.replace(new RegExp("[" + charlist + "]+$"), "");
   };
 
+  /**
+   * trim characters from both sides of string
+   * @param {String} charlist list of characters to strip
+   */
   String.prototype.strip = function (charlist) {
     return this.trimLeft(charlist).trimRight(charlist);
   };
 
-// Errors
-
-//var printError = function(error, explicit) {
-//    console.log(`[${explicit ? 'JSON Syntax Error (EXPLICIT)' : 'JSON Error (INEXPLICIT)'}] ${error.name}: ${error.message}`);
-//}
-
+  /**
+   * @param {String} str the string to strip whitespace from
+   * remove all whitespace fro a string
+   */
+  String.prototype.stripWhitespace = function (str) {
+    return str.replace(/\s+/g, '');
+  };
