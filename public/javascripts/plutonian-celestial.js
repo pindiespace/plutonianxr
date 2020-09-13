@@ -221,6 +221,7 @@ var PCelestial = (function () {
         STAR: 'star',
         BROWN_DWARF: 'brown_dwarf',
         EXOPLANET: 'exoplanet',
+        ROGUE_PLANET: 'rogue_planet', // planet not orbiting a star
         PLANET: 'planet',
         MOON: 'moon',
         ARTIFACT: 'artifact'
@@ -284,6 +285,13 @@ var PCelestial = (function () {
 
             return (hours + minutes + seconds);
 
+    };
+
+    /**
+     * Convert degrees 0-360 to 0-24
+     */
+    PCelestial.prototype.degToDecimalHMS = function (degrees) {
+        return parseFloat(degrees) / 24;
     };
 
     /**
@@ -380,10 +388,16 @@ var PCelestial = (function () {
         switch(data.type) {
 
             case t.PLANET:
+            case t.EXOPLANET:
             case t.MOON:
                 // 1 unit = 2370km, Pluto = 2370/2370 = 1.0
                 scaled.diameter /= this.dKmUnits,
                 scaled.dist /= this.dKmUnits;
+                break;
+
+            case t.ROGUE_PLANET:
+                saled.diameter /= this.dKmUnits,
+                scaled.dist *= this.dParsecUnits;
                 break;
 
             case t.BROWN_DWARF:
@@ -400,7 +414,7 @@ var PCelestial = (function () {
                 beak;
 
             default:
-                console.error('.scale ERROR: invalide celestial type');
+                console.error('.scale ERROR: invalid celestial type');
                 break;
 
         }
@@ -1044,13 +1058,24 @@ var computeHygSprite = async function (hygData, spriteFile, size, scene) {
             if(star.id == "11734") { // Polaris
                 window.polaris = sprite;
                 sprite.size *= 100;
-                sprite.lookAt = function (camera) { camera.target = this.position}
+                sprite.lookAt = function (camera) {camera.setTarget(this.position)}
+                // just changing camera.target only works in preview edition
+                //sprite.lookAt = function (camera) { camera.target = this.position}
             }
 
             if(star.id == "7574") { // Achernar
                 window.achernar = sprite;
                 sprite.size *= 3;
-                sprite.lookAt = function (camera) { camera.target = this.position}
+                sprite.lookAt = function (camera) {camera.setTarget(this.position)}
+            }
+
+            if(star.id == "25583") { // AB Doradus
+                window.abdor = sprite;
+                sprite.size *= 10;
+                sprite.lookAt = function (camera) {
+                    console.log(sprite.name + " position:" + sprite.position)
+                    camera.setTarget(this.position)
+                    }
             }
 
             if(star.id == "118441") { // star behind sirius
@@ -1060,51 +1085,51 @@ var computeHygSprite = async function (hygData, spriteFile, size, scene) {
             if(star.id == "32263") { // Sirius
                 window.sirius = sprite;
                 sprite.size /= 2;
-                sprite.lookAt = function (camera) {camera.target = this.position}
+                sprite.lookAt = function (camera) {camera.setTarget(this.position)}
             }
 
             if(star.id == "27919") {  // Betelgeuse
                 window.betelgeuse = sprite;
                 sprite.size *= baseDist * 0.5 * baseScale;
-                sprite.lookAt = function (camera) { camera.target = this.position}
+                sprite.lookAt = function (camera) {camera.setTarget(this.position)}
             }
 
             if(star.id == "24378") { // Rigel
                 window.rigel = sprite;
                 sprite.size *= baseDist * 0.75 * baseScale;
-                sprite.lookAt = function (camera) { camera.target = this.position}
+                sprite.lookAt = function (camera) {camera.setTarget(this.position)}
             }
 
              // Bellatrix
             if(star.id == "25273") { // Bellatrix
                 window.bellatrix = sprite;
                 sprite.size *= baseDist * 0.2 * baseScale;
-                sprite.lookAt = function (camera) { camera.target = this.position}
+                sprite.lookAt = function (camera) {camera.setTarget(this.position)}
             }
 
              // saiph
             if(star.id == "27298") { // Saiph
                 window.saiph = sprite;
                 sprite.size *= baseDist * 0.5 * baseScale;
-                sprite.lookAt = function (camera) { camera.target = this.position}
+                sprite.lookAt = function (camera) {camera.setTarget(this.position)}
             }
 
             if(star.id == "26662") { // Alnitak, orion belt, left
                 window.alnitak = sprite;
                 sprite.size *= baseDist * 0.7 * baseScale;
-                sprite.lookAt = function (camera) { camera.target = this.position}
+                sprite.lookAt = function (camera) {camera.setTarget(this.position)}
                 //camera.target = sprite.position;
             }
             if(star.id == "26246") { // Alnilam, orion belt, middle
                 window.alnilam = sprite;
                 sprite.size *= baseDist * 1.6 * baseScale;
-                sprite.lookAt = function (camera) { camera.target = this.position}
+                sprite.lookAt = function (camera) {camera.setTarget(this.position)}
 
             }
             if(star.id == "25865") { // Mintaka, right
                 sprite.size *= baseDist * 0.7 * baseScale;
                 window.mintaka = sprite;
-                sprite.lookAt = function (camera) { camera.target = this.position}
+                sprite.lookAt = function (camera) {camera.setTarget(this.position)}
             }
 
             //if(star.id == "5154") { // very distant star, > 30,000 parsecs
@@ -1142,6 +1167,7 @@ var computeHygSprite = async function (hygData, spriteFile, size, scene) {
         https://forum.babylonjs.com/t/disable-camera-depending-scaling-on-a-sprite/9252
 
         function update(sprite, cam) {
+
             let dx = cam.position.x - sprite.position.x,
             dy = cam.position.y - sprite.position.y,
             dz = cam.position.z - sprite.position.z;
@@ -1175,14 +1201,19 @@ var computeHygSprite = async function (hygData, spriteFile, size, scene) {
 
         }
 
+        window.mgr = spriteManagerStars;
+
         // update function for sprites
         scene.registerBeforeRender(() => {
             let dx = pos.x - oPos.x,
             dy = pos.y - oPos.y,
             dz = pos.z - oPos.z;
+
+            // note preview verson has .children as an alias to .sprites
+
             if((dx + dy + dz) != 0) {
                 for(let i = 0; i < hygData.length; i++) {
-                    update(spriteManagerStars.children[i], camera);
+                    update(spriteManagerStars.sprites[i], camera);
                 }
 
             }

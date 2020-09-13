@@ -51,10 +51,21 @@ var PUtil = (function () {
 
     };
 
-
     PUtil.prototype.isNumber = function (value) {
-        value = parseFloat(value);
-        return typeof value === 'number' && isFinite(value);
+
+        let v = parseFloat(value);
+
+        if(isNaN(v)) {
+            if(this.isString(value)) {
+                if(value.indexOf('−') != -1) {
+                    console.error('isNumber ERROR: number:' + value + ' is not using correct minus symbol');
+                } else {
+                    console.error('isNumber ERROR: bad number:' + value);
+                }
+            }
+        }
+
+        return (typeof v === 'number' && isFinite(v));
     };
 
     // NOTE: Array.isArray() is already defined in modern browsers

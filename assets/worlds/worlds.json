@@ -170,6 +170,36 @@
                     }
                 }
             ],
+            "rogue_planets": [
+                {
+                    "key": "PSO-J318.5338−22.8603",
+                    "dname":"pso-j318-5338−22-8603",
+                    "name": "PSO J318.5338−22.8603",
+                    "description": "ultra red sub brown dwarf",
+                    "data": {
+                        "type": "rogue_planet",
+                        "diameter": "1000",
+                        "ra":"13.2722433",
+                        "dec":"-22.86035",
+                        "dist":"24.6",
+                        "tilt":0,
+                        "rotation": 0.002,
+                        "color":[255, 0, 0, 0.2],
+                        "models": {
+                            "default": {
+                                "surface": "pso-j318-5338−22-8603.png",
+                                "emissive": "true",
+                                "specular": 0.2,
+                                "active": true
+                            }
+                        }
+                    },
+                    "mesh": null,
+                    "references": [
+                        "https://iopscience.iop.org/article/10.1088/2041-8205/777/2/L20"
+                    ]
+                }
+            ],
             "star_systems": [
                 {
                     "key": "solar_system",
@@ -178,7 +208,7 @@
                     "description": "Our home star system.",
                     "data": {
                         "type": "star_system",
-                        "diameter": 10,
+                        "diameter": 1,
                         "ra": 0,
                         "dec": 0,
                         "dist": 0,
@@ -281,7 +311,7 @@
                     "name": "Centauri Star System",
                     "description": "Closest star system to the solar system",
                     "data": {
-                        "diameter": 10,
+                        "diameter": 1.1,
                         "ra": 14.66115128,
                         "dec": -60.83730923,
                         "dist": 1.347490972,
@@ -376,12 +406,11 @@
                     "description": "A pair of Brown Dwarfs, extremely close to the Sun",
                     "data": {
                         "type": "star_system",
-                        "diameter": 5,
+                        "diameter": 0.5,
                         "ra": "162.3280125",
                         "dec": "-53.31941",
                         "dist": "1.9980",
                         "color": [1, 0, 0]
-
                     },
                     "stars": [
                         {

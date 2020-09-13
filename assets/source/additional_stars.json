@@ -1,5 +1,8 @@
 /*
 
+get 'rogue_planet' category working
+
+
 rotate stars and planets about SpaceVolume (the barycenter)
 need to compute orbits with something like:
 
@@ -8,11 +11,11 @@ https://doc.babylonjs.com/how_to/pivot
 
 explore pivot
 
-Shrink skybox when entering VR, resize on exiting VR
+make spaceVolume transparent when Camera is inside
+
+then add backface culling
 
 camera acceleration and deceleration
-
-remove light from planet mesh for anything except its own star
 
 scaling for size of stars, planets in different modes
 
@@ -43,6 +46,84 @@ Bring in skybox to 1000 units for VR.
 
 */
 
+
+        // CFBDSIR2149
+        // https://www.eso.org/public/archives/releases/sciencepapers/eso1245/eso1245a.pdf
+        // RA: 21h 49, 47.2s  + motion: 1.2 sec (10 years)
+        //Dec: 04d 03m 08.9s  - motion: 1.0 sec (10 years)
+        // Dist  31 +/- 13
+
+        // DEC: 
+        // RA: 327.44666666666666
+        // DEC: 4.052472222222222
+
+                    "planets": [
+                            {
+                                "key": "cfbdsir2149",
+                                "dname": "cfbdsir2149",
+                                "name": "CFBDSIR2149",
+                                "description": "Free-floating planet in the AB Doradus moving group, 4-7 times Jupiter, 450deg.",
+                                "data": {
+                                    "type": "free_planet",
+                                    "diameter": 2000,
+                                    "ra": 5.715109724359943,
+                                    "dec": 4.05219444,
+                                    "x": 2,
+                                    "y": 1,
+                                    "z": 1,
+                                    "dist":1,
+                                    "color": [1,1,1],
+                                    "models": {
+                                        "default": {
+                                        "surface": "cfbdsir2149-vis.png",
+                                        "emissive": "true",
+                                        "specular": 1,
+                                        "active": true
+                                        }
+                                    },
+                                    "references": [
+                                        "https://www.eso.org/public/archives/releases/sciencepapers/eso1245/eso1245a.pdf"
+                                    ],
+                                    "moons": [],
+                                    "artifacts": []
+                                }
+                        }
+                    ]
+
+
+https://en.wikipedia.org/wiki/Rogue_planet
+
+PSO J318.5338−22.8603
+https://iopscience.iop.org/article/10.1088/2041-8205/777/2/L20
+
+
+
+case t.FREE_PLANET:
+                    // don't have a parent star system, so don't set with local vector using
+                    // the stellar scale
+                    //mesh.setPositionWithLocalVector(new BABYLON.Vector3(scaled.dist, 0, 0));
+                    this.loadSpaceVolume(pObj, dir, scene);
+                    this.setPosition(data, mesh.position, dParsecUnits);
+
+                    // appearance
+                    console.log("TEXTURE DIR:" + texDir + model.surface)
+                    mat.diffuseTexture = new BABYLON.Texture(texDir + model.surface, scene);
+                    mat.emissiveColor = new BABYLON.Color3(1, 1, 1);
+
+                                            // glow
+                        var gll = new BABYLON.GlowLayer('glow', scene, options);
+                        gll.intensity = 5;
+                        mat.emissiveColor = new BABYLON.Color3(0.678, 0.556, 0.423);
+                        // TODO: explore emissive color for glow.
+                        //////////////mat.emissiveColor = clr.clone();
+                        gll.addIncludedOnlyMesh(mesh);
+
+                    if(util.isNumber(model.specular)) {
+                        mat.specularColor = new BABYLON.Color3(model.specular, model.specular, model.specular)
+                    } else {
+                        mat.specularColor = new BABYLON.Color3(0, 0, 0)
+                    }
+                    break;
 
 
 {
