@@ -74,18 +74,22 @@
             "data": {
                 "type": "galaxy",
                 "diameter": 200000,
-                "ra": "60",
-                "dec": "0",
+                "ra": "180",
+                "dec": "60.2",
                 "dist": 0,
                 "rotation": [0, 0, 0],
                 "color": [0, 255, 0, 0.2],
                 "models": {
                     "default": {
                         "cubemap": "eso0932a",
+                        "ra": 179.25,
+                        "dec": 60.749,
                         "active": true
                     },
                     "eso": {
                         "cubemap": "eso0932a",
+                        "ra": 179.25,
+                        "dec":60.749,
                         "active": false
                     },
                     "gaiadim": {
@@ -178,18 +182,19 @@
                     "description": "ultra red sub brown dwarf",
                     "data": {
                         "type": "rogue_planet",
-                        "diameter": "1000",
+                        "diameter": "5000",
                         "ra":"13.2722433",
                         "dec":"-22.86035",
                         "dist":"24.6",
                         "tilt":0,
                         "rotation": 0.002,
-                        "color":[255, 0, 0, 0.2],
+                        "color":[128, 0, 0, 0.2],
                         "models": {
                             "default": {
                                 "surface": "pso-j318-5338−22-8603.png",
-                                "emissive": "true",
-                                "specular": 0.2,
+                                "emissive": true,
+                                "specular": 0.0,
+                                "glow": false,
                                 "active": true
                             }
                         }
@@ -208,7 +213,7 @@
                     "description": "Our home star system.",
                     "data": {
                         "type": "star_system",
-                        "diameter": 1,
+                        "diameter": 20000,
                         "ra": 0,
                         "dec": 0,
                         "dist": 0,
@@ -233,11 +238,12 @@
                                 "dist": 0,
                                 "rotation": 0.002,
                                 "spect": "G2V",
-                                "color": [255, 245, 242],
+                                "color": [1, 0.960784, 0.9490196],
                                 "models": {
                                     "default": {
                                         "surface": "sol.jpg",
                                         "emissive": "true",
+                                        "glow": "true",
                                         "specular": 0,
                                         "active": true
                                     }
@@ -253,7 +259,9 @@
                                     "description": "Dwarf Planet, innermost member of Kuiper belt",
                                     "data": {
                                         "type": "planet",
-                                        "diameter": 2370,
+                                        "diameter":2370,
+                                        "ra": 0,
+                                        "dec":0,
                                         "dist": 10000,
                                         "tilt": 0,
                                         "rotation": 0.002,
@@ -278,6 +286,8 @@
                                             "data": {
                                                 "type": "planet",
                                                 "diameter": 1208,
+                                                "ra": 0,
+                                                "dec": 0,
                                                 "dist": 19570,
                                                 "tilt": 0,
                                                 "rotation": 0.002,
@@ -311,7 +321,7 @@
                     "name": "Centauri Star System",
                     "description": "Closest star system to the solar system",
                     "data": {
-                        "diameter": 1.1,
+                        "diameter": 10000,
                         "ra": 14.66115128,
                         "dec": -60.83730923,
                         "dist": 1.347490972,
@@ -385,6 +395,9 @@
                                     "description": "Rocky exoplanet orbiting in habitable zone.",
                                     "data": {
                                         "type": "exoplanet",
+                                        "ra": 0,
+                                        "dec": 0,
+                                        "dist":0,
                                         "models": {},
                                         "references": [
                                             "https://en.wikipedia.org/wiki/Proxima_Centauri_b"
@@ -406,7 +419,7 @@
                     "description": "A pair of Brown Dwarfs, extremely close to the Sun",
                     "data": {
                         "type": "star_system",
-                        "diameter": 0.5,
+                        "diameter": 10000,
                         "ra": "162.3280125",
                         "dec": "-53.31941",
                         "dist": "1.9980",
@@ -419,18 +432,19 @@
                             "name": "Luhman 16 A",
                             "description": "First dwarf of the pair.",
                             "data": {
-                                "type": "star",
+                                "type": "brown_dwarf",
                                 "hygID": "",
                                 "diameter": "300",
                                 "ra": "162.3248925",
                                 "dec": "-53.31941",
-                                "dist": "0.003125",
+                                "dist": "0.03125",
                                 "spect": "L7.5",
                                 "color": [1, 0.411764706, 0],
                                 "models": {
                                      "default": {
                                         "surface": "luhman_16_a.png",
                                         "emissive": "true",
+                                        "glow": true,
                                         "specular": 0,
                                         "active": true
                                     }
@@ -453,13 +467,14 @@
                                 "diameter": "300",
                                 "ra": "162.3248925",
                                 "dec": "-53.31941",
-                                "dist": "-0.003125",
+                                "dist": "-0.03125",
                                 "spect": "T0.5",
                                 "color": [1, 0.32549010, 0.003921],
                                 "models": {
                                      "default": {
                                         "surface": "luhman_16_b.png",
                                         "emissive": "true",
+                                        "glow": true,
                                         "specular": 0,
                                         "active": true
                                     }

@@ -220,6 +220,7 @@ export class MeshOptimizedComponent extends UnoptimizedComponent {
   }
 }
 
+///////////////////////////////////////////////////////////////////
 
 /** 
  * set user interactions for camera (non-VR)
@@ -779,3 +780,247 @@ var setPosition = function (data, position, units) {
     //sphere.material.specularColor = new BABYLON.Color3( 0.2, 0.2, 0.2 ); //gets rid of highlight
 
     //const environment = scene.createDefaultEnvironment();
+
+
+/*
+    PWorld.prototype.loadPlanetModel = function (pObj, dir, scene, systemDiameter) {
+
+        console.log("------------------------------");
+        console.log("drawing planetModel:" + pObj.name)
+
+        let util = this.util;
+        let celestial = this.celestial;
+        let t = celestial.PCTYPES;
+        let mesh = null;
+
+        if(!this.checkObject(pObj)) {
+            console.error('loadPlanetModel ERROR: invalid object passed');
+            return mesh;
+        }
+
+        let data = pObj.data;
+
+        // get the active model
+        let model = this.getActiveModel(data.models);
+
+        if(!util.isObject(model)) {
+            console.error('loadPlanetModel ERROR: no active model found');
+            return mesh;
+        }
+
+        // scale raw values to plutonian planetary system units (returnd diameter)
+
+        let scaled = this.celestial.scale(pObj.data);
+
+        // create 'surface' model = just a sphere with 1 texture
+
+        if(util.isString(model.surface)) {
+
+            let texDir = dir + '/textures/';
+
+            console.log(pObj.name + ' texture:' + texDir + model.surface)
+
+            // create the mesh
+
+            mesh = BABYLON.MeshBuilder.CreateSphere(
+                pObj.key, {
+                    diameter:scaled.diameter, 
+                    segments: 32}, scene);
+
+            // exclude from the .godLight (only SpaceVolume)
+
+            this.godLight.excludedMeshes.push(mesh);
+
+            // material
+
+            mesh.material = new BABYLON.StandardMaterial(pObj.key + 'Mat', scene);
+            let mat = mesh.material;
+
+            // color
+            //const clr = this.getColor(data.color);
+            const clr = celestial.color(data);
+
+            // adjust mesh based on object type
+
+            switch(data.type) {
+
+                case t.STAR:
+                case t.BROWN_DWARF:
+                    //if(parent) data.dist = 0;
+                    // TODO: USE BABYLON VECTOR RATHER THAN CUSTOM 'vec'
+                    // TODO: objects should rotate around their barycenter, which is
+                    // TODO: the center of the SpaceVolume for each StarSystem
+                    //this.setPositionByRADec(data, mesh.position, dParsecUnits);
+
+
+                    if(pObj.key == 'luhman_16_b' || pObj.key == 'luhman_16_a') {
+                        console.log("LUHMAN SCALED DISTANCE:" + pObj.name + scaled.dist)
+                        mesh.bakeCurrentTransformIntoVertices();
+                    }
+
+                    // normals not needed for emissive objects (no shadows)
+                    mesh.freezeNormals();
+
+                    // set lighting, texture, color
+                    if(model.emissive) {
+                        const light = new BABYLON.PointLight(pObj.name + 'Light', mesh.getAbsolutePosition(), scene);
+                        light.position = new BABYLON.Vector3(0, 0, 0);
+                        // light range, adjust to StarSystem SpaceVolume
+                        if(systemDiameter) {
+                            console.log('+++++++have systemDiameter:' + systemDiameter)
+                            light.range = (systemDiameter * dParsecUnits);
+                        } else {
+                            console.log('++++++no systemDiameter');
+                            light.range = 4 * dParsecUnits; // emissive is always a star scales
+                        }
+                        // set the parent of the Light to star or brown dwarf
+                        light.parent = mesh;
+                        // properties for emissive texture
+                        mat.emissiveTexture = new BABYLON.Texture(texDir + model.surface, scene, true, false);
+                        if(clr) {
+                            mat.diffuseColor = clr.clone();
+                        } else {
+                            mat.diffuseColor = new BABYLON.Color3(1, 1, 1);
+                        }
+                        mat.specularColor = new BABYLON.Color3(0, 0, 0);
+
+                        //https://doc.babylonjs.com/how_to/glow_layer
+                        var options = { 
+                            mainTextureRatio: 0.1,
+                            //mainTextureFixedSize: 256,
+                            blurKernelSize: 100
+                        };
+                        mat.disableLighting = true;
+
+                        // glow
+                        var gl = new BABYLON.GlowLayer('glow', scene, options);
+                        gl.intensity = 5;
+                        mat.emissiveColor = new BABYLON.Color3(0.678, 0.556, 0.423);
+                        // TODO: explore emissive color for glow.
+                        //////////////mat.emissiveColor = clr.clone();
+                        gl.addIncludedOnlyMesh(mesh);
+                    }
+                    break;
+                case t.EXOPLANET:
+                case t.PLANET:
+                    // position
+                    mesh.setPositionWithLocalVector(new BABYLON.Vector3(scaled.dist, 0, 0));
+
+                    // appearance
+                    mat.diffuseTexture = new BABYLON.Texture(texDir + model.surface, scene);
+                    mat.emissiveColor = new BABYLON.Color3(0.1, 0.1, 0.1);
+
+                    if(util.isNumber(model.specular)) {
+                        mat.specularColor = new BABYLON.Color3(model.specular, model.specular, model.specular)
+                    } else {
+                        mat.specularColor = new BABYLON.Color3(0, 0, 0)
+                    }
+                    break;
+
+            }
+
+        } else if(model.gltf) {
+            
+            //load a gltf file
+
+        } else if(model.alias) {
+
+            // load an .alias wavefront file
+
+        }
+
+        // Runs every frame to rotate the sphere
+        if(mesh) {
+
+            // BAKING
+
+            // TODO: Axial tilt
+
+            // camera
+
+            // planet rotation
+            scene.onBeforeRenderObservable.add(()=>{
+
+                // update stars
+                // DOESN'T WORK, WHY? 
+                if(pObj.key == 'luhman_16_a' || pObj.key == 'luhman_16_b') {
+                    //this.celestial.orrey.computeOrbit(pObj);
+                    // try making orbit manually here
+                    // NOTE: scaled.dist is being SAVED from creation of these objects!
+                    // TODO: eliminate required saving
+                    // TODO: not sign, but rotation
+                    //console.log("SCALED DISTANCE:" + scaled.dist)
+                    mesh.position.x = scaled.dist * Math.sin(this.rot);
+                    mesh.position.z = scaled.dist * Math.cos(this.rot);
+                    //mesh.position.x = Math.sin(this.rot);
+                    //mesh.position.z = Math.cos(this.rot);
+                    this.rot += 0.0002*scene.getEngine().getDeltaTime();;
+
+                }
+
+                // baked in rotations for parents and children
+                mesh.rotation.y += 0.0001*scene.getEngine().getDeltaTime();
+                //mesh.rotation.x += 0.0001*scene.getEngine().getDeltaTime();
+
+
+            });
+
+        }
+
+        return mesh;
+
+    };
+    */
+
+    
+    /**
+     * Load a Star
+     */
+    /*
+    PWorld.prototype.loadStar = function (pObj, dir, scene, parent, systemDiameter) {
+
+        let util = this.util;
+
+        // draw the star (apart from planets, etc), pass parent (StarSystem) for lighting
+        let mesh = this.loadPlanetModel(pObj, dir + '/' + pObj.dname, scene, systemDiameter);
+
+///////////////////////////////////////////////////////////////
+        if(pObj.key == 'luhman_16_a') {
+                window.luhman_a = mesh;
+        }
+        if(pObj.key == 'luhman_16_b') {
+                window.luhman_b = mesh;
+        }
+///////////////////////////////////////////////////////////////
+
+        if(mesh) {
+
+            //
+            mesh.lookAt = function (camera) { camera.target = this.position}
+
+            // Stars are children to their SpaceVolume
+
+            if(parent) {
+                mesh.parent = parent;
+            }
+
+            mesh.pObj = pObj;
+            pObj.mesh = mesh;
+
+            // create 2D GUI label
+            this.ui.createLabel(pObj, scene, false, false);
+
+            // draw the planets, comets, asteroids
+
+            if(util.isArray(pObj.planets)) {
+                for(let i = 0; i< pObj.planets.length; i++) {
+                    this.loadPlanet(pObj.planets[i], dir + '/' + pObj.dname +  '/planets', scene, mesh);
+                }
+            }
+
+        }
+
+        return mesh;
+
+    };
+    */

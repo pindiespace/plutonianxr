@@ -7,72 +7,6 @@
  * (about 10,000 of the 119,000 stars in Hyg3 fall in this category)
  */
 
-var PData = (function () {
-
-    /*
-     * A subset of the Hyg3 database fields
-     * https://github.com/astronexus/HYG-Database
-     */
-
-    /**
-     * Template for celestial data in the simulation (non-stardome sprite)
-     * @param {*} type 
-     * @param {*} diameter 
-     * @param {*} ra 
-     * @param {*} dec 
-     * @param {*} dist 
-     * @param {*} bary 
-     * @param {*} tilt 
-     * @param {*} rot 
-     */
-    function PData (type, diameter, ra, dec, dist, bary, tilt, rot) {
-
-        this.type = type || 'unknown',
-        this.hygID = '',
-        this.diameter = diameter || 0,
-        this.ra = ra || 0,
-        this.dec = dec || 0,
-        this.x = 0,
-        this.y = 0,
-        this.z = 0,
-        this.dist = dist || 0, // for a star, planet, center, for a StarSystem, the barycenter
-        this.tilt = tilt || 0, // from solar system view
-        this.rot = rot || 0,
-        this.absMag = 0,
-        this.spect = '',
-        this.color = [],
-        this.models = {},
-        this.mesh = null,
-        this.references = [];
-
-    };
-
-    return PData;
-
-}());
-
-/**
- * Template for an entry in the worlds JSON file
- * @param {String} key unique identifier for object
- * @param {String} dname name of directory in asset store with data, images, models
- * @param {String} name the name of the object in the UI
- * @param {PData} data celestial data and models associated with the object
- */
-var PObj = (function (key, dname, name, data) {
-
-    function PObj () {
-
-        this.key = null,
-        this.dname = '',
-        this.name = '',
-        this.data = new PData();
-
-    };
-
-    return PObj;
-
-}());
-
 /**
  * Contains computations for solar system planetary positions
  */
@@ -115,9 +49,10 @@ var PCelestial = (function () {
 
     // constructor
 
-    function PCelestial (util) {
+    function PCelestial (util, pdata) {
 
-        this.util              = util; // PUtil object, instantated in plutonian-scene.js
+        this.util              = util;   // PUtil object, instantated in plutonian-scene.js
+        this.pdata             = pdata;  // PData objects, describes Hyg3 data and World data
 
         this.dParsecUnits      =     10; // scale parsec distances to the simulation
         this.dKmUnits          =   2370; // 1 unit = 2370km, Pluto = 2370/2370 = 1.0
@@ -216,6 +151,7 @@ var PCelestial = (function () {
     PCelestial.prototype.PCTYPES = {
         WORLD: 'world',
         GALAXY: 'galaxy',
+        NEBULA: 'nebula',
         STARDOME: 'stardome',
         STAR_SYSTEM: 'star_system',
         STAR: 'star',
@@ -223,27 +159,12 @@ var PCelestial = (function () {
         EXOPLANET: 'exoplanet',
         ROGUE_PLANET: 'rogue_planet', // planet not orbiting a star
         PLANET: 'planet',
+        EXOMOON: 'exomoon',
         MOON: 'moon',
         ARTIFACT: 'artifact'
     };
 
     // functions
-
-    /**
-     * Return pObj.data default object
-      */
-    PCelestial.prototype.createCelestialData = function (type, diameter = 0, ra = 0, dec = 0, dist = 0) { 
-        return null;
-    };
-
-    /**
-     * Check the data on a data object
-     * @param {PCData.data} data object
-     */
-    PCelestial.prototype.checkData = function (data) {
-        // TODO: write check function
-        return true;
-    };
 
     // private static variables (slower)
 
@@ -252,7 +173,7 @@ var PCelestial = (function () {
     /**
     * Return radians for (fractional) degrees.
     * @param {Number} n the number, in degrees (0-360).
-    * @returns {Number} return the same number, in radians (0-2PI).
+    * @return {Number} return the same number, in radians (0-2PI).
     */
     PCelestial.prototype.degToRad = function (deg = 0) {
         return parseFloat(deg) * Math.PI / 180;
@@ -374,16 +295,14 @@ var PCelestial = (function () {
         let util = this.util;
         let t = this.PCTYPES;
 
-        if(!this.checkData()) {
-            console.error('getScale: invalid celestial data object passed');
-            return false;
-        }
 
         let scaled = {
             diameter: data.diameter,
             dist: data.dist,
             segments: 32
         };
+
+        console.log("ORIGNAL DATA DIST:" + scaled.dist)
 
         switch(data.type) {
 
@@ -393,11 +312,13 @@ var PCelestial = (function () {
                 // 1 unit = 2370km, Pluto = 2370/2370 = 1.0
                 scaled.diameter /= this.dKmUnits,
                 scaled.dist /= this.dKmUnits;
+                console.log('planet scaled diameter:' + scaled.diameter);
+                console.log('planet scaled dist:' + scaled.dist)
                 break;
 
             case t.ROGUE_PLANET:
-                saled.diameter /= this.dKmUnits,
-                scaled.dist *= this.dParsecUnits;
+                scaled.diameter /= this.dKmUnits, // planetary dimensions
+                scaled.dist *= this.dParsecUnits; // stellar distances
                 break;
 
             case t.BROWN_DWARF:
@@ -406,8 +327,10 @@ var PCelestial = (function () {
             case t.STAR_SYSTEM:
             case t.GALAXY:
                 // 1 unit = 1/10 parsec
+                //console.log("STAR BROWNIE dKmUnits:" + this.dParsecUnits + " DIST:" + scaled.dist)
                 scaled.diameter /= this.dKmUnits,
                 scaled.dist *= this.dParsecUnits;
+                //console.log("STAR BROWNDWARF SCALED DIAMETER:" + scaled.diameter + " DISTANCE:" + scaled.dist)
                 break;
 
             case t.ARTIFACT:
@@ -422,11 +345,11 @@ var PCelestial = (function () {
         // warnings for objects without data yet
 
         if(scaled.diameter < 0.01) {
-            console.warn('.scale WARNNG: diameter very small (' + scaled.diameter + ' units');
+            console.warn('.scale WARNNG: diameter very small (' + scaled.diameter + ' units for:' + data.type);
         }
 
         if(scaled.dist < 0.01) {
-            console.warn('.scale WARNING: distance very small (' + scaled.dist + ' units')
+            console.warn('.scale WARNING: distance very small (' + scaled.dist + ' units for:' + data.type)
         }
 
         return scaled;
@@ -452,32 +375,21 @@ var PCelestial = (function () {
         let color = data.color;
         let c = null;
 
-        if(!util.isArray(color) || (color.length != 3 && color.length != 4)) {
+        if(util.isString(data.spec)) {
 
-            // check for spectrum
-            let spec = data.spect;
+            let cc = getHygColor(data);
+            c = new BABYLON.Color3(cc[0], cc[1], cc[2]);
 
-            if(!util.isString(spec)) {
-                console.error('color ERROR: invalid color array:' + color);
-                return null;
-            }
 
-            // load spect
-            let cv = this.getHygColor(data);
-            
-            if(!c) {
-                console.error('color ERROR: no valid color or spectrum');
-                return null;
-            }
-
+        } else {
+            color = data.color;
         }
 
         // at this point, we should have an array with 3 valid colors
-
         try {
 
-            // handle web versus BabylonJS color units
-            if(color[0] + color[1] + color[2] > 1.0) {
+            // handle web versus BabylonJS color units (fails for [1,1,1])
+            if(color[0] + color[1] + color[2] > 3.0) {
                 color[0] /= 255,
                 color[1] /= 255,
                 color[2] /= 255
@@ -491,13 +403,20 @@ var PCelestial = (function () {
             }
 
         } catch (e) {
-            cosole.error('color ERROR: could not make a valid color');
+            console.error('color ERROR: could not make a valid color with:' + color);
         }
 
         return c;
 
     };
 
+    PCelestial.prototype.rotate = function (data) {
+        console.log("celestial.rotate TODO:")
+    };
+
+    PCelestial.prototype.rotateByQuat = function (data) {
+        console.log("celestial rotatebyquat TODO:");
+    };
 
     /**
      * Make sure the JSON file has the minimum number of columns needed 
@@ -562,8 +481,6 @@ var PCelestial = (function () {
         let   c = null;
         let   s = star.spect;
         let dsc = this.dStarColors;
-
-        // window.bvToRGB = this. bvToRGB; ///////////////////////////////
 
         // look for an exact match
         c = this.hygColors[s];
@@ -802,9 +719,6 @@ var PCelestial = (function () {
 
         let hygColors = this.hygColors;
         let hygData = this.hygData;
-
-        window.hygColors = hygColors;
-        window.hygData   = hygData;
 
         if(! hygData || !util.isArray(hygData) || !hygData.length) {
             console.error('computeHygSprite ERROR: invalid Hyg data (not an array)');
@@ -1200,8 +1114,6 @@ var computeHygSprite = async function (hygData, spriteFile, size, scene) {
                 }
 
         }
-
-        window.mgr = spriteManagerStars;
 
         // update function for sprites
         scene.registerBeforeRender(() => {

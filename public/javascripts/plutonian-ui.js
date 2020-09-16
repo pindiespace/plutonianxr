@@ -3,7 +3,7 @@
  * Custom Loader UI
  * https://doc.babylonjs.com/how_to/creating_a_custom_loading_screen
  */
-
+'use strict'
 var PUI = (function() {
 
     // constructor

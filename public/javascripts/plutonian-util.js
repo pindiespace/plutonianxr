@@ -2,6 +2,7 @@
  * Utility methods
  * We hand-build our classes similar to TypeScript compiles
  */
+'use strict'
 var PUtil = (function () {
 
    //constructor

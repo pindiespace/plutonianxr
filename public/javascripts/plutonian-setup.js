@@ -1,3 +1,7 @@
+/**
+ * Setup the engine, with fallbacks if it can't run
+ */
+'use strict'
 var PSetup = (function() {
 
     // constructor

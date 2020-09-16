@@ -1,10 +1,14 @@
 /*
 
-get 'rogue_planet' category working
+ADD BACK THE PLANETS AND MOONS
 
+organize defaults in plutonian-scene
 
 rotate stars and planets about SpaceVolume (the barycenter)
 need to compute orbits with something like:
+
+
+Find out how to put skybox into its own rendering group
 
 explore transformnode
 https://doc.babylonjs.com/how_to/pivot
@@ -66,7 +70,7 @@ Bring in skybox to 1000 units for VR.
                                 "data": {
                                     "type": "free_planet",
                                     "diameter": 2000,
-                                    "ra": 5.715109724359943,
+                                    "ra": 5.715109724,
                                     "dec": 4.05219444,
                                     "x": 2,
                                     "y": 1,
