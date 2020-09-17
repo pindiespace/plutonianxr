@@ -1,25 +1,36 @@
 /*
 
-ADD BACK THE PLANETS AND MOONS
-
 organize defaults in plutonian-scene
 
-rotate stars and planets about SpaceVolume (the barycenter)
-need to compute orbits with something like:
-
+check VR display!!!!!!!!!!!!!!!!!
+may need reboot
 
 Find out how to put skybox into its own rendering group
+
+get pjump and plook to work for camera
+
+change camera speed inside a SpaceVolume
+
+swap followCamera for Planets, if not in VR
+https://doc.babylonjs.com/babylon101/cameras
+
+play with camera.inertia = 1;
+CAMERA > 1 GIVES HYPERSPEED, OUTSIDE UNIVERSE
 
 explore transformnode
 https://doc.babylonjs.com/how_to/pivot
 
+// 3D labels billboards (another sprite?)
+
+VR: add 3D haptic controls
+
 explore pivot
 
-make spaceVolume transparent when Camera is inside
-
-then add backface culling
+SpaceVolume add backface culling
 
 camera acceleration and deceleration
+
+make sure glow layer drawn in same layer as object!!!!
 
 scaling for size of stars, planets in different modes
 

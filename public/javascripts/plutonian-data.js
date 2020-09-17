@@ -70,7 +70,6 @@ var PData = (function () {
 
     };
 
-
     /**
      * check an existing pObj for valid entries
      */
@@ -108,22 +107,24 @@ var PData = (function () {
 
     /**
      * Copy a pObj
-     * - If nothing is passed, build an empty object.
-     * - Otherwise, add any needed fields
+     * 1. If nothing is passed, build an empty object.
+     * 2. Otherwise, add any needed fields to the existing object.
+     * 3. Finally, return a cloned copy of the original object.
      */
     PData.prototype.clonePObj = function (pObj = {}) {
-        if(!pObj.key) pObj.key = '';
-        if(!pObj.dname) pObj.dname = '';
-        if(!pObj.name) pObj.name =  '';
-        if(!pObj.description) pObj.description = '';
+        if(!pObj.key) pObj.key = this.EMPTY;
+        if(!pObj.dname) pObj.dname = this.EMPTY;
+        if(!pObj.name) pObj.name =  this.EMPTY;
+        if(!pObj.description) pObj.description = this.EMPTY;
         if(!pObj.references) pObj.references = [];
 
         if(!pObj.data) {
-            pObj.data = {};
+            pObj.data = this.cloneData();
+            //pObj.data = {};
         }
         else {
             let d = pObj.data;
-            if(!d.type) d.type = "unknown";
+            if(!d.type) d.type = this.UNKNOWN;
             if(!d.diameter) d.diameter = 0;
             if(!d.ra) d.ra = 0;
             if(!d.dec) d.dec = 0;
@@ -170,7 +171,24 @@ var PData = (function () {
         return true;
     };
 
-    PData.prototype.cloneData = function({}, data) {
+    /**
+     * Clond a data sub-object from pObj
+     * 1. If nothing is passed, build an empty object.
+     * 2. Otherwise, add any needed fields to the existing object.
+     * 3. Finally, return a cloned copy of the original object.
+     */
+    PData.prototype.cloneData = function({}, data, type) {
+        let d = data;
+        if(!d.type) d.type = this.UNKNOWN;
+        if(!d.diameter) d.diameter = 0;
+        if(!d.ra) d.ra = 0;
+        if(!d.dec) d.dec = 0;
+        if(!d.dist) d.dist = 0;
+        if(!d.tilt) d.tilt = 0;
+        if(!d.rotation) d.rotation = 0;
+        if(!d.color) d.color = [1, 1, 1, 1];
+
+        return Object.assign({}, d);
 
     };
 
@@ -195,48 +213,4 @@ var PData = (function () {
     };
 
     return PData;
-}());
-
-var HygData = (function () {
-
-    /*
-     * A subset of the Hyg3 database fields
-     * https://github.com/astronexus/HYG-Database
-     */
-
-    /**
-     * Template for celestial data in the simulation (non-stardome sprite)
-     * @param {*} type 
-     * @param {*} diameter 
-     * @param {*} ra 
-     * @param {*} dec 
-     * @param {*} dist 
-     * @param {*} bary 
-     * @param {*} tilt 
-     * @param {*} rot 
-     */
-    function HygData (type, diameter, ra, dec, dist, bary, tilt, rot) {
-
-        this.type = type || 'unknown',
-        this.hygID = '',
-        this.diameter = diameter || 0,
-        this.ra = ra || 0,
-        this.dec = dec || 0,
-        this.x = 0,
-        this.y = 0,
-        this.z = 0,
-        this.dist = dist || 0, // for a star, planet, center, for a StarSystem, the barycenter
-        this.tilt = tilt || 0, // from solar system view
-        this.rot = rot || 0,
-        this.absMag = 0,
-        this.spect = '',
-        this.color = [],
-        this.models = {},
-        this.mesh = null,
-        this.references = [];
-
-    };
-
-    return HygData;
-
 }());

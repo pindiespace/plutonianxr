@@ -54,6 +54,9 @@ var PCelestial = (function () {
         this.util              = util;   // PUtil object, instantated in plutonian-scene.js
         this.pdata             = pdata;  // PData objects, describes Hyg3 data and World data
 
+        // data model for hyg3 database
+        this.PCTYPES = this.pdata.PCTYPES;
+
         this.dParsecUnits      =     10; // scale parsec distances to the simulation
         this.dKmUnits          =   2370; // 1 unit = 2370km, Pluto = 2370/2370 = 1.0
         this.dMUnits           =   1000; // 1 unit = 1000 meters, Voyager 1000/1000 = 1.0
@@ -144,24 +147,6 @@ var PCelestial = (function () {
         dSpriteIndex['c'] = 1,
         dSpriteIndex['s'] = 0,
         dSpriteIndex['d'] = 4;
-    };
-
-
-    // information model
-    PCelestial.prototype.PCTYPES = {
-        WORLD: 'world',
-        GALAXY: 'galaxy',
-        NEBULA: 'nebula',
-        STARDOME: 'stardome',
-        STAR_SYSTEM: 'star_system',
-        STAR: 'star',
-        BROWN_DWARF: 'brown_dwarf',
-        EXOPLANET: 'exoplanet',
-        ROGUE_PLANET: 'rogue_planet', // planet not orbiting a star
-        PLANET: 'planet',
-        EXOMOON: 'exomoon',
-        MOON: 'moon',
-        ARTIFACT: 'artifact'
     };
 
     // functions
@@ -963,7 +948,7 @@ var computeHygSprite = async function (hygData, spriteFile, size, scene) {
             sprite.isPickable = true;
 
             // add some additional properties to the Sprite
-            sprite.hyId = star.id;
+            sprite.hygid = star.id;
             sprite.aMag  = setHygMag(star);
 
             let baseDist = 100; ///////////////////////////////////

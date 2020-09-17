@@ -41,6 +41,10 @@ var PWorld = (function () {
 
         this.util = new PUtil();
         this.pdata = new PData(this.util);
+
+        // data model for hyg3 database
+        this.PCTYPES = this.pdata.PCTYPES;
+
         this.setup = new PSetup(this.util);
         this.ui = new PUI(this.util);
         this.celestial = new PCelestial(this.util, this.pdata);
@@ -154,14 +158,16 @@ var PWorld = (function () {
     PWorld.prototype.getActiveGalaxy = function () {
 
         let util = this.util;
-        let w = this.world;
+
         let a = []; // accumulate active galaxies
+        let w = this.world; // world pObj tree
 
         if(!util.isObject(w)) {
             console.error('getActiveSkybox ERROR: missing world');
             return null;
         }
 
+        // the current galaxy will have an active SkyBox (cubemap) model
         if(util.isArray(w.galaxies)) {
             for(let i = 0; i < w.galaxies.length; i++) {
                 let galaxy = w.galaxies[i];
@@ -203,7 +209,10 @@ var PWorld = (function () {
         // this returns the active galaxy and its skybox {galaxy:xx, skybox:xx}
         let galaxies = this.getActiveGalaxy();
 
+        console.log("galaxy is a:" + galaxies + " with length:" + galaxies.length)
+
         if(galaxies.length > 0) {
+
             let g = galaxies[0].galaxy;
             let d = g.data.diameter;
 
@@ -287,7 +296,7 @@ var PWorld = (function () {
 
     };
 
-    PWorld.prototype.setPositionByXYZ = function (data, vec, units = 1) {
+    PWorld.prototype.setPositionByXYZ = function (x, y, z, units = 1) {
 
         let util = this.util;
 
@@ -301,42 +310,14 @@ var PWorld = (function () {
             return false;
         }
 
-        vec.x = data.x * units;
-        vec.y = data.y * units;
-        vec.z = data.z * units;
-
-        return true;
-
-    };
-
-/*
-    PWorld.prototype.setPositionByRADec = function (data, vec, units = 1) {
-
-        let util = this.util;
-        let celestial = this.celestial;
-
-        if(!util.isObject(vec) || !util.isNumber(vec.x)) {
-            console.error('setPositionByRADec ERROR: invalid vector passed:' + vec);
-            return false;
-        }
-
-        if(!util.isNumber(data.ra) || !util.isNumber(data.dec) || !util.isNumber(data.dist)) {
-            console.error('setPositionByRADec ERROR: invalid ra:' + data.ra + ', dec:' + data.dec + ', dist:' + data.dist);
-            return false;
-        }
-
-        let A = celestial.degToRad(parseFloat(data.ra) * 15);
-        let B = celestial.degToRad(parseFloat(data.dec));
-
         // Note: we reverse the y and z axes to match the BabylonJS coordinate system
-        vec.x = Math.cos(B) * Math.cos(A) * data.dist * units,
-        vec.z = Math.cos(B) * Math.sin(A) * data.dist * units, // was y
-        vec.y = Math.sin(B) * data.dist * units; // was z
-
-        return true;
+        return new BABYLON.Vector3(
+            x * units,
+            y * units,
+            z * units
+            );
 
     };
-*/
 
     /**
      * Set position of a pObj
@@ -741,7 +722,7 @@ var PWorld = (function () {
     PWorld.prototype.setParent = function (pObj, dir, scene, parent) {
 
         let celestial = this.celestial;
-        let t = celestial.PCTYPES;
+        let t = this.PCTYPES;
         let pdata = this.pdata;
 
         let mesh = pObj.mesh;
@@ -764,28 +745,24 @@ var PWorld = (function () {
             case t.MOON:
             case t.EXOMOON:
                 if(pObj.mesh && parent) {
-                    console.log("%%%%%%%% ready to set parent...")
-                    console.log('%%%%%%%%%%%Mesh   is:' + mesh)
-                    console.log('%%%%%%%%%%%Parent is:' + parent)
+                    //console.log("%%%%%%%% ready to set parent...")
+                    //console.log('%%%%%%%%%%%Mesh   is:' + mesh)
+                    //console.log('%%%%%%%%%%%Parent is:' + parent)
                     mesh.parent = parent;
                 }
                 break;
 
-            // gets a unparented SpaceVolume (with no parent of its own, like STAR_SYSTEM)
+            // creates a unparented SpaceVolume around rogue planet
+            // (with no parent of its own, like STAR_SYSTEM)
             case t.ROGUE_PLANET:
                 console.log('%%%%%%%SETTING ROGUE PLANET SPACE VOLUME')
                 // alter pObj to represent its enclosing sphere
-                let d = pObj.data.diameter;
-                //pObj.data.diameter = 2;
+                //let d = pObj.data.diameter;
                 let ppObj = pdata.clonePObj(pObj);
                 ppObj.data.diameter =  this.dSpaceVolumeSize;
-                console.log('%%%%PPOBJ DATA DIAMETER IS:' + pObj.data.diameter)
+                //console.log('%%%%PPOBJ DATA DIAMETER IS:' + pObj.data.diameter)
                 parent = this.loadSpaceVolume(ppObj, dir, scene);
                 parent.pObj = ppObj;
-                window.rogue = pObj
-                // "dist":"24.6",
-                // restore original values
-                //pObj.data.diameter = d;
                 break;
 
             // does NOT get a parent
@@ -881,11 +858,11 @@ var PWorld = (function () {
 
         if(model.surface) {
         
-            console.log('%%%%%%setting surface for:' + pObj.name)
+            //console.log('%%%%%%setting surface for:' + pObj.name)
 
             if(model.emissive) {
                 mesh.freezeNormals();
-                console.log('%%%%%%setting emissive for:' + pObj.name)
+                //console.log('%%%%%%setting emissive for:' + pObj.name)
                 mat.specularColor = new BABYLON.Color3(0, 0, 0);
                 mat.disableLighting = true;
                 // TODO: load different emissive texture
@@ -900,6 +877,8 @@ var PWorld = (function () {
                 //material.freeze();
                 //material.unfreeze(); // IF THERE IS NO SHADER
                 mat.diffuseTexture = new BABYLON.Texture(texDir + model.surface, scene, true);
+                // this create the equivalen of ambient light on the 'backside' of planets
+                mat.emissiveColor = new BABYLON.Color3(0.1, 0.1, 0.1);
                 if(util.isNumber(model.specular)) {
                     mat.specularColor = new BABYLON.Color3(model.specular, model.specular, model.specular);
                 } else {
@@ -927,14 +906,19 @@ var PWorld = (function () {
     PWorld.prototype.setPos = function (pObj, scaled) {
 
         let celestial = this.celestial;
-        let t = celestial.PCTYPES;
+        let t = this.PCTYPES;
 
         let data = pObj.data;
         let mesh = pObj.mesh;
+
+        if(!mesh) {
+            console.error('setPos ERROR: no mesh');
+            return false;
+        }
         let parent = pObj.mesh.parent;
 
         if(!parent) {
-            console.error('%%%%%%%%%%%setPosition ERROR: no parent');
+            console.error('setPosition ERROR: no parent');
             return false;
         }
 
@@ -1016,14 +1000,42 @@ var PWorld = (function () {
         window[pObj.key] = pObj.mesh;
 
         // look at an object with the camera
-        mesh.lookAt = function () {
-            let cam = scene.cameras[0];
-            cam.setTarget(mesh.position)
+        mesh.pLook = function () {
+            // let scene = cam.getScene();
+            let cam = scene.activeCameras[0];
+            // TODO:
+            // since we're locating planets with their parent, need absolute position
+            //https://doc.babylonjs.com/resources/frame_of_references
+            //var localPosition = mesh.getPositionExpressedInLocalSpace();
+            var matrix = mesh.computeWorldMatrix(true); //true forces a recalculation rather than using cache version
+            var globalPos = BABYLON.Vector3.TransformCoordinates(this.position, matrix);
+            cam.setTarget(globalPos);
             let dx = cam.position.x - mesh.position.x,
             dy = cam.position.y - mesh.position.y,
             dz = cam.position.z - mesh.position.z;
             let dist = Math.sqrt(dx*dx + dy*dy + dz*dz);
             console.log("position:" + mesh.position + " distance:" + dist);
+        };
+
+        mesh.pJump = function () {
+            let cam = scene.activeCameras[0];
+            // let s = cam.getScene();
+            // TODO:
+            // since we're rotating planets with their parent, need to get global position
+            var matrix = mesh.computeWorldMatrix(true); //true forces a recalculation rather than using cache version
+            var globalPos = BABYLON.Vector3.TransformCoordinates(this.position, matrix);
+            cam.setTarget(globalPos);
+            // create a unit vector for the camera
+            let u = new BABYLON.Vector3(cam.position.x, cam.position.y, cam.position.z);
+            u.normalize();
+            // TODO: NOT RIGHT!!!!!!!
+            // get the mesh position, subtract the camera 'standoff' 1 unit
+            let v = globalPos.subtract(u);
+            cam.position.x = v.x;
+            cam.position.y = v.y;
+            cam.position.z = v.z;
+            //this.lookAt(cam)
+
         };
 
         // follow an object with the camera
@@ -1041,8 +1053,8 @@ var PWorld = (function () {
         let util = this.util;
         let pdata = this.pdata;
 
-        console.log('%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%');
-        console.log('%%%%%%%loading:' + pObj.name)
+        console.log('---------------------------');
+        console.log('loading star, planet, or moon:' + pObj.name)
 
         // check the data object for validity
         if(!pdata.checkPObj(pObj)) {
@@ -1053,7 +1065,7 @@ var PWorld = (function () {
         // data should be OK
         let data = pObj.data;
 
-        console.log('%%%%% DATA DIAMETER FOR:' + pObj.name + ' is:' + pObj.data.diameter)
+        ///console.log('%%%%% DATA DIAMETER FOR:' + pObj.name + ' is:' + pObj.data.diameter)
 
         // scale the distance. Planets and stards use a differen conversion of real distance to units
         let scaled = this.celestial.scale(pObj.data);
@@ -1103,6 +1115,9 @@ var PWorld = (function () {
 
     };
 
+    /*
+     * Loading for individual celestial objects 
+     */
 
     /**
      * load a (natural) moon of a planet
@@ -1203,7 +1218,9 @@ var PWorld = (function () {
         if(mesh) {
 
             // StarSystems are NOT children to their Galaxy - they would inherit
-            // The Skybox 'infinite distance' properties
+            // The Skybox 'infinite distance' properties. Rogue Planets don't 
+            // have a StarSystem, so they have a dynamically-generated SpaceVolume
+            // equivalent
             //mesh.parent = parent;
 
             // reciprocally link
@@ -1242,14 +1259,18 @@ var PWorld = (function () {
 
         let mesh = this.loadPlanetModel(pObj, dir + '/', scene, parent);
 
-        // additional features
+        if(mesh) {
 
-        this.ui.createLabel(pObj, scene);
+            // additional features
 
-        if(util.isArray(pObj.moons)) {
-            for(let i = 0; i < pObj.moons.length; i++) {
-                this.loadMoon(pObj.moons[i], dir + '/' + pObj.dname + '/moons', scene, mesh);
+            this.ui.createLabel(pObj, scene);
+
+            if(util.isArray(pObj.moons)) {
+                for(let i = 0; i < pObj.moons.length; i++) {
+                    this.loadMoon(pObj.moons[i], dir + '/' + pObj.dname + '/moons', scene, mesh);
+                }
             }
+
         }
 
         return mesh;
@@ -1274,6 +1295,10 @@ var PWorld = (function () {
 
         // draw the star (apart from planets, etc)
         let mesh = this.loadCloudModel(pObj, dir + '/' + pObj.dname, scene);
+
+        if(mesh) {
+
+        }
 
         return mesh;
 
@@ -1479,6 +1504,10 @@ var PWorld = (function () {
                 // check if world can actually be loaded
                 if(pWorld.checkWorld(w)) {
 
+                    // Save a reference to the world (tree of pObj objects)
+                    pWorld.world = w;
+
+                    // Create the 3D model. The mesh is the outermost SpaceVolume, outside Galaxies
                     pWorld.mesh = pWorld.loadWorld(w, scene).then((mesh) => {
 
                         // get back 'universe' mesh
@@ -1556,7 +1585,10 @@ var PWorld = (function () {
         // This attaches the camera to the canvas
         camera.attachControl(canvas, true);
 
-        this.camera = camera; // TODO: MAY BE TEMPORARY
+        scene.activeCameras = [camera];
+
+        //camera.inertia = 1; doesn't stop
+        //camera.inertia = 0.1; very short
 
         // create a fullscreen UI layer
         scene.gui = BABYLON.GUI.AdvancedDynamicTexture.CreateFullscreenUI('UI');
@@ -1597,7 +1629,7 @@ var PWorld = (function () {
                 switch(state) {
 
                     case BABYLON.WebXRState.ENTERING_XR:
-                        console.log("Entering XR:" + state)
+                        console.log("Entering XR:" + state + " pWorld is:" + pWorld)
                         pWorld.toggleVRSkybox(true); // shrunken below 1000 unit size
                         break;
 
@@ -1686,10 +1718,10 @@ try {
 
                 if (pickResult.hit) {
                     if(pickResult.pickedSprite) {
-                        console.log("Picked sprite is:" + pickResult.pickedSprite.name + " id:" + pickResult.pickedSprite.hyid)
+                        console.log("Picked sprite is:" + pickResult.pickedSprite.name + " id:" + pickResult.pickedSprite.hygid)
                         window.sprite = pickResult.pickedSprite; // TODO: remove
-                        //pickResult.pickedSprite.size *= 4;
-                        let cam = this.cameras[0]
+                        // NOTE: default camera wash pushed into array when the camera was created
+                        let cam = this.activeCameras[0];
                         let dx = cam.position.x - sprite.position.x,
                         dy = cam.position.y - sprite.position.y,
                         dz = cam.position.z - sprite.position.z;
@@ -1702,6 +1734,7 @@ try {
                 if(pickMesh.hit) {
                     let m = pickMesh.pickedMesh;
                     console.log("Picked mesh is:" + m.name);
+                    window.mesh = m;
                     //if(!m.infiniteDistance) {
                     //    console.log("Changing mesh::::")
                     //    toggleMeshActivation(m)
