@@ -113,6 +113,53 @@ var PUtil = (function () {
 
 
     /** 
+     * Scale a color up to the top, or down to the bottom 
+     * of the 0-1 color channel range used by BabylonJS
+     */
+    PUtil.prototype.scaleColor = function (color, up = true) {
+
+        let num = [];
+        let n = 0;
+
+        if(this.isArray(color)) {
+            num = color;
+        } else if(this.isObject(color)) {
+            num[0] = color.r,
+            num[1] = color.g,
+            num[2] = color.b;
+        } else {
+            console.error('clampColor ERROR: invalid color');
+            return null;
+        }
+
+        for(var i = 0; i < num.length; i++) {
+            if(num[i] < 0 || num[i] > 1) {
+                console.error('clampColor ERROR: color value out of range');
+                return null;
+            }
+        }
+
+        if(up) {
+            n = Math.max.apply(null, num);
+            let r = (1 - n);
+            console.log('--clr n:' + n + ' r:' + r)
+            for(var i = 0; i < num.length; i++) {
+                num[i] += r;
+            }
+
+        } else {
+            n = Math.min.apply(null, num);
+            let r = (1 - n);
+            for(var i = 0; i < num.length; i++) {
+                num[i] -= r;
+            }
+        }
+        
+        return new BABYLON.Color3(num[0], num[1], num[2]);
+
+    };
+
+    /** 
      * Number of keys in an associative array or object.
      * NOTE: won't work on old browsers, but we should never get here.
      * @param {Object} obj a JS Object.
@@ -136,7 +183,6 @@ var PUtil = (function () {
         let keys = Object.keys(obj);
         return keys.sort(function(a, b) { return obj[b] - obj[a]});
     };
-
 
     /** 
      * Random seed.
@@ -171,7 +217,7 @@ var PUtil = (function () {
 
     };
 
-        /** 
+    /** 
      * Get an unique object id.
      * @link https://jsfiddle.net/briguy37/2MVFd/
      * @returns {String} a unique UUID format id.
@@ -190,7 +236,7 @@ var PUtil = (function () {
 
         return uuid;
 
-    }
+    };
 
     /** 
      * Get the width of the entire screen (excluding OS taskbars)

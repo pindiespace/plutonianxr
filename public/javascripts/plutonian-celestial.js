@@ -291,6 +291,10 @@ var PCelestial = (function () {
 
         switch(data.type) {
 
+            case t.WORLD:
+                // diameter and distance don't scale
+                break;
+
             case t.PLANET:
             case t.EXOPLANET:
             case t.MOON:
@@ -322,7 +326,8 @@ var PCelestial = (function () {
                 beak;
 
             default:
-                console.error('.scale ERROR: invalid celestial type');
+                console.error('.scale ERROR: invalid celestial type:' + data.type);
+                window.tt = t;
                 break;
 
         }
@@ -900,6 +905,9 @@ var computeHygSprite = async function (hygData, spriteFile, size, scene) {
         var spriteManagerStars = new BABYLON.SpriteManager('starsManager', spriteFile, numStars, spriteSize, scene);
         spriteManagerStars.isPickable = true;
 
+        // TODO: this might be a way to prevent 1-pixel sparkle of distant stars
+        //spriteManagerStars.fogEnabled = false;
+
         window.camera = scene.cameras[0]; ///////////////////////////TODO TODO
 
         // TODO: await function here!!!
@@ -922,6 +930,11 @@ var computeHygSprite = async function (hygData, spriteFile, size, scene) {
 
             // make the sprite static
             sprite.stopAnimation();
+
+            // NOT DEFINED FOR SPRITE
+            //sprite.cullingStrategy = BABYLON.AbstractMesh.CULLINGSTRATEGY_BOUNDINGSPHERE_ONLY;
+            //sprite.freezeNormals(); // NOT IN SPRITE
+            //sprite.convertToUnIndexedMesh(); // NOT IN SPRITE too few vertices to need indexing
 
             // For stars at undetermined (maximum) distance, pre-compute once, size, etc
 

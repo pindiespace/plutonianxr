@@ -189,7 +189,7 @@
                         "dist":"24.6",
                         "tilt":0,
                         "rotation": 0.002,
-                        "color":[128, 0, 0, 0.2],
+                        "color":[64, 0, 0, 0.3],
                         "models": {
                             "default": {
                                 "surface": "pso-j318-5338−22-8603.png",

@@ -1,6 +1,46 @@
 /*
 
-organize defaults in plutonian-scene
+rotate sub-objects in star system
+rotate sub-objects in planetary system
+
+USE TAG SYSTEM
+https://doc.babylonjs.com/resources/tags
+var myJSObj = {};
+// enable tags for myJSObj
+BABYLON.Tags.EnableFor(myJSObj);
+
+// disable tags for myJSObj
+BABYLON.Tags.DisableFor(myJSObj);
+===================================
+
+MeshWriter (create letters as meshes)
+https://doc.babylonjs.com/extensions/mesh_writer_introduction
+===================================
+    var text = "BabylonJS Roxxx";
+    var font = "normal 56px Arial";
+    var tx = new BABYLON.DynamicTexture("dt", {width:500, height: 40}, scene);
+    tx.hasAlpha = true;
+    var clearColor = "transparent";
+    var clearColor = "white";
+    tx.drawText(text, null, 45, font, "blue", clearColor, true, false);
+    tx.drawText("CLICK = BOOM", null, 60, "normal 18px Arial", "red", null, true, true);
+
+    var mat = new BABYLON.StandardMaterial("mat1", scene);
+    mat.diffuseTexture = tx;
+    mat.freeze();
+===================================
+Rendering group performance
+    // Groups
+    ground.renderingGroupId = 0;
+    sphere.renderingGroupId = 1;
+    box.renderingGroupId = 2;
+
+    // Prevent clear between groups.
+    scene.setRenderingAutoClearDepthStencil(1, false);    
+    scene.setRenderingAutoClearDepthStencil(2, false);
+
+
+====================================
 
 check VR display!!!!!!!!!!!!!!!!!
 may need reboot
@@ -10,6 +50,8 @@ Find out how to put skybox into its own rendering group
 get pjump and plook to work for camera
 
 change camera speed inside a SpaceVolume
+
+Flatten spheres (like Saturn) and bake vertices
 
 swap followCamera for Planets, if not in VR
 https://doc.babylonjs.com/babylon101/cameras

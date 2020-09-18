@@ -186,7 +186,7 @@ var PData = (function () {
         if(!d.dist) d.dist = 0;
         if(!d.tilt) d.tilt = 0;
         if(!d.rotation) d.rotation = 0;
-        if(!d.color) d.color = [1, 1, 1, 1];
+        if(!d.color) d.color = [1, 1, 1, 0.5];
 
         return Object.assign({}, d);
 
