@@ -320,6 +320,7 @@ var PCelestial = (function () {
                 scaled.dist *= this.dParsecUnits;
                 //console.log("STAR BROWNDWARF SCALED DIAMETER:" + scaled.diameter + " DISTANCE:" + scaled.dist)
                 break;
+
             case t.GALAXY:
                 scaled.diameter *= this.dParsecUnits;
                 scaled.dist *= this.dParsecUnits;

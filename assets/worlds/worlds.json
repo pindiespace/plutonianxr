@@ -5,7 +5,7 @@
     "description": "Milky Way and nearby galaxies",
     "data": {
         "type": "world",
-        "diameter": 1000000,
+        "diameter": 10000000,
         "dist": 0,
         "ra": 0,
         "dec": 0,

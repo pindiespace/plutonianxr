@@ -21,7 +21,7 @@ var PWorld = (function () {
 
         this.UNIVERSE_DEFAULT_SIZE     = 1000000; // size of universe in units (not drawn beyond dVisUSize)
         this.DIAMETER_DEFAULT          = 1;
-        this.SPACEVOLUME_DEFAULT_SCALE = 4;
+        this.SPACEVOLUME_DEFAULT_SCALE = 8;
         this.VR_DEFAULT_SIZE           = 900;       // VR skybox must be < 1000 units
         this.DESKTOP_DEFAULT_SIZE      = 100000;
 
@@ -146,12 +146,7 @@ var PWorld = (function () {
         if(galaxies.length > 0) {
 
             let g = galaxies[0].galaxy;
-            let d = g.data.diameter;
-
-            if(!d) {
-                console.error('toggleVRSkybox ERROR: missing galactic diameter')
-            }
-            let s = galaxies[0].skybox; 
+            //let d = g.data.diameter;
 
             // toggle large and small skybox based on supplied 'vr' variable
             if(vr == true) {
@@ -297,7 +292,7 @@ var PWorld = (function () {
 
             // these all get parents
             case t.GALAXY:
-                scaled.diameter *= this.SPACEVOLUME_DEFAULT_SCALE;
+                //scaled.diameter *= this.SPACEVOLUME_DEFAULT_SCALE;
                 break;
             case t.STAR:
             case t.BROWN_DWARF:
@@ -1062,8 +1057,6 @@ var PWorld = (function () {
 
         let mesh = this.loadPlanetModel(pObj, dir + '/', scene, parent);
 
-        window.pluto = pObj;
-
         if(mesh) {
 
             this.ui.createLabel(pObj, scene, true, true);
@@ -1222,13 +1215,8 @@ var PWorld = (function () {
         // draw the galaxy model as an infinite cubemap, large-format
         let meshSky = this.loadSkybox(pObj, dir, scene, this.NO_VR);
 
-        // now that we know how big the SkyBox is, adjust camera maxZ to include it
-        scene.activeCamera.maxZ = pObj.data.diameter * 1.1;
-
         if(meshSky) {
 
-        } else {
-            console.error("MESHSKYNOTREADY")
         }
 
         // load a small skybox for VR, which needs under 1000 units in size
@@ -1237,8 +1225,6 @@ var PWorld = (function () {
         
         if(meshSkyVR) {
             meshSkyVR.setEnabled(false);
-        } else {
-            console.error("MESHSKYVR NOT READY")
         }
 
         /*
@@ -1251,7 +1237,6 @@ var PWorld = (function () {
         console.log("POBJDATADIAMETER:" + pObj.name + ":" + pObj.data.diameter)
 
         let mesh = this.loadSpaceVolume(pObj, dir, scene);
-
         /*
          * TODO: create a global directional light. Exclude everything except 
          * SpaceVolume from the directional light
@@ -1262,7 +1247,9 @@ var PWorld = (function () {
 
         if(mesh) {
 
+            // spaceVolume should be invisible
             mesh.setEnabled(false);
+            this.godLight.excludedMeshes.push(mesh);
 
             // attach to parent
             if(parent) {
@@ -1284,6 +1271,13 @@ var PWorld = (function () {
                 pObj.meshSkyVR = meshSkyVR;
                 meshSkyVR.pObj = pObj;
             }
+
+        //10,000,000 universe SpaceVolume
+        // 2,000,000 galaxy Skybox
+        // 2,000,000 galaxy SpaceVolume
+
+        // Make the camera's view slightly larger than the Skybox dimensions
+        scene.activeCamera.maxZ = mesh.getBoundingInfo().boundingSphere.radius * 1.2;
 
             /////////this.ui.createLabel(pObj, scene);
 
@@ -1361,6 +1355,8 @@ var PWorld = (function () {
         // create World elements
 
         if(mesh) { // valid world
+
+            this.world = pObj;
 
             mesh.setEnabled(false);
 
@@ -1468,6 +1464,7 @@ var PWorld = (function () {
     PWorld.prototype.createScene = async function (engine) {
 
         let celestial = this.celestial;
+        let pWorld = this; // for VR state changes
 
         let canvas = engine.getRenderingCanvas();
 
@@ -1524,7 +1521,7 @@ var PWorld = (function () {
 
                     case BABYLON.WebXRState.ENTERING_XR:
                         console.log("Entering XR:" + state)
-                        //pWorld.toggleVRSkybox(true); // shrunken below 1000 unit size
+                        pWorld.toggleVRSkybox(true); // shrunken below 1000 unit size
                         break;
 
                     case BABYLON.WebXRState.IN_XR:
@@ -1534,7 +1531,7 @@ var PWorld = (function () {
 
                     case BABYLON.WebXRState.EXITING_XR:
                         console.log("Exiting XR:" + state)
-                        //pWorld.toggleVRSkybox(false); // original size
+                        pWorld.toggleVRSkybox(false); // original size
                         break;
 
                     case BABYLON.WebXRState.NOT_IN_XR:
