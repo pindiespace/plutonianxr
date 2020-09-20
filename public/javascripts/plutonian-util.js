@@ -272,8 +272,8 @@ var PUtil = (function () {
      * @param {Error} error execution error
      * @param {Boolean} verbose if true
      */
-    PUtil.prototype.printError = function (error, explicit) {
-        console.log(`[${explicit ? 'Syntax Error (EXPLICIT)' : 'Error (INEXPLICIT)'}] ${error.name}: ${error.message}`);
+    PUtil.prototype.printError = function (error, explicit, str = '') {
+        console.log(`[${explicit ? str + ', Syntax Error (EXPLICIT)' : str + ', Error (INEXPLICIT)'}] ${error.name}: ${error.message}`);
     };
 
     /**
@@ -290,6 +290,7 @@ var PUtil = (function () {
 
     /**
      * mock lags and delays
+     * NOTE: call from an async function with 'await'
      */
     PUtil.prototype.sleep = function (ms) {
         return new Promise(resolve => setTimeout(resolve, ms))

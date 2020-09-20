@@ -33,40 +33,9 @@ var PData = (function () {
         ARTIFACT: 'artifact'
     };
 
-    PData.prototype.checkHygObj = function(hygObj) {
+    PData.prototype.checkWorld = function(world) {
+
         return true;
-    };
-
-    /** 
-     * Build a HygObj based on Hyg3 database fields. 
-     * - If nothing is passed, build an empty object.
-     * - Otherwise, add any needed fields
-     */
-    PData.prototype.cloneHygObj = function (hygObj = {}) {
-
-    // required fields
-    if(!hygObj.id) hygObj.id = this.hygObj_ERROR;
-    if(!hygObj.proper) hygObj.proper = this.EMPTY;
-    if(!hygObj.ra) hygObj.ra = 0;
-    if(!hygObj.dec) hygObj.dec = 0;
-    if(!hygObj.dist) hygObj.dist = 0;
-    if(!hygObj.mag) hygObj.mag = 0;
-    if(!hygObj.absmag) hygObj.absmag = 0;
-    if(!hygObj.spect) hygObj.spect = this.EMPTYs;
-    if(!hygObj.x) hygObj.x = 0;
-    if(!hygObj.y) hygObj.y = 0;
-    if(!hygObj.z) hygObj.z = 0;
-    if(!hygObj.con) hygObj.con = this.EMPTY;
-
-    // multiple star
-    if(!hygObj.comp) hygObj.comp = this.EMPTY;
-    if(!hygObj.comp_primary) hygObj.comp_primary = this.EMPTY;
-    if(!hygObj.base) hygObj.base = this.EMPTY;
-
-    //if(!hygObj.lum) hygObj.lum = 1;
-    //if(!hygObj.var) hygObj.var = this.EMPTY;
-    //if(!hygObj.var_min) = 1;
-    //if(!hygObj.var_max) = 1;
 
     };
 
@@ -123,6 +92,8 @@ var PData = (function () {
             //pObj.data = {};
         }
         else {
+            //NOTE: don't used returned object
+            //this.cloneData(pObj.data);
             let d = pObj.data;
             if(!d.type) d.type = this.UNKNOWN;
             if(!d.diameter) d.diameter = 0;
@@ -172,7 +143,7 @@ var PData = (function () {
     };
 
     /**
-     * Clond a data sub-object from pObj
+     * Clone a data sub-object from pObj
      * 1. If nothing is passed, build an empty object.
      * 2. Otherwise, add any needed fields to the existing object.
      * 3. Finally, return a cloned copy of the original object.
@@ -211,6 +182,44 @@ var PData = (function () {
         return true;
 
     };
+
+    PData.prototype.checkHygObj = function(hygObj) {
+        return true;
+    };
+
+    /** 
+     * Build a HygObj based on Hyg3 database fields. 
+     * - If nothing is passed, build an empty object.
+     * - Otherwise, add any needed fields
+     */
+    PData.prototype.cloneHygObj = function (hygObj = {}) {
+
+    // required fields
+    if(!hygObj.id) hygObj.id = this.hygObj_ERROR;
+    if(!hygObj.proper) hygObj.proper = this.EMPTY;
+    if(!hygObj.ra) hygObj.ra = 0;
+    if(!hygObj.dec) hygObj.dec = 0;
+    if(!hygObj.dist) hygObj.dist = 0;
+    if(!hygObj.mag) hygObj.mag = 0;
+    if(!hygObj.absmag) hygObj.absmag = 0;
+    if(!hygObj.spect) hygObj.spect = this.EMPTYs;
+    if(!hygObj.x) hygObj.x = 0;
+    if(!hygObj.y) hygObj.y = 0;
+    if(!hygObj.z) hygObj.z = 0;
+    if(!hygObj.con) hygObj.con = this.EMPTY;
+
+    // multiple star
+    if(!hygObj.comp) hygObj.comp = this.EMPTY;
+    if(!hygObj.comp_primary) hygObj.comp_primary = this.EMPTY;
+    if(!hygObj.base) hygObj.base = this.EMPTY;
+
+    //if(!hygObj.lum) hygObj.lum = 1;
+    //if(!hygObj.var) hygObj.var = this.EMPTY;
+    //if(!hygObj.var_min) = 1;
+    //if(!hygObj.var_max) = 1;
+
+    };
+
 
     return PData;
 }());

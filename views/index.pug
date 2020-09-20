@@ -10,15 +10,15 @@ block content
 
     // fullscreen canvas, under header and footer
     section(class='render-xr-canvas-wrapper')
-      canvas(id='render-canvas' class='render-xr-canvas')
+      canvas(id='primary-xr-canvas' class='render-xr-canvas')
 
       // Custom VR Button doesn't work
       //section(class='xr-toggle')
-        //div(id='customVRButton' class='xr-toggle-button')
+      //div(id='customVRButton' class='xr-toggle-button')
   
     // putting this below the canvas ensures canvas will be fullscreen
-    div(class='scene-loader-wrapper')
-      div(class='scene-loader-dialog')
+    div(id='primary-scene-loader' class='scene-loader-wrapper')
+      div(id='primary-scene-loader-dialog' class='scene-loader-dialog')
         h1= Loader
 
     include components/babylon-scripts.pug

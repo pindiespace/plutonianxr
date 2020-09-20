@@ -1,4 +1,4 @@
-/*
+
 
 rotate sub-objects in star system
 rotate sub-objects in planetary system
@@ -38,7 +38,17 @@ Rendering group performance
     // Prevent clear between groups.
     scene.setRenderingAutoClearDepthStencil(1, false);    
     scene.setRenderingAutoClearDepthStencil(2, false);
-
+    // switch back and forth.
+    scene.onRenderingGroupObservable.add(function(info) {
+        if (info.renderStage === BABYLON.RenderingGroupInfo.STAGE_PREOPAQUE) {
+            if (info.renderingGroupId === 1) {
+                engine.setDepthFunctionToGreater();
+            }
+            else if (info.renderingGroupId === 2) {
+                engine.setDepthFunctionToLessOrEqual();
+            }
+        }
+    });
 
 ====================================
 
@@ -101,7 +111,6 @@ Blending of skybox
 
 Bring in skybox to 1000 units for VR.
 
-*/
 
 
         // CFBDSIR2149
@@ -291,3 +300,348 @@ local_group/star_systems/luhman16/stars/luhman_16_a/textures/luhman_16_a.png
 	"y":"",
 	"z":""
 },
+
+
+*/
+
+
+////////////////////////////////////////////////////////////////////////////////////////
+/*
+        var createPScene = async function (engine) {
+
+            let canvas = engine.getRenderingCanvas();
+
+            // This creates a basic Babylon Scene object (non-mesh)
+            var scene = new BABYLON.Scene(engine);
+
+            // This creates and positions a free camera (non-mesh)
+            let camera = new BABYLON.UniversalCamera('desktopcamera', new BABYLON.Vector3(0, 0, 19), scene);
+
+            // This targets the camera to scene origin
+            camera.setTarget(BABYLON.Vector3.Zero());
+
+            console.log('rendering canvas is:' + engine.getRenderingCanvas())
+        
+            // This attaches the camera to the canvas
+            camera.attachControl(canvas, true);
+
+            // IMPORTANT: you CANNOT add camera to scene.activeCameras
+
+            // This creates a light, aiming 0,1,0 - to the sky (non-mesh)
+            var light = new BABYLON.HemisphericLight("light", new BABYLON.Vector3(0, 1, 0), scene);
+        
+            // Default intensity is 1. Let's dim the light a small amount
+            light.intensity = 0.7;
+        
+            // Our built-in 'sphere' shape.
+            var sphere = BABYLON.MeshBuilder.CreateSphere("sphere", {diameter: 2, segments: 32}, scene);
+        
+            // Move the sphere upward 1/2 its height
+            sphere.position.y = 1;
+        
+            const environment = scene.createDefaultEnvironment();
+        
+            // XR
+            const xrHelper = await scene.createDefaultXRExperienceAsync({
+                //floorMeshes: [environment.ground]
+            }).then(helper => {
+                helper.baseExperience.onStateChangedObservable.add((state) => {
+
+                switch(state) {
+
+                    case BABYLON.WebXRState.ENTERING_XR:
+                        console.log("Entering XR:" + state)
+                        //pWorld.toggleVRSkybox(true); // shrunken below 1000 unit size
+                        break;
+
+                    case BABYLON.WebXRState.IN_XR:
+                        // XR is initialized and already submitted one frame
+                        console.log("In XR:" + state)
+                        break;
+
+                    case BABYLON.WebXRState.EXITING_XR:
+                        console.log("Exiting XR:" + state)
+                        //pWorld.toggleVRSkybox(false); // original size
+                        break;
+
+                    case BABYLON.WebXRState.NOT_IN_XR:
+                        console.log("Not in XR:" + state)
+                        // self explanatory - either our or not yet in XR
+                        break;
+
+                }
+
+            });
+
+        });
+
+        return scene;
+        
+    };
+
+    let engine = plutonianWorld.setup.createDefaultEngine();
+
+    if(engine.getRenderingCanvas()) {
+
+        // initialize loader UI
+        engine.loadingScreen = new customLoadingScreen('scene-loader-wrapper', 'scene-loader-dialog');
+
+        // display Loading Screen
+        engine.loadingScreen.displayLoadingUI();
+
+        let sc = createPScene(engine).then(returnedScene => { 
+
+            // hide the startup screen
+            returnedScene.getEngine().loadingScreen.hideLoadingUI();
+
+            engine.runRenderLoop( function () {
+
+                if (returnedScene) {
+                    returnedScene.render();
+                }
+
+            });
+
+            // Resize
+            window.addEventListener("resize", function () {
+                engine.resize();
+            });
+
+        });
+
+    } // valid engine
+
+    */
+
+
+////////////////////////////////////////////////////////////////////////////////////////
+/**
+ * Fire loading
+ */
+
+/*
+
+try {
+
+    // Initialize BABYLON, then attach <canvas> as rendering surface
+
+    // create rendering engine
+    let eng = plutonianWorld.setup.createDefaultEngine().then((returnedEngine) => {
+
+        if(returnedEngine) {
+
+            let engine = returnedEngine;
+
+            // initialize loader UI
+            engine.loadingScreen = new customLoadingScreen('scene-loader-wrapper', 'scene-loader-dialog');
+
+            // display Loading Screen
+            engine.loadingScreen.displayLoadingUI();
+
+            // create the scene (async)
+            var s = plutonianWorld.createScene(engine).then(returnedScene => { 
+
+            // keep a local copy
+            plutonianWorld.scene = returnedScene;
+
+            returnedScene.getEngine().loadingScreen.hideLoadingUI();
+
+            // Optimization
+            // TODO: put skybox into its own rendering group
+            // NOTE: there's probably a way to put this into rendering groups
+            // scene.autoClear = false; // Color buffer
+            // scene.autoClearDepthAndStencil = false; // Depth and stencil, obviously
+            // scene.setRenderingAutoClearDepthStencil(renderingGroupIdx, autoClear, depth, stencil);
+
+            // load assets into the scene
+            var assets = plutonianWorld.createAssets(returnedScene).then(returnedAssets => {
+
+                console.log('in .then for createAssets()');
+
+                // Make some items pickable
+                returnedScene.onPointerDown = function (evt) {
+
+                    let pickResult = this.pickSprite(this.pointerX, this.pointerY);
+
+                    if (pickResult.hit) {
+                        if(pickResult.pickedSprite) {
+                            console.log("Picked sprite is:" + pickResult.pickedSprite.name + " id:" + pickResult.pickedSprite.hygid)
+                            window.sprite = pickResult.pickedSprite; // TODO: remove
+                            // NOTE: default camera wash pushed into array when the camera was created
+                            let cam = this.activeCameras[0];
+                            let dx = cam.position.x - sprite.position.x,
+                            dy = cam.position.y - sprite.position.y,
+                            dz = cam.position.z - sprite.position.z;
+                            let dist = Math.sqrt(dx*dx + dy*dy + dz*dz);
+                            console.log("distance:" + dist + " sizeX:" + pickResult.pickedSprite.width)
+                        }
+                    }
+
+                    let pickMesh = this.pick(this.pointerX, this.pointerY);
+                    if(pickMesh.hit) {
+                        let m = pickMesh.pickedMesh;
+                        console.log("Picked mesh is:" + m.name);
+                        window.mesh = m;
+                        //if(!m.infiniteDistance) {
+                        //    console.log("Changing mesh::::")
+                        //    toggleMeshActivation(m)
+                        //};
+
+                    }
+
+                };
+
+            }); // end of asset loading
+
+            //sceneToRender = returnedScene;
+                // set up endless render loop
+            engine.runRenderLoop(function () {
+                if (returnedScene) {
+                    returnedScene.render();
+                }
+
+            }); // end of rendering loop
+
+        }); // end of createScene=>then
+
+        } // if engine was created
+
+
+    }); // end of createEngine=>then
+
+} catch (e) {
+
+    console.error('failed setup...');
+    if (e instanceof SyntaxError) {
+
+        util.printError(e, true);
+
+        } else {
+
+            util.printError(e, false);
+
+        }
+
+}
+
+*/
+
+
+
+PWorld.prototype.createScene = async function (engine) {
+
+    let pWorld = this;
+    let celestial = this.celestial;
+
+    let canvas = engine.getRenderingCanvas();
+
+    // This creates a basic Babylon Scene object (non-mesh)
+    let scene = new BABYLON.Scene(engine);
+
+    if(!engine || !canvas) {
+        console.error('createScene ERROR: missing engine:' + engine + ' or canvas:' + camvas);
+        return;
+    }
+
+    // TODO: Optimizations
+    // https://doc.babylonjs.com/how_to/how_to_use_sceneoptimizer
+
+    // TODO: follow camera
+    // https://doc.babylonjs.com/babylon101/cameras
+
+    // This creates and positions a free camera (non-mesh)
+    //var camera = new BABYLON.FreeCamera('camera1', new BABYLON.Vector3(0, 0, 19), scene);
+    let camera = new BABYLON.UniversalCamera('desktopcamera', new BABYLON.Vector3(0, 0, 19), scene);
+
+    camera.maxZ = this.DESKTOP_DEFAULT_SIZE * celestial.dParsecUnits; // constant, size of skybox for visible universe
+    camera.minZ = 1;
+
+    console.log('camera initial size is:' + camera.minZ + ', ' + camera.maxZ)
+
+    // This targets the camera to scene origin
+    camera.setTarget(BABYLON.Vector3.Zero());
+
+    // This attaches the camera to the canvas
+    camera.attachControl(canvas, true);
+
+    // IMPORTANT: YOU CANNOT add camera to scene.activeCameras [] for VR to work!!!!
+
+    //camera.inertia = 1; doesn't stop
+    //camera.inertia = 0.1; very short
+
+    // Glow Layer
+    var gl = new BABYLON.GlowLayer('glow', scene, {
+            mainTextureRatio: 0.1,
+            //mainTextureFixedSize: 256,
+            blurKernelSize: 100
+    });
+
+    gl.intensity = 5;
+    this.glow = gl;
+
+    // create a fullscreen UI layer
+    /////////scene.gui = BABYLON.GUI.AdvancedDynamicTexture.CreateFullscreenUI('UI');
+
+// adjust rendering pipeline (just for skybox?)
+//var quality = "high";
+//var pipeline = new BABYLON.DefaultRenderingPipeline("pipeline", false, scene, [camera]); /// name, hdrEnabled, scene, cameras
+//if (quality != "low") {
+//    pipeline.bloomEnabled = true;
+//    pipeline.bloomWeight = 4;
+//}
+//pipeline.fxaa = new BABYLON.FxaaPostProcess('fxaa', 1, null, BABYLON.Texture.BILINEAR_SAMPLINGMODE, engine, false);
+//pipeline.fxaaEnabled = true; // fxaa deactivated by default
+
+    // TODO: set up controllers for Desktop and VR
+    // https://doc.babylonjs.com/how_to/webxr_controllers_support
+
+    /*
+     * Set up VR support
+     * Also see https://doc.babylonjs.com/playground/?code=customButtons
+     */
+
+    // TODO: not used yet. Check when API exposes it.
+    const HMDXRButton = document.getElementsByClassName('xr-toggle.button')[0];
+
+    const xrHelperOptions = {
+        //floorMeshes: [environment.ground],
+        //disableDefaultUI : true
+        createDeviceOrientationCamera: false
+    };
+
+    // XR
+    const xrHelper = await scene.createDefaultXRExperienceAsync(xrHelperOptions).then(helper => {
+
+        helper.baseExperience.onStateChangedObservable.add((state) => {
+
+            switch(state) {
+
+                case BABYLON.WebXRState.ENTERING_XR:
+                    console.log("Entering XR:" + state)
+                    //pWorld.toggleVRSkybox(true); // shrunken below 1000 unit size
+                    break;
+
+                case BABYLON.WebXRState.IN_XR:
+                    // XR is initialized and already submitted one frame
+                    console.log("In XR:" + state)
+                    break;
+
+                case BABYLON.WebXRState.EXITING_XR:
+                    console.log("Exiting XR:" + state)
+                    //pWorld.toggleVRSkybox(false); // original size
+                    break;
+
+                case BABYLON.WebXRState.NOT_IN_XR:
+                    console.log("Not in XR:" + state)
+                    // self explanatory - either our or not yet in XR
+                    break;
+
+            }
+
+        });
+
+    });
+
+    return scene;
+
+};

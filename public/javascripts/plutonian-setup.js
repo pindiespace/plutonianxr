@@ -9,15 +9,18 @@ var PSetup = (function() {
     function PSetup (util, canvas) {
 
         this.util   = util;
-        this.canvas = this.getCanvas() || null;
+        this.canvas = null;
         this.engine = null;
 
-        // TODO: initialize engine here
+        this.CANVAS_ID_DEFAULT = 'primary-xr-canvas';
 
     };
 
     // functions
 
+    /**
+     * Fallback to DOM error message, if can't run
+     */
     PSetup.prototype.fallbackDOM = function (fallbackMessage) {
 
         let msg = '';
@@ -30,9 +33,8 @@ var PSetup = (function() {
 
         // write an epic fail to the HTML page.
         var body = document.getElementsByTagName('body')[0];
-        fail = document.createElement('div');
+        var fail = document.createElement('div');
         fail.setAttribute('id', 'fail');
-        //fail.style.display = 'table-cell;';
         fail.style.position = 'absolute';
         fail.style.width = '400px';
         fail.style.height = '100px';
@@ -55,16 +57,12 @@ var PSetup = (function() {
 
     };
 
-    PSetup.prototype.fallback2D = function (canvas, fallbackMessage) {
-
-        return canvas;
-
-    };
-
     /**
      * Get the canvas on the HTML page
      */
-    PSetup.prototype.getCanvas = function () {
+    PSetup.prototype.getCanvas = function (id) {
+
+        let util = this.util;
 
         // check to see if canvas is already initialized
         if(this.util.isObject(this.canvas)) {
@@ -74,18 +72,28 @@ var PSetup = (function() {
         }
 
         // no object, so look for expected canvas class.
-        let canvas = this.canvas;
+        let canvas = null;
+        if(!id) id = this.CANVAS_ID_DEFAULT;
 
         try {
 
-            canvas = document.getElementsByClassName('render-xr-canvas')[0];
+            canvas = document.getElementById(id);
+            if(!canvas) throw new Error('Bad canvas:' + typeof canvas + ' using ID:' + id);
+            this.canvas = canvas;
 
         } catch (e) {
 
-            try {
+            console.warn('failed to initialize default BabylonJS Canvas:' + e);
 
+            try {
+                console.log('Trying to add an HTML5 canvas to the web page...');
+
+                // create and attach an HTML5Canvas element
                 let b = document.getElementsByTagName('body')[0];
+                if(!b) throw new Error('HTML missing body element');
+
                 let s = document.createElement('section');
+                if(!s) throw new Error('cannot create HTML elements');
 
                 // define section wrapper for fullscreen
                 s.class = 'render-xr-canvas-wrapper',
@@ -97,18 +105,20 @@ var PSetup = (function() {
 
                 // define canvas for fullscreen
                 canvas = document.createElement('canvas'),
-                canvas.id = 'render-canvas',
-                canvas.class = 'render.xr-canvas',
+                canvas.id = 'primary-xr-canvas',
+                canvas.class = 'render-xr-canvas',
                 canvas.style.width = '100%',
                 canvas.style.height = '100%';
 
+                this.canvas = canvas;
+
                 // append to page
-                //s.appendChild('canvas');
-                //b.appendChild(section);
+                s.appendChild(canvas);
+                b.appendChild(s);
 
             } catch (e) {
 
-                alert('This web browser cannot run HTML5 canvas applications');
+                this.fallbackDOM('');
 
             }
 
@@ -119,13 +129,15 @@ var PSetup = (function() {
 
     PSetup.prototype.createDefaultEngine = function () {
 
-        let canvas = this.canvas; // initialized in constructor
-        let engine = this.engine = null;
+        let engine = null;
 
         try {
 
+            const canvas = this.getCanvas();
+
             // Init BabylonJS
             engine = new BABYLON.Engine(canvas, true, { preserveDrawingBuffer: true, stencil: true });
+            if(!engine) throw new ERROR('Bad engine:' + typeof engine);
 
             // Resize
             window.addEventListener('resize', function () {
@@ -134,8 +146,7 @@ var PSetup = (function() {
 
         } catch (e) {
 
-            console.error('failed to create default BabylonJS engine');
-            var fallback = this.fallback2d(canvas);
+            console.error('failed to create default BabylonJS engine:' + e);
 
         }
 
@@ -145,3 +156,4 @@ var PSetup = (function() {
     return PSetup;
 
 }());
+

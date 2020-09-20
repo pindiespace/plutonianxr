@@ -4,7 +4,6 @@
  * - 1 unit = 2370km
  */
 'use strict'
-
 var PWorld = (function () {
 
     // static class functions and variables here. Note they are a bit slower to access
@@ -24,23 +23,27 @@ var PWorld = (function () {
         this.DIAMETER_DEFAULT          = 1;
         this.SPACEVOLUME_DEFAULT_SCALE = 4;
         this.VR_DEFAULT_SIZE           = 900;       // VR skybox must be < 1000 units
-        this.DESKTOP_DEFAULT_SIZE      = 200000;
+        this.DESKTOP_DEFAULT_SIZE      = 100000;
 
         this.NO_VR                     = false;       // flags for VR adjustments
         this.USE_VR                    = true;
 
         this.GLOBAL_ROTATION           = Math.PI; // global rotation counter, local rotations must be added/subtracted
         this.WORLD_DIRECTORY           = 'worlds';
+        this.WORLD_FILE_DEFALLT        = 'worlds.json';
 
         this.util = new PUtil();
+        this.setup = new PSetup(this.util);
         this.pdata = new PData(this.util);
 
         // data model for hyg3 database
         this.PCTYPES = this.pdata.PCTYPES;
 
-        this.setup = new PSetup(this.util);
         this.ui = new PUI(this.util);
         this.celestial = new PCelestial(this.util, this.pdata);
+
+        // fire the program;
+        this.init();
 
     };
 
@@ -358,9 +361,11 @@ var PWorld = (function () {
 
         console.log("------------------------------");
         console.log('creating skybox:' + pObj.name);
+        console.log('useVR is:' + useVR)
 
         let util = this.util;
         let pdata = this.pdata;
+        let celestial = this.celestial;
 
         let mesh = null;
 
@@ -394,18 +399,11 @@ var PWorld = (function () {
         if(useVR) {
             bSize = this.VR_DEFAULT_SIZE;
         } else if(util.isNumber(data.diameter) && data.diameter > 0) {
-            bSize = data.diameter * dParsecUnits;
-            console.log('skybox for:' + pObj.name + ' using bSize:' + bSize);
+            bSize = data.diameter * celestial.dParsecUnits;
+            console.log('loadSkybox VR for:' + pObj.name + ' using bSize:' + bSize);
         }
 
-        console.log('camera size is currently:' + bSize)
-
-        // adjust the cameras
-        let cs = scene.cameras;
-        for(var i = 0; i < scene.cameras.length; i++) {
-            console.log('resetting camera size to:' + bSize + ' for:' + pObj.name);
-            //scene.cameras[i].maxZ = bSize;
-        }
+        console.log('loadSkybox: box size and camera maxZ is currently:' + bSize)
 
         // create the mesh, infinite distance skybox
         mesh = BABYLON.MeshBuilder.CreateBox(
@@ -414,8 +412,8 @@ var PWorld = (function () {
 
         this.godLight.excludedMeshes.push(mesh); // not lit
         mesh.infiniteDistance = true;
-        mesh.freezeNormals(); // don't need to calculate
-        mesh.convertToUnIndexedMesh(); // too few vertices to need indexing
+        //////mesh.freezeNormals(); // don't need to calculate
+        //////mesh.convertToUnIndexedMesh(); // too few vertices to need indexing
 
         // set the position
 
@@ -692,6 +690,7 @@ var PWorld = (function () {
     PWorld.prototype.setEmissiveLight = function (pObj, range, scene) {
 
         let mesh = pObj.mesh;
+        let celestial = this.celestial;
 
         const light = new BABYLON.PointLight(pObj.name + 'Light', mesh.getAbsolutePosition(), scene);
 
@@ -702,7 +701,7 @@ var PWorld = (function () {
             // TODO: RANGE FROM PARENT
             light.range = range;
         } else {
-            light.range = 4 * dParsecUnits; // emissive is always a star scales
+            light.range = 4 * celestial.dParsecUnits; // emissive is always a star scales
         }
         // set the parent of the Light to star or brown dwarf
         light.parent = mesh;
@@ -1217,6 +1216,8 @@ var PWorld = (function () {
          * 3. Since the Skybox is projected to infinity, we need a SECOND mesh
          *    otherwise, children inherit projection to infinity
          */
+
+
         let mesh = this.loadSpaceVolume(pObj, dir, scene);
 
         /*
@@ -1306,7 +1307,6 @@ var PWorld = (function () {
 
     };
 
-
     /**
     * Check to see if the world can be parsed.
     * @param {Object} world 
@@ -1324,6 +1324,7 @@ var PWorld = (function () {
         console.log('creating world:' + pObj.name)
 
         let util = this.util;
+        let mesh = null;
 
         if(!this.checkWorld(pObj)) {
             console.error('loadWorld ERROR: no World object');
@@ -1333,18 +1334,10 @@ var PWorld = (function () {
         //let dir = this.worldDir;
         let dir = this.WORLD_DIRECTORY;
 
-        // convert 1 unit = 1 parsec
-        //////////////world.data.diameter *= dParsecUnits; //////////////////////////////////////////////////
-
-
-
-        let mesh = this.loadSpaceVolume(pObj, dir, scene);
-
-        // Create objects in the universe
-
-        this.godLight = new BABYLON.DirectionalLight("dirLight", new BABYLON.Vector3(-6, -6, 0), scene);
-        //this.godLight.position = new BABYLON.Vector3(6, 6, 0);
+        mesh = this.loadSpaceVolume(pObj, dir, scene);
         this.godLight.excludedMeshes.push(mesh);
+
+        // create World elements
 
         if(mesh) { // valid world
 
@@ -1363,7 +1356,9 @@ var PWorld = (function () {
                 } // loop through galaxies
             }
 
-        } 
+        }
+
+        return mesh;
 
     };
 
@@ -1449,91 +1444,115 @@ var PWorld = (function () {
 
     };
 
-    PWorld.prototype.createScene = async function (engine, canvas) {
+    PWorld.prototype.createPAssets = async function (scene) {
 
-        let pWorld = this;
+        var pWorld = this;
+        let util = this.util;
+        let pdata = this.pdata;
+        let assets = {};
+
+        console.log('loading world file...');
+
+        // Begin loading assets
+        var assetManager = new BABYLON.AssetsManager(scene);
+
+        var loadJSON = assetManager.addTextFileTask('worlds', this.WORLD_DIRECTORY + '/' + this.WORLD_FILE_DEFALLT);
+
+        loadJSON.onSuccess = function(world) {
+
+            console.log('World file loaded, validating...');
+
+            try {
+
+                // try to parse the world data
+                let w = JSON.parse(world.text);
+
+                if(pdata.checkWorld(w)) {
+                    assets.world = w;
+                    console.log('Loading world file objects...');
+
+                }
+
+            } catch (e) {
+
+                if (e instanceof SyntaxError) {
+                    util.printError(e, true);
+                } else {
+                    util.printError(e, false);
+                }
+
+            }
+
+        } // end of assetManager callback
+
+        assetManager.load();
+        
+        return assets;
+
+    };
+
+
+    PWorld.prototype.createScene = async function (engine) {
+
+        let celestial = this.celestial;
+
+        let canvas = engine.getRenderingCanvas();
 
         // This creates a basic Babylon Scene object (non-mesh)
         var scene = new BABYLON.Scene(engine);
 
-        // TODO: Optimizations
-        // https://doc.babylonjs.com/how_to/how_to_use_sceneoptimizer
-
-        // TODO: follow camera
-        // https://doc.babylonjs.com/babylon101/cameras
-
         // This creates and positions a free camera (non-mesh)
-        //var camera = new BABYLON.FreeCamera('camera1', new BABYLON.Vector3(0, 0, 19), scene);
-        var camera = new BABYLON.UniversalCamera('desktopcamera', new BABYLON.Vector3(0, 0, 19), scene);
-
-
-        camera.maxZ = this.DESKTOP_DEFAULT_SIZE * dParsecUnits; // constant, size of skybox for visible universe
-        camera.minZ = 1;
-
-        console.log('camera initial size is:' + camera.minZ + ', ' + camera.maxZ)
+        let camera = new BABYLON.UniversalCamera('desktopcamera', new BABYLON.Vector3(0, 0, 19), scene);
 
         // This targets the camera to scene origin
         camera.setTarget(BABYLON.Vector3.Zero());
 
+        camera.maxZ = this.DESKTOP_DEFAULT_SIZE * celestial.dParsecUnits; // constant, size of skybox for visible universe
+        camera.minZ = 1;
+  
+        console.log('camera initial size is:' + camera.minZ + ', ' + camera.maxZ)
+
         // This attaches the camera to the canvas
         camera.attachControl(canvas, true);
 
-        scene.activeCameras = [camera];
+        // IMPORTANT: you CANNOT add camera to scene.activeCameras
 
-        //camera.inertia = 1; doesn't stop
-        //camera.inertia = 0.1; very short
+        // create lighting (dim with light.intensity)
+        let light = new BABYLON.DirectionalLight("godLight", new BABYLON.Vector3(-6, -6, 0), scene);
+        this.godLight = light;
 
-        // Glow Layer
+        // glow Layer
         var gl = new BABYLON.GlowLayer('glow', scene, {
                 mainTextureRatio: 0.1,
                 //mainTextureFixedSize: 256,
                 blurKernelSize: 100
-        });
-
+            });
+    
         gl.intensity = 5;
         this.glow = gl;
 
-        // create a fullscreen UI layer
-        scene.gui = BABYLON.GUI.AdvancedDynamicTexture.CreateFullscreenUI('UI');
-
-    // adjust rendering pipeline (just for skybox?)
-    //var quality = "high";
-    //var pipeline = new BABYLON.DefaultRenderingPipeline("pipeline", false, scene, [camera]); /// name, hdrEnabled, scene, cameras
-    //if (quality != "low") {
-    //    pipeline.bloomEnabled = true;
-    //    pipeline.bloomWeight = 4;
-    //}
-    //pipeline.fxaa = new BABYLON.FxaaPostProcess('fxaa', 1, null, BABYLON.Texture.BILINEAR_SAMPLINGMODE, engine, false);
-    //pipeline.fxaaEnabled = true; // fxaa deactivated by default
-
-        // TODO: set up controllers for Desktop and VR
-        // https://doc.babylonjs.com/how_to/webxr_controllers_support
-
-        /*
-         * Set up VR support
-         * Also see https://doc.babylonjs.com/playground/?code=customButtons
-         */
-
+        // Our built-in 'sphere' shape.
+        var sphere = BABYLON.MeshBuilder.CreateSphere("sphere", {diameter: 2, segments: 32}, scene);
+        
+        // Move the sphere upward 1/2 its height
+            sphere.position.y = 1;
 
         // TODO: not used yet. Check when API exposes it.
-        var HMDXRButton = document.getElementsByClassName('xr-toggle.button')[0];
-
-        var xrHelperOptions = {
-            //floorMeshes: [environment.ground],
-            //disableDefaultUI : true
-            createDeviceOrientationCamera: false
-        };
+        const HMDXRButton = document.getElementsByClassName('xr-toggle.button')[0];
 
         // XR
-        var xrHelper = await scene.createDefaultXRExperienceAsync(xrHelperOptions).then(helper => {
-
-            helper.baseExperience.onStateChangedObservable.add((state) => {
+        const xrHelper = await scene.createDefaultXRExperienceAsync({
+            //floorMeshes: [environment.ground],
+            //disableDefaultUI : true,
+            createDeviceOrientationCamera: false
+        }).then(helper => {
+                helper.baseExperience.onStateChangedObservable.add((state) => {
 
                 switch(state) {
 
                     case BABYLON.WebXRState.ENTERING_XR:
-                        console.log("Entering XR:" + state + " pWorld is:" + pWorld)
-                        pWorld.toggleVRSkybox(true); // shrunken below 1000 unit size
+                        console.log("Entering XR:" + state)
+                        //pWorld.toggleVRSkybox(true); // shrunken below 1000 unit size
                         break;
 
                     case BABYLON.WebXRState.IN_XR:
@@ -1543,7 +1562,7 @@ var PWorld = (function () {
 
                     case BABYLON.WebXRState.EXITING_XR:
                         console.log("Exiting XR:" + state)
-                        pWorld.toggleVRSkybox(false); // original size
+                        //pWorld.toggleVRSkybox(false); // original size
                         break;
 
                     case BABYLON.WebXRState.NOT_IN_XR:
@@ -1551,7 +1570,7 @@ var PWorld = (function () {
                         // self explanatory - either our or not yet in XR
                         break;
 
-                    }
+                }
 
             });
 
@@ -1561,110 +1580,59 @@ var PWorld = (function () {
 
     };
 
-   // return the world object
+    PWorld.prototype.init = async function() {
 
-   return PWorld;
+        let pWorld = this;
+        let util = this.util;
 
-   // assign PUtil as a static class object, independent of other modules
+        let engine = this.setup.createDefaultEngine();
+
+        if(engine.getRenderingCanvas()) {
+
+            // initialize loader UI
+            //engine.loadingScreen = new CustomLoadingScreen();
+
+            //engine.loadingScreen.displayLoadingUI();
+
+            // display Loading Screen
+           engine.loadingScreen.displayLoadingUI();
+            await util.sleep(2000); ///////////////////////////////
+
+            let sc = this.createScene(engine).then(returnedScene => { 
+
+                let as = pWorld.createPAssets(returnedScene).then(returnedAssets => {
+
+                    console.log("Past loading assets...");
+
+                     // hide the startup screen
+                     //engine.loadingScreen.hideLoadingUI();
+
+                });
+
+                engine.runRenderLoop( function () {
+
+                    if (returnedScene) {
+                        returnedScene.render();
+                    }
+
+                });
+
+                // Resize
+                window.addEventListener("resize", function () {
+                    engine.resize();
+                });
+
+            });
+    
+        } // valid engine
+    };
+
+    // return the world object
+
+    return PWorld;
 
 }());
 
 
 // create the scene object
 var plutonianWorld = new PWorld();
-
-
-/**
- * Fire loading
- */
-
-try {
-
-    // Initialize <canvas>, attach as rendering surface
-    //var canvas = document.getElementsByClassName('render-xr-canvas')[0];
-
-    let c = plutonianWorld.setup.getCanvas();
-
-    // create rendering engine
-    var engine = plutonianWorld.setup.createDefaultEngine(c);
-
-    // initialize loader UI
-    engine.loadingScreen = new customLoadingScreen('scene-loader-wrapper', 'scene-loader-dialog');
-
-    // display Loading Screen
-    engine.loadingScreen.displayLoadingUI();
-
-    this.engine = engine;
-
-    // create the scene (async)
-    var s = plutonianWorld.createScene(engine, c).then(returnedScene => { 
-
-        // keep a local copy
-        plutonianWorld.scene = returnedScene;
-
-        returnedScene.getEngine().loadingScreen.hideLoadingUI();
-
-        // Optimization
-        // TODO: put skybox into its own rendering group
-        // NOTE: there's probably a way to put this into rendering groups
-        // scene.autoClear = false; // Color buffer
-        // scene.autoClearDepthAndStencil = false; // Depth and stencil, obviously
-        // scene.setRenderingAutoClearDepthStencil(renderingGroupIdx, autoClear, depth, stencil);
-
-        // load assets into the scene
-        var assets = plutonianWorld.createAssets(returnedScene).then(returnedAssets => {
-
-            console.log('in .then for createAssets()');
-
-            // Make some items pickable
-            returnedScene.onPointerDown = function (evt) {
-
-                let pickResult = this.pickSprite(this.pointerX, this.pointerY);
-
-                if (pickResult.hit) {
-                    if(pickResult.pickedSprite) {
-                        console.log("Picked sprite is:" + pickResult.pickedSprite.name + " id:" + pickResult.pickedSprite.hygid)
-                        window.sprite = pickResult.pickedSprite; // TODO: remove
-                        // NOTE: default camera wash pushed into array when the camera was created
-                        let cam = this.activeCameras[0];
-                        let dx = cam.position.x - sprite.position.x,
-                        dy = cam.position.y - sprite.position.y,
-                        dz = cam.position.z - sprite.position.z;
-                        let dist = Math.sqrt(dx*dx + dy*dy + dz*dz);
-                        console.log("distance:" + dist + " sizeX:" + pickResult.pickedSprite.width)
-                    }
-                }
-
-                let pickMesh = this.pick(this.pointerX, this.pointerY);
-                if(pickMesh.hit) {
-                    let m = pickMesh.pickedMesh;
-                    console.log("Picked mesh is:" + m.name);
-                    window.mesh = m;
-                    //if(!m.infiniteDistance) {
-                    //    console.log("Changing mesh::::")
-                    //    toggleMeshActivation(m)
-                    //};
-                }
-
-
-            };
-
-        }); // end of createAssets()
-
-        //sceneToRender = returnedScene;
-            // set up endless render loop
-        engine.runRenderLoop(function () {
-            if (returnedScene) {
-                returnedScene.render();
-            }
-
-        }); // end of rendering loop
-
-    }); // end of createScene()
-
-
-} catch (e) {
-
-    console.error('failed to create scene')
-
-}

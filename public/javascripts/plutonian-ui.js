@@ -47,25 +47,79 @@ var PUI = (function() {
 
 }());
 
-function customLoadingScreen(wrapperClass, dialogClass) {
-    console.log('customLoadingScreen creation')
-    this.sceneLoaderWrapper = window.document.getElementsByClassName(wrapperClass)[0];
-    this.sceneLoaderDialog = window.document.getElementsByClassName(dialogClass)[0];
-};
+/**
+ * CustomLoadingScreen
+ */
+/*
+var CustomLoadingScreen = (function() {
 
-customLoadingScreen.prototype.displayLoadingUI = function (msg) {
+    let wrapperClass = 'scene-loader-wrapper';
+    let dialogClass = 'scene-loader-dialog';
 
-    if(!msg) {
-        msg = 'loading...';
+    function CustomLoadingScreen(wClass, dClass) {
+        console.log('customLoadingScreen creation')
+        this.initDOM();
+    };
+
+    CustomLoadingScreen.prototype.initDOM = function () {
+
+        //NOTE: we have to set the DOMElement .style here, or it isn't there in time
+
+        this.sceneLoaderWrapper = document.getElementsByClassName(wrapperClass)[0];
+        this.sceneLoaderWrapper.style.display = 'none';
+
+        this.sceneLoaderDialog = document.getElementsByClassName(dialogClass)[0];
+        this.sceneLoaderDialog.style.display = 'block';
+
+    };
+
+    CustomLoadingScreen.prototype.displayLoadingUI = function (msg) {
+
+        if(!msg) {
+            msg = 'loading...';
+        }
+
+        console.log('customLoadingScreen loading')
+        this.sceneLoaderDialog.innerHTML = msg;
+       // this.sceneLoaderDialog.style.display = 'block';
+        this.sceneLoaderWrapper.style.display = 'block';
+        alert("bob")
+    };
+
+    CustomLoadingScreen.prototype.hideLoadingUI = function () {
+        console.log('customLoadingScreen loaded')
+
+        this.sceneLoaderWrapper.style.display = 'none';
+        //this.sceneLoaderDialog.style.display = 'none';
+    };
+
+    return CustomLoadingScreen;
+
+}());
+*/
+
+BABYLON.DefaultLoadingScreen.prototype.displayLoadingUI = function (msg = 'loading') {
+
+    if (document.getElementById('primary-scene-loader-dialog')) {
+        // Do not add a loading screen if there is already one
+        document.getElementById('primary-scene-loader-dialog').style.display = "block";
+        document.getElementById('primary-scene-loader-dialog').innerHTML = msg;
+        return;
     }
 
-    console.log('customLoadingScreen loading')
-    this.sceneLoaderDialog.innerHTML = msg;
+    this._loadingDiv = document.createElement('div');
+    this._loadingDiv.id = 'primary-scene-loader-dialog';
+    this._loadingDiv.innerHTML = "<p>scene is currently loading</p>";
+    this._loadingDiv.style.color = 'red';
+
+    this._resizeLoadingUI();
+    window.addEventListener("resize", this._resizeLoadingUI);
+    document.body.appendChild(this._loadingDiv);
+
 };
 
-customLoadingScreen.prototype.hideLoadingUI = function () {
-    console.log('customLoadingScreen loaded')
-    this.sceneLoaderWrapper.style.display = 'none';
-};
-
-
+BABYLON.DefaultLoadingScreen.prototype.hideLoadingUI = function(){
+    document.getElementById('primary-scene-loader').style.display = "none";
+    document.getElementById('primary-scene-loader-dialog').style.display = 'none';
+    console.log("scene is now loaded");
+}
