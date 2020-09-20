@@ -314,12 +314,15 @@ var PCelestial = (function () {
             case t.STAR:
             case t.STARDOME:
             case t.STAR_SYSTEM:
-            case t.GALAXY:
                 // 1 unit = 1/10 parsec
                 //console.log("STAR BROWNIE dKmUnits:" + this.dParsecUnits + " DIST:" + scaled.dist)
                 scaled.diameter /= this.dKmUnits,
                 scaled.dist *= this.dParsecUnits;
                 //console.log("STAR BROWNDWARF SCALED DIAMETER:" + scaled.diameter + " DISTANCE:" + scaled.dist)
+                break;
+            case t.GALAXY:
+                scaled.diameter *= this.dParsecUnits;
+                scaled.dist *= this.dParsecUnits;
                 break;
 
             case t.ARTIFACT:

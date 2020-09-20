@@ -272,7 +272,7 @@ var PUtil = (function () {
      * @param {Error} error execution error
      * @param {Boolean} verbose if true
      */
-    PUtil.prototype.printError = function (error, explicit, str = '') {
+    PUtil.prototype.printError = function (error, explicit, str = 'printError:') {
         console.log(`[${explicit ? str + ', Syntax Error (EXPLICIT)' : str + ', Error (INEXPLICIT)'}] ${error.name}: ${error.message}`);
     };
 

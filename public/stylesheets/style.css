@@ -10,6 +10,10 @@ html, body, main {
   margin: 0;
   padding: 0; }
 
+/* create a radial gradient in the background */
+body {
+  background-image: radial-gradient(circle farthest-corner at center, #3C4B57 0%, #1C262B 100%); }
+
 a {
   color: #00B7FF; }
 

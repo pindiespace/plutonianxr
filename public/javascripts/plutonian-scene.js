@@ -272,7 +272,7 @@ var PWorld = (function () {
     PWorld.prototype.loadSpaceVolume = function (pObj, dir, scene) {
 
         console.log("------------------------------");
-        console.log('creating space volume:' + pObj.name)
+        console.log('creating SpaceVolume:' + pObj.name)
 
         let util = this.util;
         let celestial = this.celestial;
@@ -282,7 +282,7 @@ var PWorld = (function () {
 
         // we don't use a specified model object for SpaceVolumes
         if(!pdata.checkPObj(pObj, true, false)) {
-            console.error('loadSpaceVolume ERROR: invalid object passed');
+            console.error('loadSpaceVolume ERROR:' + pObj.name +' invalid object passed');
             return mesh;
         }
 
@@ -290,6 +290,34 @@ var PWorld = (function () {
 
         // scale the distance
         let scaled = celestial.scale(data);
+
+        // adjust values based on object type
+        let t = this.PCTYPES;
+        switch(pObj.data.type) {
+
+            // these all get parents
+            case t.GALAXY:
+                scaled.diameter *= this.SPACEVOLUME_DEFAULT_SCALE;
+                break;
+            case t.STAR:
+            case t.BROWN_DWARF:
+            case t.EXOPLANET:
+            case t.PLANET:
+            case t.MOON:
+            case t.EXOMOON:
+                break;
+
+            case t.ROGUE_PLANET:
+                scaled.diameter *= this.SPACEVOLUME_DEFAULT_SCALE;
+                break;
+
+            case t.STARDOME:
+            case t.STAR_SYSTEM:
+            // parent may be sub-object
+            case t.ARTIFACT:
+                break;
+
+        }
 
         // all SpaceVolumes are the same, don't need a .model entry
         mesh = BABYLON.MeshBuilder.CreateSphere(
@@ -307,7 +335,7 @@ var PWorld = (function () {
 
         mesh.position = this.getPosByRADecDist(data.ra, data.dec, scaled.dist, 1);
 
-        console.log(pObj.name + " SpaceVolume position x:" + mesh.position.x + " y:" + mesh.position.y + " z:" + mesh.position.z)
+        console.log(pObj.name + ' loadSpaceVolume diameter:' + scaled.diameter + ' position x:' + mesh.position.x + ' y:' + mesh.position.y + ' z:' + mesh.position.z)
 
         // create material
         let mat = new BABYLON.StandardMaterial(pObj.key + '-mat', scene);
@@ -415,6 +443,9 @@ var PWorld = (function () {
         //////mesh.freezeNormals(); // don't need to calculate
         //////mesh.convertToUnIndexedMesh(); // too few vertices to need indexing
 
+        console.log(pObj.name + ' loadSkyBox diameter:' + bSize + ' position x:' + mesh.position.x + ' y:' + mesh.position.y + ' z:' + mesh.position.z)
+
+
         // set the position
 
         mesh.position = this.getPosByRADecDist(data.ra, data.dec, data.dist, 1);
@@ -502,12 +533,6 @@ var PWorld = (function () {
             console.error('loadStarDome ERROR: invalid object passed');
             return mesh;
         }
-
-        //if(!this.checkObject(pObj)) {
-        //    console.error('loadStarDome ERROR: invalid object passed');
-        //    return mesh;
-        //}
-
 
         let data = pObj.data;
 
@@ -611,7 +636,6 @@ var PWorld = (function () {
 
         if (mesh) {
 
-
         console.log('%%%%%%%%%%%setting parent for:' + pObj.name)
         console.log('%%%%%%%%%%%Mesh   is:' + mesh)
         console.log('%%%%%%%%%%%Parent is:' + parent)
@@ -638,11 +662,7 @@ var PWorld = (function () {
             // (with no parent of its own, like STAR_SYSTEM)
             case t.ROGUE_PLANET:
                 console.log('%%%%%%%SETTING ROGUE PLANET SPACE VOLUME')
-                // alter pObj to represent its enclosing sphere
-                //let d = pObj.data.diameter;
                 let ppObj = pdata.clonePObj(pObj);
-                ppObj.data.diameter = pObj.data.diameter * 4;
-                //console.log('%%%%PPOBJ DATA DIAMETER IS:' + pObj.data.diameter)
                 parent = this.loadSpaceVolume(ppObj, dir, scene);
                 parent.pObj = ppObj;
                 break;
@@ -967,7 +987,7 @@ var PWorld = (function () {
             return null;
         }
 
-        // exclude meshes from 'godLight' (illuminates the SpaceVolumes)
+        // exclude meshes from 'godLight' (pnly illuminates the SpaceVolumes)
         this.godLight.excludedMeshes.push(mesh);
 
         pObj.mesh = mesh;
@@ -1202,11 +1222,23 @@ var PWorld = (function () {
         // draw the galaxy model as an infinite cubemap, large-format
         let meshSky = this.loadSkybox(pObj, dir, scene, this.NO_VR);
 
+        // now that we know how big the SkyBox is, adjust camera maxZ to include it
+        scene.activeCamera.maxZ = pObj.data.diameter * 1.1;
+
+        if(meshSky) {
+
+        } else {
+            console.error("MESHSKYNOTREADY")
+        }
+
         // load a small skybox for VR, which needs under 1000 units in size
         let meshSkyVR = this.loadSkybox(pObj, dir, scene, this.USE_VR);
+
         
         if(meshSkyVR) {
             meshSkyVR.setEnabled(false);
+        } else {
+            console.error("MESHSKYVR NOT READY")
         }
 
         /*
@@ -1216,7 +1248,7 @@ var PWorld = (function () {
          * 3. Since the Skybox is projected to infinity, we need a SECOND mesh
          *    otherwise, children inherit projection to infinity
          */
-
+        console.log("POBJDATADIAMETER:" + pObj.name + ":" + pObj.data.diameter)
 
         let mesh = this.loadSpaceVolume(pObj, dir, scene);
 
@@ -1229,6 +1261,8 @@ var PWorld = (function () {
         // hide for now
 
         if(mesh) {
+
+            mesh.setEnabled(false);
 
             // attach to parent
             if(parent) {
@@ -1308,14 +1342,6 @@ var PWorld = (function () {
     };
 
     /**
-    * Check to see if the world can be parsed.
-    * @param {Object} world 
-    */
-    PWorld.prototype.checkWorld = function (pObj) {
-        return true;
-    };
-
-    /**
      * load the world
      */
     PWorld.prototype.loadWorld = async function (pObj, scene) {
@@ -1326,11 +1352,6 @@ var PWorld = (function () {
         let util = this.util;
         let mesh = null;
 
-        if(!this.checkWorld(pObj)) {
-            console.error('loadWorld ERROR: no World object');
-            return mesh;
-        }
-
         //let dir = this.worldDir;
         let dir = this.WORLD_DIRECTORY;
 
@@ -1340,6 +1361,8 @@ var PWorld = (function () {
         // create World elements
 
         if(mesh) { // valid world
+
+            mesh.setEnabled(false);
 
             // hide the universe, we only view the world from inside a galaxy
             this.toggleMeshActivation(mesh);
@@ -1362,59 +1385,19 @@ var PWorld = (function () {
 
     };
 
-    /**
-     * create assets from the World JSON file
-     * @param {BABYLON.Scene} scene
-     */
     PWorld.prototype.createAssets = async function (scene) {
 
         var pWorld = this;
         let util = this.util;
+        let pdata = this.pdata;
+        let assets = {};
+
+        console.log("------------------------------");
+        console.log('loading world file...');
 
         // Begin loading assets
-        var assetManager = new BABYLON.AssetsManager(scene);
-
-        var loadJSON = assetManager.addTextFileTask('planets', 'worlds/worlds.json');
-
-        loadJSON.onSuccess = function(world) {
-
-            console.log('World file loaded, validating...');
-
-            try {
-
-                // try to parse the world data
-                let w = JSON.parse(world.text);
-
-                // check if world can actually be loaded
-                if(pWorld.checkWorld(w)) {
-
-                    // Save a reference to the world (tree of pObj objects)
-                    pWorld.world = w;
-
-                    // Create the 3D model. The mesh is the outermost SpaceVolume, outside Galaxies
-                    pWorld.mesh = pWorld.loadWorld(w, scene).then((mesh) => {
-
-                        // get back 'universe' mesh
-                        console.log('World is loaded');
-
-                    });
-
-                } // isValidWorld check
-
-            } catch (e) {
-
-                if (e instanceof SyntaxError) {
-
-                    util.printError(e, true);
-
-                } else {
-
-                    util.printError(e, false);
-
-                }
-            }
-
-        }; // on success loading world
+        this.assetManager = new BABYLON.AssetsManager(scene);
+        let assetManager = this.assetManager;
 
         // called when all tasks are done
         assetManager.onTasksDoneObservable.add(function(tasks) {
@@ -1431,35 +1414,16 @@ var PWorld = (function () {
         // TODO: shift rendering here?????????????????????????????
         assetManager.onFinish = function(tasks) {
             console.log('onFinish DONE')
-            //engine.runRenderLoop(function() {
-            //    scene.render();
-           // });
         };
 
-        assetManager.load();
 
-        // return the world JSON object
-
-        return assetManager;
-
-    };
-
-    PWorld.prototype.createPAssets = async function (scene) {
-
-        var pWorld = this;
-        let util = this.util;
-        let pdata = this.pdata;
-        let assets = {};
-
-        console.log('loading world file...');
-
-        // Begin loading assets
-        var assetManager = new BABYLON.AssetsManager(scene);
+        // Load the JSON 'world' file describing the world
 
         var loadJSON = assetManager.addTextFileTask('worlds', this.WORLD_DIRECTORY + '/' + this.WORLD_FILE_DEFALLT);
 
         loadJSON.onSuccess = function(world) {
 
+            console.log("------------------------------");
             console.log('World file loaded, validating...');
 
             try {
@@ -1467,10 +1431,19 @@ var PWorld = (function () {
                 // try to parse the world data
                 let w = JSON.parse(world.text);
 
+                // check the world, then begin loading assets
                 if(pdata.checkWorld(w)) {
+
                     assets.world = w;
+
                     console.log('Loading world file objects...');
 
+                    assets.mesh = pWorld.loadWorld(w, scene).then((mesh) => {
+
+                        console.log('World is loaded');
+
+                    });
+                
                 }
 
             } catch (e) {
@@ -1507,6 +1480,7 @@ var PWorld = (function () {
         // This targets the camera to scene origin
         camera.setTarget(BABYLON.Vector3.Zero());
 
+        // set the camera maxZ a little bit larger once we create a skybox
         camera.maxZ = this.DESKTOP_DEFAULT_SIZE * celestial.dParsecUnits; // constant, size of skybox for visible universe
         camera.minZ = 1;
   
@@ -1531,11 +1505,9 @@ var PWorld = (function () {
         gl.intensity = 5;
         this.glow = gl;
 
-        // Our built-in 'sphere' shape.
-        var sphere = BABYLON.MeshBuilder.CreateSphere("sphere", {diameter: 2, segments: 32}, scene);
-        
-        // Move the sphere upward 1/2 its height
-            sphere.position.y = 1;
+        // test sphere for environment.
+        //var sphere = BABYLON.MeshBuilder.CreateSphere("sphere", {diameter: 2, segments: 32}, scene);
+        //sphere.position.y = 1;
 
         // TODO: not used yet. Check when API exposes it.
         const HMDXRButton = document.getElementsByClassName('xr-toggle.button')[0];
@@ -1589,23 +1561,18 @@ var PWorld = (function () {
 
         if(engine.getRenderingCanvas()) {
 
-            // initialize loader UI
-            //engine.loadingScreen = new CustomLoadingScreen();
+            // DefaultLoadingScreen.prototype.displayLoadingUI in plutonian-ui.js
+            engine.displayLoadingUI();
 
-            //engine.loadingScreen.displayLoadingUI();
-
-            // display Loading Screen
-           engine.loadingScreen.displayLoadingUI();
-            await util.sleep(2000); ///////////////////////////////
+            ////await util.sleep(1000); ///////////////////////////////
 
             let sc = this.createScene(engine).then(returnedScene => { 
 
-                let as = pWorld.createPAssets(returnedScene).then(returnedAssets => {
+                let as = pWorld.createAssets(returnedScene).then(returnedAssets => {
 
                     console.log("Past loading assets...");
 
-                     // hide the startup screen
-                     //engine.loadingScreen.hideLoadingUI();
+                    // DefaultLoadingScreen self-hides
 
                 });
 

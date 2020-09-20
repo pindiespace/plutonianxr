@@ -48,57 +48,16 @@ var PUI = (function() {
 }());
 
 /**
- * CustomLoadingScreen
+ * Replace the default BabylonJS loading screen with a custom one.
+ * Animate background fade with:
+ * https://codepen.io/SemperLabs/pen/XOeQNm
+ * Animated loader dialog circular
+ * https://codepen.io/Kumaheika/pen/VpEVNW
  */
-/*
-var CustomLoadingScreen = (function() {
-
-    let wrapperClass = 'scene-loader-wrapper';
-    let dialogClass = 'scene-loader-dialog';
-
-    function CustomLoadingScreen(wClass, dClass) {
-        console.log('customLoadingScreen creation')
-        this.initDOM();
-    };
-
-    CustomLoadingScreen.prototype.initDOM = function () {
-
-        //NOTE: we have to set the DOMElement .style here, or it isn't there in time
-
-        this.sceneLoaderWrapper = document.getElementsByClassName(wrapperClass)[0];
-        this.sceneLoaderWrapper.style.display = 'none';
-
-        this.sceneLoaderDialog = document.getElementsByClassName(dialogClass)[0];
-        this.sceneLoaderDialog.style.display = 'block';
-
-    };
-
-    CustomLoadingScreen.prototype.displayLoadingUI = function (msg) {
-
-        if(!msg) {
-            msg = 'loading...';
-        }
-
-        console.log('customLoadingScreen loading')
-        this.sceneLoaderDialog.innerHTML = msg;
-       // this.sceneLoaderDialog.style.display = 'block';
-        this.sceneLoaderWrapper.style.display = 'block';
-        alert("bob")
-    };
-
-    CustomLoadingScreen.prototype.hideLoadingUI = function () {
-        console.log('customLoadingScreen loaded')
-
-        this.sceneLoaderWrapper.style.display = 'none';
-        //this.sceneLoaderDialog.style.display = 'none';
-    };
-
-    return CustomLoadingScreen;
-
-}());
-*/
 
 BABYLON.DefaultLoadingScreen.prototype.displayLoadingUI = function (msg = 'loading') {
+
+    console.log('loading ui started');
 
     if (document.getElementById('primary-scene-loader-dialog')) {
         // Do not add a loading screen if there is already one
@@ -121,5 +80,5 @@ BABYLON.DefaultLoadingScreen.prototype.displayLoadingUI = function (msg = 'loadi
 BABYLON.DefaultLoadingScreen.prototype.hideLoadingUI = function(){
     document.getElementById('primary-scene-loader').style.display = "none";
     document.getElementById('primary-scene-loader-dialog').style.display = 'none';
-    console.log("scene is now loaded");
+    console.log("closing loading UI");
 }

@@ -12,6 +12,11 @@ html, body, main {
   padding: 0;
 }
 
+/* create a radial gradient in the background */
+body {
+  background-image: radial-gradient(circle farthest-corner at center, #3C4B57 0%, #1C262B 100%);
+}
+
 a {
   color: #00B7FF;
 }
@@ -100,7 +105,9 @@ display: flex;
   font-size: 30px; 
   color: green; 
   border: 10px solid green;
-} 
+}
+
+
 
 /* wrapper around the canvas (which fills screen, underlies header and footer) */
 .render-xr-canvas-wrapper, .scene-loader-wrapper {

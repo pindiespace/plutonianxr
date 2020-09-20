@@ -14,6 +14,11 @@ var PData = (function () {
         this.EMPTY = '';
         this.UNKNOWN = 'unknown';
 
+        // initialize PCTYPECHECK
+        for (var i in this.PCTYPES) {
+            this.PCTYPECHECK[this.PCTYPES[i]] = true;
+        }
+
     };
 
     // information model
@@ -33,7 +38,53 @@ var PData = (function () {
         ARTIFACT: 'artifact'
     };
 
+    PData.prototype.PCTYPECHECK = [];
+
+    /**
+     * check World file for schema validity, report on elements
+     * @param {Object} world
+     */
     PData.prototype.checkWorld = function(world) {
+
+        let util = this.util;
+
+        if(!util.isObject(world)) {
+            console.error('checkWorld ERROR: world not defined');
+            return false;
+        }
+
+        // Top level should have default data, and 'galaxies' and 'dark matter' arrays
+        if(!this.checkPObj(world, true, false)) {
+            console.error('checkWorld ERROR: default world object not valid');
+            return false;
+        }
+
+        if(!util.isArray(world.dark_matter)) {
+            console.warn('checkWorld WARNING: no dark matter in this universe')
+        }
+
+        if(!util.isArray(world.galaxies)) {
+            console.error('checkWorld WARNING: no galaxies in this universe');
+        }
+
+        // there should be at least 1 active galaxy, with 1 active model
+        let gFlag = false;
+        for(let i = 0; i < world.galaxies.length; i++) {
+            let g = world.galaxies[i];
+            if(!this.checkPObj(g, true, true, true)) {
+                console.warn('checkWorld WARNING:' + g.name + ' not complete');
+            } else {
+                gFlag = true;
+            }
+
+        }
+        if(!gFlag) {
+            console.error('checkWorld ERROR: no active galazies in world');
+            return false;
+        }
+
+        // active galaxy has Stars
+        // TODO:
 
         return true;
 
@@ -42,22 +93,24 @@ var PData = (function () {
     /**
      * check an existing pObj for valid entries
      */
-    PData.prototype.checkPObj = function (pObj, checkData = true, checkModels = true) {
+    PData.prototype.checkPObj = function (pObj, checkData = true, checkModels = true, suppress = false) {
 
         let util = this.util;
 
+        let name = pObj.name;
+
         if(!util.isObject(pObj)) {
-            console.error('checkPObj ERROR: not a valid object');
+            if(!suppress) console.error('checkPObj ERROR:' + name + ' not a valid object');
             return false;
         }
 
         if(!util.isString(pObj.key)) {
-            console.error('checkPObj ERROR: key missing');
+            if(!suppress) console.error('checkPObj ERROR:' + name + ' key missing');
             return false;
         }
 
         if(!util.isString(pObj.dname)) {
-            console.error('checkPObj ERROR:' + pObj.name + ' missing data directory');
+            if(!suppress) console.error('checkPObj ERROR:' + name + ' missing data directory');
             return false;
         }
 
@@ -67,7 +120,7 @@ var PData = (function () {
 
         // optionally check the data object
         if(checkData == true) {
-            return this.checkData(pObj.data, pObj.name, checkModels);
+            return this.checkData(pObj.data, pObj.name, checkModels, suppress);
         }
 
         return true;
@@ -113,30 +166,36 @@ var PData = (function () {
     /**
      * Check data associated with a world object
      */
-    PData.prototype.checkData = function(data, name, checkModels = true) {
+    PData.prototype.checkData = function(data, name, checkModels = true, suppress = false) {
 
         let util = this.util;
         let t = this.PCTYPES;
 
         if(!util.isObject(data)) {
-            console.error('checkData ERROR: no data object');
+            if(!suppress) console.error('checkData ERROR:' + name + ' no data object');
+            return false;
+        }
+
+        // check if valid data type
+        if(!this.PCTYPECHECK[data.type]) {
+            if(!suppress) console.error('checkData ERROR:' + name + 'type:' + data.type + ' not registered');
             return false;
         }
 
         if(!util.isNumber(data.x)) {
             if(!util.isNumber(data.ra) || !util.isNumber(data.dec) || !util.isNumber(data.dist)) {
-                console.error('checkData ERROR: missing or invalid for ra:' + data.ra + ' dec:' + data.dec + ' dist:' + data.dist + ' information');
+                if(!suppress) console.error('checkData ERROR:' + name + ' missing or invalid for ra:' + data.ra + ' dec:' + data.dec + ' dist:' + data.dist + ' information');
                 return false;
             }
         } else {
             if(!util.isData(data.y) || !util.isData(data.z)) {
-                console.error('checkData ERROR: missing both ra, dec and xyz data');
+                if(!suppress) console.error('checkData ERROR: ' + name + ' missing both ra, dec and xyz data');
                 return false;
             }
         }
 
         if(checkModels == true) {
-            return this.checkModel(data.models);
+            return this.checkModel(data.models, name, suppress);
         }
 
         return true;
@@ -163,21 +222,28 @@ var PData = (function () {
 
     };
 
-    PData.prototype.checkModel = function (models, name) {
+    PData.prototype.checkModel = function (models, name, suppress = false) {
 
         let util = this.util;
 
         if(!util.isObject(models)) {
-            console.error('checkData ERROR: missing model object');
+            if(!suppress) console.error('checkData ERROR:' + name + ' missing model object');
             return false;
         }
 
         if(!util.isObject(models.default)) {
-            console.error('checkData ERROR: no default model');
+            if(!suppress) console.error('checkData ERROR:' + name + ' no default model');
             return false;
         }
 
         // TODO: could do more checking of model parameters
+        let activeFlag = false;
+        for(var i in models) {
+            if(models[i].active) activeFlag = true;
+        }
+        if(!activeFlag) {
+            if(!suppress) console.error('checkData ERROR:' + name + ' has models, but none are active');
+        }
 
         return true;
 
