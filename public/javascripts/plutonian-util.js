@@ -159,6 +159,25 @@ var PUtil = (function () {
 
     };
 
+    /**
+     * Compute distance between two 3D vectors
+     */
+    PUtil.prototype.computeDistance3 = function(p1, p2, check = false) {
+
+        if(check) {
+            if(!this.isObject(p1) || !this.isObject(p2)) {
+                console.error('computeDistance3 Error: invalid objects:p1' + p1 + ' p2:' + p2);
+                return;
+            }
+        }
+
+        let dx = p1.x - p2.x,
+            dy = p1.y - p2.y,
+            dz = p1.z - p2.z;
+
+        return Math.sqrt(dx*dx + dy*dy + dz*dz);
+    };
+
     /** 
      * Number of keys in an associative array or object.
      * NOTE: won't work on old browsers, but we should never get here.

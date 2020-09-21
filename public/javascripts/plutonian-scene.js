@@ -290,7 +290,7 @@ var PWorld = (function () {
         let t = this.PCTYPES;
         switch(pObj.data.type) {
 
-            // these all get parents
+            case t.WORLD:
             case t.GALAXY:
                 //scaled.diameter *= this.SPACEVOLUME_DEFAULT_SCALE;
                 break;
@@ -521,6 +521,7 @@ var PWorld = (function () {
 
         let util = this.util;
         let pdata = this.pdata;
+        let pWorld = this;
         let mesh = null;
 
         // check data but NOT model
@@ -559,21 +560,25 @@ var PWorld = (function () {
                 loadHYG.stars = JSON.parse(stars.text);
 
                 const spriteMgr = await computeHygSprite(loadHYG.stars, domeDir + 'sprite/textures/' + model.spritesheet, model.size, scene).then((spriteManagerStars) => {
-                    console.log('Hyg stardome loaded');
+                    console.log('GLOBAL Hyg stardome loaded');
+
+                    // TODO: activate stardome interaction here
+
                 }); // TODO: attach elsewhere, or delete!
 
             }
 
             assetManager.onProgress = function(remainingCount, totalCount, lastFinishedTask) {
-                console.log('Loading Hyg database files. ' + remainingCount + ' out of ' + totalCount + ' items still need to be loaded.');
+                console.log('Loading GLOBAL Hyg database files. ' + remainingCount + ' out of ' + totalCount + ' items still need to be loaded.');
             };
 
             assetManager.onFinish = function(tasks) {
-                console.log('All done with loading Hyg database');
+                console.log('All done with loading GLOBAL Hyg database');
             };
 
 
             // Load Hyg and color data
+            console.log('loading PCelestial Hyg data...')
             this.celestial.loadHygData(model, domeDir, scene);
 
             assetManager.load();
@@ -891,17 +896,25 @@ var PWorld = (function () {
     /**
      * Set user interactions
      */
-    PWorld.prototype.setInteractions = function (pObj, scene) {
+    PWorld.prototype.setMeshMetaData = function (pObj, scene) {
 
-        console.log('setInteractions for:' + pObj.name)
+        let util = this.util;
+
+        console.log('setMeshInteractions for:' + pObj.name)
 
         let mesh = pObj.mesh;
         window[pObj.key] = pObj.mesh;
 
+        // Set metadata for the mesh
+        mesh.metadata = {
+
+        };
+
         // look at an object with the camera
         mesh.pLook = function () {
             // let scene = cam.getScene();
-            let cam = scene.activeCameras[0];
+            ////////let cam = scene.activeCameras[0];
+            let cam = scene.activeCamera;
             // TODO:
             // since we're locating planets with their parent, need absolute position
             //https://doc.babylonjs.com/resources/frame_of_references
@@ -917,7 +930,7 @@ var PWorld = (function () {
         };
 
         mesh.pJump = function () {
-            let cam = scene.activeCameras[0];
+            let cam = scene.activeCamera;
             // let s = cam.getScene();
             // TODO:
             // since we're rotating planets with their parent, need to get global position
@@ -933,7 +946,7 @@ var PWorld = (function () {
             cam.position.x = v.x;
             cam.position.y = v.y;
             cam.position.z = v.z;
-            //this.lookAt(cam)
+            this.pLook();
 
         };
 
@@ -1006,7 +1019,7 @@ var PWorld = (function () {
         this.setMotion(pObj, scaled, scene);
 
         // set user interactions
-        this.setInteractions(pObj, scene);
+        this.setMeshMetaData(pObj, scene);
 
         // create 2D GUI label
         this.ui.createLabel(pObj, scene, false, false);
@@ -1377,6 +1390,64 @@ var PWorld = (function () {
 
         }
 
+        // set pickerInteractions, we can only use .onPointerDown ONCE
+
+        scene.onPointerDown = function (evt) {
+
+            let cam = this.activeCamera;
+
+            // picker for Sprites
+            let pickResult = this.pickSprite(this.pointerX, this.pointerY);
+
+            if (pickResult.hit) {
+
+                if(pickResult.pickedSprite) {
+                    let s = pickResult.pickedSprite;
+                    console.log('Picked SPRITE is:' + s.name + ' hygid:' + s.hygid);
+                    // NOTE: default camera wash pushed into array when the camera was created
+                    let dist = BABYLON.Vector3.Distance(cam.position, s.position);
+                    console.log('Distance:' + dist + ' width:' + s.width + ' height:' + s.height);
+                    console.log('Camera at:' + cam.position);
+                    window.sprite = s; // TODO: remove
+                }
+
+            }
+
+            // Picker for non-Sprite meshes
+            let pickMesh = this.pick(this.pointerX, this.pointerY);
+
+                if(pickMesh.hit) {
+
+                    if(pickMesh.pickedMesh) {
+                        let m = pickMesh.pickedMesh;
+                        console.log('Picked MESH is:' + m.name + ' pObj:' + m.pObj.name);
+                        let dist = BABYLON.Vector3.Distance(cam.position, m.position);
+                        //console.log('Distance:' + util.computeDistance3(cam.position, m.position));
+                        let w = m.getBoundingInfo().boundingBox.maximum;
+                        let h = m.getBoundingInfo().boundingBox.minimum;
+                        console.log('Distance:' + dist + ' max:' + w + ' min:' + h);
+                        console.log('Camera at:' + cam.position);
+                        window.mesh = m;
+                        // skybox is at m.infiniteDistance
+                    }
+
+                }
+
+            // throw a ray from the camera
+            let ray = this.createPickingRay(scene.pointerX, scene.pointerY, BABYLON.Matrix.Identity(), camera);	
+
+                let hit = this.pickWithRay(ray);
+
+                if (hit.pickedMesh) { // && hit.pickedMesh.metadata == "cannon"){
+                    let m = hit.pickedMesh;
+                    console.log('Picked RAY MESH:' + m.name + ' pObj:' + m.pObj.name);
+                    console.log('Distance:' + util.computeDistance3(cam.position, m.position));
+                    console.log('Camera at:' + cam.position);
+                    //createGUIButton();
+                }
+
+        };
+
         return mesh;
 
     };
@@ -1486,7 +1557,7 @@ var PWorld = (function () {
         // This attaches the camera to the canvas
         camera.attachControl(canvas, true);
 
-        // IMPORTANT: you CANNOT add camera to scene.activeCameras
+        // IMPORTANT: you CANNOT add a camera to scene.activeCameras
 
         // create lighting (dim with light.intensity)
         let light = new BABYLON.DirectionalLight("godLight", new BABYLON.Vector3(-6, -6, 0), scene);

@@ -9,12 +9,13 @@ var PData = (function () {
 
         this.util = util;
 
-        this.pObj_ERROR = -1;
+        this.pObj_ERROR   = -1;
         this.hygObj_ERROR = -1;
-        this.EMPTY = '';
-        this.UNKNOWN = 'unknown';
+        this.EMPTY        = '';
+        this.UNKNOWN      = 'unknown';
 
-        // initialize PCTYPECHECK
+        // initialize PCTYPECHECK array for fast type checking
+
         for (var i in this.PCTYPES) {
             this.PCTYPECHECK[this.PCTYPES[i]] = true;
         }

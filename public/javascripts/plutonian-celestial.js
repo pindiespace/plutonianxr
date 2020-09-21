@@ -511,7 +511,6 @@ var PCelestial = (function () {
 
     };
 
-
     /**
      * 
      * get the sprite index to display for this type
@@ -683,12 +682,12 @@ var PCelestial = (function () {
         };
 
         assetManager.onFinish = async function(tasks) {
-            console.log('######FINISHED, LOADING')
+            console.log('beginning compute Hyg')
             // TODO: attach to object, look for when computing, assume loads have finished
             // TODO: could put an 'await' here for JSON parsing for both...
             let mgr = await celestial.computeHygSprite(dir + 'sprite/textures/' + model.spritesheet, model.size, scene)
             .then((spriteManagerStars) => {
-                console.log('COMPUTED Hyg database')
+                console.log('Finished computing  Hyg database')
             });
 
             console.log('LOADED Hyg database');
