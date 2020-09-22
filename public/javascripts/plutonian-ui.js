@@ -59,15 +59,19 @@ BABYLON.DefaultLoadingScreen.prototype.displayLoadingUI = function (msg = 'loadi
 
     console.log('loading ui started');
 
-    if (document.getElementById('primary-scene-loader-dialog')) {
+    let loaderMsg = document.getElementById('primary-scene-loader-msg');
+    if (loaderMsg) {
         // Do not add a loading screen if there is already one
-        document.getElementById('primary-scene-loader-dialog').style.display = "block";
-        document.getElementById('primary-scene-loader-dialog').innerHTML = msg;
+        loaderMsg.style.display = "block";
+        loaderMsg.innerHTML = msg;
         return;
     }
 
+    let loader = document.getElementById('primary-scene-loader');
+
+    // fallback
     this._loadingDiv = document.createElement('div');
-    this._loadingDiv.id = 'primary-scene-loader-dialog';
+    this._loadingDiv.id = id;
     this._loadingDiv.innerHTML = "<p>scene is currently loading</p>";
     this._loadingDiv.style.color = 'red';
 
@@ -78,7 +82,19 @@ BABYLON.DefaultLoadingScreen.prototype.displayLoadingUI = function (msg = 'loadi
 };
 
 BABYLON.DefaultLoadingScreen.prototype.hideLoadingUI = function(){
-    document.getElementById('primary-scene-loader').style.display = "none";
-    document.getElementById('primary-scene-loader-dialog').style.display = 'none';
+
+    let loader = document.getElementById('primary-scene-loader');
+
+    loader.classList.add('loader-fadeout');
+
+    window.loader = loader;
+
+    // NOTE: This has to be done here, not in the showLoadingUI function!!
+
+    loader.addEventListener('animationend', () => {
+        loader.style.display = 'none';
+        loader.classList.remove('loader-fadeout');
+    });
+
     console.log("closing loading UI");
-}
+};

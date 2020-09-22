@@ -147,6 +147,7 @@ var PSetup = (function() {
         } catch (e) {
 
             console.error('failed to create default BabylonJS engine:' + e);
+            this.fallbackDOM('failed to create default BabylonJS engine:' + e);
 
         }
 

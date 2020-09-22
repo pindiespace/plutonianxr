@@ -1,6 +1,4 @@
 
-add back pickers 
-
 push to Heroku
 loading screen
 
@@ -11,10 +9,25 @@ specify orbits with transform node
 move drawing to a different object
 
 collision detector meshes - proximity?
-use them to divide SpaceVolume
+move the collision mesh, detect meshes that collide
+https://doc.babylonjs.com/babylon101/cameras,_mesh_collisions_and_gravity
+Create a mesh (can call it ‘collider’), set visibility to 0, turn on collisions and set its position to the webXR camera position collider.position = webXRcamera.position
+Put it in a WebWorker
+
+If you want to move forward use const newPosition = webXRcamera.getFrontPosition(0.5) then collider.lookAt(newPosition).
+Create a forward vector, then collider.moveWithCollisions(forwards)
+
+text sprite - basic
+https://www.babylonjs-playground.com/#H7VAZR#1
+
+text sprite - fancy
+https://www.babylonjs-playground.com/#7PLYSR#2
 
 dynamic terrain for planet surface
 https://doc.babylonjs.com/extensions/dynamic_terrain
+
+WebXR hitTest 
+https://www.babylonjs-playground.com/#4URFXZ#16
 
 
 USE TAG SYSTEM
@@ -63,13 +76,28 @@ Rendering group performance
             }
         }
     });
+====================================
+function closestPointOnMesh(mesh) {
+    var center = mesh.getBoundingInfo().boundingBox.centerWorld;
+    var positions = mesh.getVerticesData(BABYLON.VertexBuffer.PositionKind);
+	var minSquaredDistance = 100000;
+    var closestVertex = BABYLON.Vector3.Zero;
+	var numberOfVertices = positions.length/3;	
+
+	for(var i = 0; i<numberOfVertices; i++) {
+        var vertPosition = new BABYLON.Vector3(positions[i*3], positions[i*3+1], positions[i*3+2]);
+        var dsq = BABYLON.Vector3.DistanceSquared(center, vertPosition);
+
+        if (minSquaredDistance > dsq)  {
+            minSquaredDistance = dsq;
+            closestVertex = vertPosition;
+        }
+	}
+
+    return closestVertex;
+}
 
 ====================================
-
-check VR display!!!!!!!!!!!!!!!!!
-may need reboot
-
-Find out how to put skybox into its own rendering group
 
 get pjump and plook to work for camera
 

@@ -9,7 +9,7 @@
 var createError = require('http-errors');
 var express = require('express');
 var path = require('path');
-////////////////var session = require('express-session');
+var session = require('express-session'); // cookies
 var favicon = require('serve-favicon');
 var logger = require('morgan');
 var sassMiddleware = require('node-sass-middleware');
@@ -43,31 +43,34 @@ app.use(express.urlencoded({ extended: false }));
  * https://www.geeksforgeeks.org/session-management-using-express-session-module-in-node-js/
 */
 
-/*
-const sessionConfig = {
-  secret: '75FFzg!6WwwlivwV1B)cPY`~5p:_Kz8ugWz$-=JrD:o^rUs3S;d@R?A',
-  name: config.appName,
-  resave: true, 
-  saveUninitialized: true,
-  cookie : {
-    sameSite: 'none', // needs better config for secure sessions
-    //secure: 'true'
-  }
-};
-*/
+if(config.useCookie) {
 
-/*
-if (config.useSSL) {
-  app.set('trust proxy', 1); // trust first proxy
-  sessionConfig.cookie.secure = true; // serve secure cookies
-} else {
-  sessionConfig.cookie.sameSite = 'lax';
-  sessionConfig.cookie.secure = false;
+    let sessionConfig = {
+      secret: '75FFzg!6WwwlivwV1B)cPY`~5p:_Kz8ugWz$-=JrD:o^rUs3S;d@R?A',
+      name: config.appName,
+      resave: true, 
+      saveUninitialized: true,
+      cookie: {}
+      //cookie : {
+      //  SameSite: 'none', // needs better config for secure sessions
+      //  Secure: 'false'
+      //}
+    };
+
+    if (config.useSSL) {
+      app.set('trust proxy', 1); // trust first proxy
+      sessionConfig.cookie.sameSite = 'none';
+      sessionConfig.cookie.secure = true; // serve secure cookies
+    } else {
+      //sessionConfig.cookie.sameSite = 'lax';
+      sessionConfig.cookie.sameSite = 'none';
+      sessionConfig.cookie.secure = false;
+    }
+
+    // Add basic sessions
+    app.use(session(sessionConfig));
+
 }
-
-// Add basic sessions
-app.use(session(sessionConfig));
-*/
 
 // Support favicon
 app.use(favicon(path.join(__dirname, 'public', 'favicon.ico')))

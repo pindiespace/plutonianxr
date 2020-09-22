@@ -10,8 +10,9 @@
 
 const config = {
     port: 3000,
-    useSSL: true,
     portSecure: 443,
+    useSSL: true, // off for heroku
+    useCookie: true,  // off for heroku
     appName: 'Plutonian XR',
     appTagline: 'A WebXR experience built with BabylonJS',
     appSessionName: 'plutonianXR'

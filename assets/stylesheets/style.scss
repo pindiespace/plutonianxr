@@ -13,6 +13,7 @@ html, body, main {
 }
 
 /* create a radial gradient in the background */
+
 body {
   background-image: radial-gradient(circle farthest-corner at center, #3C4B57 0%, #1C262B 100%);
 }
@@ -64,6 +65,29 @@ h2 {
   background-color: rgba(200,10,10, 0.2);
 }
 
+/* fade header and footer in and out */
+header.animation-fadeout {
+  animation-duration: 4s;
+  animation-fill-mode: both;
+  animation-name: fadeOut;
+}
+
+header.animation-fadein {
+  animation-duration: 4s;
+  animation-fill-mode: both;
+  animation-name: fadeOut;
+}
+
+@keyframes fadeOut {
+  0% {opacity: 1;}
+  100% {opacity: 0;}
+}
+
+@keyframes fadeIn {
+  0% {opacity: 0;}
+  100% {opacity: 1;}
+}
+
 .floating-header h1 {
   font-size: 2.5em;
   margin: 0.2em 0 0.2em 0;
@@ -73,41 +97,79 @@ h2 {
   color: #ddd;
 }
 
-/* Loader dialog */
-  /* .scene-loader-wrapper { 
- z-index: 5;
-display: flex;
-  width:100%;
-  height: 100%;
-  justify-content: center; 
-  align-items: center; 
-
-  display: absolute;
-  width:100%;
-  height:100%;
-  top:0;
-  bottom:0;
-}   */
-
-.scene.loader-wrapper {
-
+/* wraps everything */
+.scene-loader-wrapper {
+  -webkit-filter: drop-shadow(0 0 18px #854415);
+  filter: drop-shadow(0 0 18px #854415);
 }
 
-.scene-loader-dialog { 
-  display:none;
-  width: 150px;
+.scene-loader-dialog {
   position: absolute;
   text-align:center;
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  padding: 8px 35px; 
-  font-size: 30px; 
-  color: green; 
-  border: 10px solid green;
+  width: 300px;
+  height: 300px;
+  filter: hue-rotate(0deg);
+  background: linear-gradient(45deg, #0f8, #08f);
+  animation: loader-hue 1.5s infinite linear;
+  border-radius: 50%;
 }
 
+/* central circle where load messages appear */
+.scene-loader-after {
+  content: "";
+  display: block;
+  position: absolute;
+  left: 3%;
+  top: 3%;
+  width: 94%;
+  height: 94%;
+  border-radius: 50%;
+  background-color: #000;
+}
 
+/* set message styles here */
+.scene-loader-before {
+  display: inline-block;
+  width: 400px;
+  position: absolute;
+  text-align:center;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 1;
+  color: #FFF;
+  text-align: center;
+  line-height: 290px;
+  font-size: 24px;
+  letter-spacing: 0.2em;
+}
+
+#primary-scene-loader-msg {
+}
+
+@keyframes loader-hue {
+  0% { filter: hue-rotate(0deg); }
+  100% { filter: hue-rotate(360deg); }
+}
+
+/* 
+ * NOTE: we fadeout for 2 seconds, 
+ * but we set display='none' in JavaScript
+ * at 800ms. Otherwise, something in BabylonJS
+ * makes the dialog re-appear
+ */
+.loader-fadeout {
+  animation: fadeout 2s;
+}
+
+/* Animate opacity */
+@keyframes fadeout {
+  from { opacity: 1 }
+  to { opacity: 0 }
+}
 
 /* wrapper around the canvas (which fills screen, underlies header and footer) */
 .render-xr-canvas-wrapper, .scene-loader-wrapper {
@@ -122,17 +184,14 @@ display: flex;
   z-index: 0;
 }
 
-.scene-loader-wrapper {
-  z-index: 5;
-}
-
 /* the WebXR <canvas> inside the wrapper */
 .render-xr-canvas {
   width: 100%;
   height: 100%;
 }
 
-/* wrapper for VR->screen toggle button */
+/* wrapper for VR->screen toggle button
+   TODO: not used yet */
 .xr-toggle {
   position: fixed;
   z-index: 4;
@@ -142,7 +201,8 @@ display: flex;
   bottom: 10px;
 }
 
-/* fixed VR->screen toggle button */
+/* fixed VR->screen toggle button
+   TODO: Not used yet */
 .xr-toggle-button {
   display: inline-block;
   background: url(../images/icons/icon_vr_smartphone_notext.svg);

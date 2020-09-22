@@ -1403,6 +1403,7 @@ var PWorld = (function () {
 
                 if(pickResult.pickedSprite) {
                     let s = pickResult.pickedSprite;
+                    console.log('^^^^^^^^^^^^^^^^^^^^^^');
                     console.log('Picked SPRITE is:' + s.name + ' hygid:' + s.hygid);
                     // NOTE: default camera wash pushed into array when the camera was created
                     let dist = BABYLON.Vector3.Distance(cam.position, s.position);
@@ -1411,7 +1412,7 @@ var PWorld = (function () {
                     window.sprite = s; // TODO: remove
                 }
 
-            }
+            } // end of picksprite
 
             // Picker for non-Sprite meshes
             let pickMesh = this.pick(this.pointerX, this.pointerY);
@@ -1420,6 +1421,7 @@ var PWorld = (function () {
 
                     if(pickMesh.pickedMesh) {
                         let m = pickMesh.pickedMesh;
+                        console.log('^^^^^^^^^^^^^^^^^^^^^^');
                         console.log('Picked MESH is:' + m.name + ' pObj:' + m.pObj.name);
                         let dist = BABYLON.Vector3.Distance(cam.position, m.position);
                         //console.log('Distance:' + util.computeDistance3(cam.position, m.position));
@@ -1431,17 +1433,23 @@ var PWorld = (function () {
                         // skybox is at m.infiniteDistance
                     }
 
-                }
+                } // end of pickmesh
 
             // throw a ray from the camera
+            // https://doc.babylonjs.com/babylon101/raycasts
             let ray = this.createPickingRay(scene.pointerX, scene.pointerY, BABYLON.Matrix.Identity(), camera);	
 
                 let hit = this.pickWithRay(ray);
 
                 if (hit.pickedMesh) { // && hit.pickedMesh.metadata == "cannon"){
                     let m = hit.pickedMesh;
+                    console.log('^^^^^^^^^^^^^^^^^^^^^^');
                     console.log('Picked RAY MESH:' + m.name + ' pObj:' + m.pObj.name);
-                    console.log('Distance:' + util.computeDistance3(cam.position, m.position));
+                    let dist = BABYLON.Vector3.Distance(cam.position, m.position);
+                    //console.log('Distance:' + util.computeDistance3(cam.position, m.position));
+                    let w = m.getBoundingInfo().boundingBox.maximum;
+                    let h = m.getBoundingInfo().boundingBox.minimum;
+                    console.log('Distance:' + dist + ' max:' + w + ' min:' + h);
                     console.log('Camera at:' + cam.position);
                     //createGUIButton();
                 }
@@ -1468,19 +1476,18 @@ var PWorld = (function () {
 
         // called when all tasks are done
         assetManager.onTasksDoneObservable.add(function(tasks) {
-            console.log('onTasksDoneObservable DONE');
+            console.log('assetManager: onTasksDoneObservable DONE');
             var errors = tasks.filter(function(task) {return task.taskState === BABYLON.AssetTaskState.ERROR});
             var successes = tasks.filter(function(task) {return task.taskState !== BABYLON.AssetTaskState.ERROR});
         });
 
         // called when error is done
         assetManager.onTaskErrorObservable.add((task) => {
-            console.log("onTaskErrorObservable ERROR:" + task.errorObject.message);
+            console.log("assetManager: onTaskErrorObservable ERROR:" + task.errorObject.message);
         });
 
-        // TODO: shift rendering here?????????????????????????????
         assetManager.onFinish = function(tasks) {
-            console.log('onFinish DONE')
+            console.log('assetManater: onFinish DONE')
         };
 
 
@@ -1504,6 +1511,8 @@ var PWorld = (function () {
                     assets.world = w;
 
                     console.log('Loading world file objects...');
+
+                    // TODO: loadWorld could just load everything into the assetManager
 
                     assets.mesh = pWorld.loadWorld(w, scene).then((mesh) => {
 
@@ -1586,6 +1595,9 @@ var PWorld = (function () {
             //disableDefaultUI : true,
             createDeviceOrientationCamera: false
         }).then(helper => {
+
+                window.helper = helper;
+
                 helper.baseExperience.onStateChangedObservable.add((state) => {
 
                 switch(state) {
@@ -1627,12 +1639,12 @@ var PWorld = (function () {
 
         let engine = this.setup.createDefaultEngine();
 
-        if(engine.getRenderingCanvas()) {
+        if(engine && engine.getRenderingCanvas()) {
 
             // DefaultLoadingScreen.prototype.displayLoadingUI in plutonian-ui.js
             engine.displayLoadingUI();
 
-            ////await util.sleep(1000); ///////////////////////////////
+            await util.sleep(1000); ///////////////////////////////
 
             let sc = this.createScene(engine).then(returnedScene => { 
 
