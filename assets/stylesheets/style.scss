@@ -15,7 +15,7 @@ html, body, main {
 /* create a radial gradient in the background */
 
 body {
-  background-image: radial-gradient(circle farthest-corner at center, #3C4B57 0%, #1C262B 100%);
+  background-image: radial-gradient(circle farthest-corner at center, #3C4B57 0%, #000 100%);
 }
 
 a {
@@ -147,7 +147,17 @@ header.animation-fadein {
   letter-spacing: 0.2em;
 }
 
+// message in loader box (title)
 #primary-scene-loader-msg {
+  position:relative;
+  padding-top:118px;
+  line-height:36px;
+  opacity:0;
+}
+
+/* BabylonJS status messages */
+#primary-scene-loader-status {
+  font-size: 16px;
 }
 
 @keyframes loader-hue {
@@ -162,13 +172,22 @@ header.animation-fadein {
  * makes the dialog re-appear
  */
 .loader-fadeout {
-  animation: fadeout 2s;
+  animation: fadeout 1s;
+}
+
+.loader-text-fadein {
+  animation: fadein 0.5s;
 }
 
 /* Animate opacity */
 @keyframes fadeout {
   from { opacity: 1 }
   to { opacity: 0 }
+}
+
+@keyframes fadein {
+  from { opacity: 0}
+  to { opacity: 1}
 }
 
 /* wrapper around the canvas (which fills screen, underlies header and footer) */

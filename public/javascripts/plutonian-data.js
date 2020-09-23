@@ -1,29 +1,20 @@
 /**
-  * Plutonian Data manipulation
-  * - defines datatypes for world and Hyg3 database entries
+  * Plutonian local assets, used since we often need two 
+  * materials sharing a common texture or cubeTexture for 
+  * VR and non-VR cases
   */
 'use strict'
+
+/**
+ * PObj data creation, cloning, validation
+ * - defines PObj data structure, required fields
+ * - defines data structure datatypes Hyg3 database entries
+ */
 var PData = (function () {
 
-    function PData (util) {
-
-        this.util = util;
-
-        this.pObj_ERROR   = -1;
-        this.hygObj_ERROR = -1;
-        this.EMPTY        = '';
-        this.UNKNOWN      = 'unknown';
-
-        // initialize PCTYPECHECK array for fast type checking
-
-        for (var i in this.PCTYPES) {
-            this.PCTYPECHECK[this.PCTYPES[i]] = true;
-        }
-
-    };
-
+    // static to class
     // information model
-    PData.prototype.PCTYPES = {
+    PData.PCTYPES = {
         WORLD: 'world',
         GALAXY: 'galaxy',
         NEBULA: 'nebula',
@@ -39,7 +30,30 @@ var PData = (function () {
         ARTIFACT: 'artifact'
     };
 
+    // dynamic to class
+
     PData.prototype.PCTYPECHECK = [];
+
+    // constructor
+
+    function PData (util) {
+
+        this.util = util;
+
+        this.pObj_ERROR   = -1;
+        this.hygObj_ERROR = -1;
+        this.EMPTY        = '';
+        this.UNKNOWN      = 'unknown';
+
+        // initialize PCTYPECHECK array for fast type checking
+
+        this.PCTYPES = PData.PCTYPES;
+
+        for (var i in this.PCTYPES) {
+            this.PCTYPECHECK[this.PCTYPES[i]] = true;
+        }
+
+    };
 
     /**
      * check World file for schema validity, report on elements
@@ -287,6 +301,6 @@ var PData = (function () {
 
     };
 
-
     return PData;
+
 }());

@@ -49,24 +49,29 @@ var PUI = (function() {
 
 /**
  * Replace the default BabylonJS loading screen with a custom one.
- * Animate background fade with:
- * https://codepen.io/SemperLabs/pen/XOeQNm
- * Animated loader dialog circular
+ * Animated loader dialog inspired by:
  * https://codepen.io/Kumaheika/pen/VpEVNW
  */
-
 BABYLON.DefaultLoadingScreen.prototype.displayLoadingUI = function (msg = 'loading') {
 
     console.log('loading ui started');
 
     let loaderMsg = document.getElementById('primary-scene-loader-msg');
     if (loaderMsg) {
-        // Do not add a loading screen if there is already one
+        let loaderStatus = document.getElementById('primary-scene-loader-status');
         loaderMsg.style.display = "block";
-        loaderMsg.innerHTML = msg;
+        //loaderMsg.innerHTML = msg;
+        loaderStatus.innerHTML = msg;
+        loaderMsg.addEventListener('animationend', (e) => {
+            if(e.srcElement.classList.contains('loader-text-fadein')) {
+                e.srcElement.style.opacity = '1';
+            }
+        });
+
         return;
     }
 
+    // if there's no loading screen, make one
     let loader = document.getElementById('primary-scene-loader');
 
     // fallback
@@ -81,20 +86,25 @@ BABYLON.DefaultLoadingScreen.prototype.displayLoadingUI = function (msg = 'loadi
 
 };
 
+/**
+ * Hide the loading UI
+*/
 BABYLON.DefaultLoadingScreen.prototype.hideLoadingUI = function(){
 
     let loader = document.getElementById('primary-scene-loader');
+    if(loader) {
 
-    loader.classList.add('loader-fadeout');
+        loader.classList.add('loader-fadeout'); // must be done in this function
+        loader.addEventListener('animationend', (e) => {
+            if(e.srcElement.classList.contains('loader-fadeout')) {
+                e.srcElement.style.display = 'none';
+                e.srcElement.classList.remove('loader-fadeout');
+            }
+        });
 
-    window.loader = loader;
+    }
 
-    // NOTE: This has to be done here, not in the showLoadingUI function!!
-
-    loader.addEventListener('animationend', () => {
-        loader.style.display = 'none';
-        loader.classList.remove('loader-fadeout');
-    });
+    // otherwise, the generated this._loadingDiv is hidden
 
     console.log("closing loading UI");
 };

@@ -61,6 +61,7 @@ var PCelestial = (function () {
 
     /**
      * Set defaults dynamically (2x faster in JavaScript than static class variable)
+     * OK because we don't make multiple PCelestial instances, just one.
      */
     PCelestial.prototype.setDefaults = function () {
 

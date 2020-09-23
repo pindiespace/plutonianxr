@@ -33,13 +33,24 @@ var PWorld = (function () {
         this.WORLD_FILE_DEFALLT        = 'worlds.json';
 
         this.util = new PUtil();
-        this.setup = new PSetup(this.util);
-        this.pdata = new PData(this.util);
 
-        // data model for hyg3 database
+        // set up engine
+        this.setup = new PSetup(this.util);
+
+        // data model for PObj and hyg3 datatypes
+        this.pdata = new PData(this.util);
         this.PCTYPES = this.pdata.PCTYPES;
 
+        // create assetLists
+        this.JSONManager = null;
+        this.cubeMapManager = null;
+
+        window.assets = this.cubeMaps; // TODO: ////////////////////////////////////////////
+
+        // user interface
         this.ui = new PUI(this.util);
+
+        // celestial calculations
         this.celestial = new PCelestial(this.util, this.pdata);
 
         // fire the program;
@@ -187,6 +198,9 @@ var PWorld = (function () {
 
     };
 
+    /**
+     * Set an pObj position using x, y, z in the JSON file
+     */
     PWorld.prototype.setPositionByXYZ = function (x, y, z, units = 1) {
 
         let util = this.util;
@@ -211,7 +225,7 @@ var PWorld = (function () {
     };
 
     /**
-     * Set position of a pObj
+     * Set position of a pObj, using polar coordinates
      */
     PWorld.prototype.getPosByRADecDist = function (ra, dec, dist, units = 1) {
 
@@ -235,10 +249,15 @@ var PWorld = (function () {
 
     };
  
+    /**
+     * Get the rotation, adjusting for BabylonJS coordinates versus 
+     * astronomical coordinates
+     * for x = x, z = y, y = z
+     * data.ra = 179.2; // side to side (almost 180)
+     * data.dec = 61.2; //up and down (correct galactic degrees 60.2)
+     */
     PWorld.prototype.getRotationByRADec = function (data) {
-// for x = x, z = y, y = z
-        //data.ra = 179.2; // side to side (almost 180)
-        //data.dec = 61.2; //up and down (correct galactic degrees 60.2)
+
 
         let util = this.util;
         let celestial = this.celestial;
@@ -389,6 +408,7 @@ var PWorld = (function () {
         let util = this.util;
         let pdata = this.pdata;
         let celestial = this.celestial;
+        let pWorld = this;
 
         let mesh = null;
 
@@ -493,8 +513,10 @@ var PWorld = (function () {
         // Load a cubemap. Files in each model directory
         if(model.cubemap) {
 
-            mat.reflectionTexture = new BABYLON.CubeTexture(dir + '/textures/' + model.cubemap + '/', 
-            scene, ['_px.png', '_py.png', '_pz.png', '_nx.png', '_ny.png', '_nz.png']);
+            // TODO: use this.cubeMapManager
+
+           mat.reflectionTexture = new BABYLON.CubeTexture(dir + '/textures/' + model.cubemap + '/', 
+                scene, ['_px.png', '_py.png', '_pz.png', '_nx.png', '_ny.png', '_nz.png']);
 
             // Skybox is always drawn at infinity
             mat.reflectionTexture.coordinatesMode = BABYLON.Texture.SKYBOX_MODE;
@@ -540,7 +562,7 @@ var PWorld = (function () {
             return mesh;
         }
 
-        let domeDir = dir + '/' + pObj.dname + '/';
+        let domeDir = dir + '/' + pObj.dname + '/'; 
 
         // use the AssetsManager to load the large JSON data file
         let assetManager = new BABYLON.AssetsManager(scene);
@@ -636,9 +658,9 @@ var PWorld = (function () {
 
         if (mesh) {
 
-        console.log('%%%%%%%%%%%setting parent for:' + pObj.name)
-        console.log('%%%%%%%%%%%Mesh   is:' + mesh)
-        console.log('%%%%%%%%%%%Parent is:' + parent)
+        //////console.log('%%%%%%%%%%%setting parent for:' + pObj.name)
+        //////console.log('%%%%%%%%%%%Mesh   is:' + mesh)
+        //////console.log('%%%%%%%%%%%Parent is:' + parent)
 
         switch(pObj.data.type) {
 
@@ -1066,7 +1088,7 @@ var PWorld = (function () {
 
         let util = this.util;
 
-        console.log('loadPlanet for:' + pObj.name + ' parent is:' + parent)
+        ////////////console.log('loadPlanet for:' + pObj.name + ' parent is:' + parent)
 
         let mesh = this.loadPlanetModel(pObj, dir + '/', scene, parent);
 
@@ -1094,7 +1116,7 @@ var PWorld = (function () {
 
         let mesh = this.loadPlanetModel(pObj, dir + '/', scene, parent);
 
-       console.log("in LoadStar for:" + pObj.name + ' mesh is:' + mesh + ' and parent:' + parent)
+       //////////////console.log("in LoadStar for:" + pObj.name + ' mesh is:' + mesh + ' and parent:' + parent)
 
         // additional configuration of Stars
 
@@ -1454,9 +1476,79 @@ var PWorld = (function () {
                     //createGUIButton();
                 }
 
+
+                /*
+                TODO: this may need to be multipick, starting the ray across the SpaceVolume
+                var origin = box.position;
+	
+                var forward = new BABYLON.Vector3(0,0,1);		
+                forward = vecToLocal(forward, box);
+            
+                var direction = forward.subtract(origin);
+                direction = BABYLON.Vector3.Normalize(direction);
+            
+                var length = 100;
+            
+                var ray = new BABYLON.Ray(origin, direction, length);
+
+                var hits = scene.multiPickWithRay(ray);
+
+                if (hits){
+                    for (var i=0; i<hits.length; i++){
+                        hits[i].pickedMesh.scaling.y += 0.01;
+                    }
+                }
+
+                */
+
         };
 
         return mesh;
+
+    };
+
+    /** 
+     * Create an asset manager for a media type
+     */
+    PWorld.prototype.createAssetManager = function (scene) {
+
+        let mgr = new BABYLON.AssetsManager(scene);
+
+        // load JSON data files
+        mgr = new BABYLON.AssetsManager(scene);
+
+        mgr.onTasksDoneObservable.add(function(tasks) {
+            console.log('assetManager: onTasksDoneObservable DONE');
+            var errors = tasks.filter(function(task) {return task.taskState === BABYLON.AssetTaskState.ERROR});
+            var successes = tasks.filter(function(task) {return task.taskState !== BABYLON.AssetTaskState.ERROR});
+        });
+
+        mgr.onTaskErrorObservable.add((task) => {
+            console.log("assetManager: onTaskErrorObservable ERROR:" + task.errorObject.message);
+        });
+
+        mgr.onFinish = function(tasks) {
+            console.log('assetManager: onFinish DONE')
+        };
+
+        return mgr;
+
+        // keep the same cubemaps for desktop and VR views (different meshes)
+        this.cubeMapManager = new BABYLON.AssetsManager(scene);
+
+        this.cubeMapManager.onTasksDoneObservable.add(function(tasks) {
+            console.log('cubeMapManager: onTasksDoneObservable DONE');
+            var errors = tasks.filter(function(task) {return task.taskState === BABYLON.AssetTaskState.ERROR});
+            var successes = tasks.filter(function(task) {return task.taskState !== BABYLON.AssetTaskState.ERROR});
+        });
+
+        this.cubeMapManager.onTaskErrorObservable.add((task) => {
+            console.log("cubeMapManager: onTaskErrorObservable ERROR:" + task.errorObject.message);
+        });
+
+        this.cubeMapManager.onFinish = function(tasks) {
+            console.log('cubeMapManager: onFinish DONE')
+        };
 
     };
 
@@ -1470,26 +1562,7 @@ var PWorld = (function () {
         console.log("------------------------------");
         console.log('loading world file...');
 
-        // Begin loading assets
-        this.assetManager = new BABYLON.AssetsManager(scene);
-        let assetManager = this.assetManager;
-
-        // called when all tasks are done
-        assetManager.onTasksDoneObservable.add(function(tasks) {
-            console.log('assetManager: onTasksDoneObservable DONE');
-            var errors = tasks.filter(function(task) {return task.taskState === BABYLON.AssetTaskState.ERROR});
-            var successes = tasks.filter(function(task) {return task.taskState !== BABYLON.AssetTaskState.ERROR});
-        });
-
-        // called when error is done
-        assetManager.onTaskErrorObservable.add((task) => {
-            console.log("assetManager: onTaskErrorObservable ERROR:" + task.errorObject.message);
-        });
-
-        assetManager.onFinish = function(tasks) {
-            console.log('assetManater: onFinish DONE')
-        };
-
+        let assetManager = this.JSONManager;
 
         // Load the JSON 'world' file describing the world
 
@@ -1540,7 +1613,9 @@ var PWorld = (function () {
 
     };
 
-
+    /** 
+     * Create a BabylonJS scene
+     */
     PWorld.prototype.createScene = async function (engine) {
 
         let celestial = this.celestial;
@@ -1550,6 +1625,13 @@ var PWorld = (function () {
 
         // This creates a basic Babylon Scene object (non-mesh)
         var scene = new BABYLON.Scene(engine);
+
+        // create our AssetManagers
+        this.JSONManager =  this.createAssetManager(scene);
+        this.cubeMapManager = this.createAssetManager(scene);
+
+        // fade to black
+        scene.clearColor = new BABYLON.Color3(0, 0, 0);
 
         // This creates and positions a free camera (non-mesh)
         let camera = new BABYLON.UniversalCamera('desktopcamera', new BABYLON.Vector3(0, 0, 19), scene);
@@ -1643,7 +1725,7 @@ var PWorld = (function () {
 
             // DefaultLoadingScreen.prototype.displayLoadingUI in plutonian-ui.js
             engine.displayLoadingUI();
-
+ 
             await util.sleep(1000); ///////////////////////////////
 
             let sc = this.createScene(engine).then(returnedScene => { 

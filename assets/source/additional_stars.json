@@ -1,6 +1,15 @@
 
 push to Heroku
-loading screen
+
+block user access until camera defined
+plutonian-scene.js:1462 Uncaught ReferenceError: camera is not defined
+    at t.scene.onPointerDown (plutonian-scene.js:146
+
+add more stuff to assetManager
+
+mesh picking - get all meshes in a line (or 2nd mesh)
+spaceVolume or Sprite - direct
+inside SpaceVolume - make ray, pick across SpaceVolume
 
 rotate sub-objects in star system
 rotate sub-objects in planetary system
