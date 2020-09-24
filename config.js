@@ -11,11 +11,11 @@
 const config = {
     port: 3000,
     portSecure: 443,
-    useSSL: true, // off for heroku
-    useCookie: true,  // off for heroku
+    useSSL: false, // off for heroku
+    useCookie: false,  // off for heroku
     appName: 'Plutonian XR',
     appTagline: 'A WebXR experience built with BabylonJS',
     appSessionName: 'plutonianXR'
-}
+};
 
 module.exports = {'config': config }

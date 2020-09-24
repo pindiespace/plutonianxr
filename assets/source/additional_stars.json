@@ -2,8 +2,6 @@
 push to Heroku
 --------------
 --------------
-add more stuff to assetManager
-assetManager search for existing asset, don't re-load if already loaded
 --------------
 --------------
 web worker for computing stars
@@ -15,6 +13,10 @@ rotate sub-objects in planetary system
 --------------
 specify orbits with transform node
 move drawing to a different object
+--------------
+gaze selection in VR  
+--------------
+load controller in VR view
 --------------
 collision detector meshes - proximity?
 move the collision mesh, detect meshes that collide
