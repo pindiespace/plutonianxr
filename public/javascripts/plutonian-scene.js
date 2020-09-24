@@ -279,6 +279,8 @@ var PWorld = (function () {
 
     };
 
+
+
     /**
      * load a spherical volume around a star system, planet, moon
      * The only object that reacts to this.godLight
@@ -386,6 +388,38 @@ var PWorld = (function () {
     };
 
     /**
+     * load cubemap texture for a skybox
+     * @param {String} dir 
+     * @param {BABYLON.Scene} scene 
+     */
+    PWorld.prototype.setCubeMapMaterial = function (pObj, dir, scene, loadTexture = true) {
+
+        // Create material suitable for an infinite-distance skybox
+        let mat = new BABYLON.StandardMaterial(pObj.key + '-cubemap', scene);
+        mat.backFaceCulling = false;
+        mat.diffuseColor = new BABYLON.Color3(0, 0, 0);
+        mat.specularColor = new BABYLON.Color3(0, 0, 0);
+
+        // Load a cubemap. Files in each model directory
+        if(dir && loadTexture) {
+
+           mat.reflectionTexture = new BABYLON.CubeTexture(dir, 
+                scene, ['_px.png', '_py.png', '_pz.png', '_nx.png', '_ny.png', '_nz.png']);
+
+            // Skybox is always drawn at infinity
+            mat.reflectionTexture.coordinatesMode = BABYLON.Texture.SKYBOX_MODE;
+
+        }
+
+        // performance enhancements - https://doc.babylonjs.com/how_to/optimizing_your_scene
+        // freeze the material, unfreeze if we have to update properties
+        mat.freeze();
+
+        return mat;
+
+    };
+
+    /**
     * Infinite-distance skybox. Used to create galaxy background
         TODO: rotate galaxy stardome by 
         TODO: Galactic tilt RA = 12:52 (+192 degrees) and Dec = +26:19.
@@ -398,8 +432,11 @@ var PWorld = (function () {
     * @param {String} cubemap name (BabylonJS-specifics)
     * @param {String} dir 
     * @param {Scene} scene
+    * @param {Boolean} useVR
+    * @param {Boolean} loadMaterial flag to load the material. VR and non-VR skyboxes 
+    * share the same material. The first one loaded shares its material with the second.
     */
-    PWorld.prototype.loadSkybox = function (pObj, dir, scene, useVR = false) {
+    PWorld.prototype.loadSkybox = function (pObj, dir, scene, useVR = false, loadMaterial = true) {
 
         console.log("------------------------------");
         console.log('creating skybox:' + pObj.name);
@@ -504,31 +541,10 @@ var PWorld = (function () {
         });
         */
 
-        // Create material suitable for an infinite-distance skybox
-        var mat = new BABYLON.StandardMaterial(pObj.key + '-cubemap', scene);
-        mat.backFaceCulling = false;
-        mat.diffuseColor = new BABYLON.Color3(0, 0, 0);
-        mat.specularColor = new BABYLON.Color3(0, 0, 0);
-
-        // Load a cubemap. Files in each model directory
-        if(model.cubemap) {
-
-            // TODO: use this.cubeMapManager
-
-           mat.reflectionTexture = new BABYLON.CubeTexture(dir + '/textures/' + model.cubemap + '/', 
-                scene, ['_px.png', '_py.png', '_pz.png', '_nx.png', '_ny.png', '_nz.png']);
-
-            // Skybox is always drawn at infinity
-            mat.reflectionTexture.coordinatesMode = BABYLON.Texture.SKYBOX_MODE;
-
+        // if specified, load the cubemap material WITH the texture
+        if(loadMaterial) {
+            mesh.material = this.setCubeMapMaterial(pObj, dir + '/textures/' + model.cubemap + '/', scene, true);
         }
-
-        // performance enhancements - https://doc.babylonjs.com/how_to/optimizing_your_scene
-
-        // freeze the material, unfreeze if we have to update properties
-        mat.freeze();
-
-        mesh.material = mat;
 
         // no rotations of the skybox after creation, so don't evaluate its matrix
         mesh.freezeWorldMatrix();
@@ -1246,39 +1262,42 @@ var PWorld = (function () {
         console.log('creating galaxy:' + pObj.name)
 
         let util = this.util;
+        let pWorld = this;
 
-        // draw the galaxy model as an infinite cubemap, large-format
-        let meshSky = this.loadSkybox(pObj, dir, scene, this.NO_VR);
+        /*
+         * Draw the galaxy mode as an infinite cubemap skybox
+         *
+         * We have two meshes of different size (meshSky and meshSkyVR) which 
+         * share the same cubemap.
+         * - load the meshes without the materials, 
+         * - then use this.cubeMapManager (BABYLON.AssetsManager) to load the cubemap
+         * - then apply the same material to BOTH meshes.
+         */
+        let meshSky = this.loadSkybox(pObj, dir, scene, this.NO_VR, false);
 
         if(meshSky) {
-
+            // nothing to do
         }
 
         // load a small skybox for VR, which needs under 1000 units in size
-        let meshSkyVR = this.loadSkybox(pObj, dir, scene, this.USE_VR);
+        // DON'T load the cubemap texture yet (shared with meshSkyVR)
+        let meshSkyVR = this.loadSkybox(pObj, dir, scene, this.USE_VR, false);
 
-        
+        // disable VR on initial creation (defaults to 2D desktop view)
         if(meshSkyVR) {
             meshSkyVR.setEnabled(false);
         }
 
         /*
-         * 1. The mesh parent is a empty space, outside the Skybox
+         * 1. The mesh parent (the universe or 'local_group') is a empty space, outside the Skybox
          * 2. The Skybox is present for each galaxy
          * 3. Not drawn, but needed for children
          * 3. Since the Skybox is projected to infinity, we need a SECOND mesh
          *    otherwise, children inherit projection to infinity
          */
-        console.log("POBJDATADIAMETER:" + pObj.name + ":" + pObj.data.diameter)
-
         let mesh = this.loadSpaceVolume(pObj, dir, scene);
-        /*
-         * TODO: create a global directional light. Exclude everything except 
-         * SpaceVolume from the directional light
-         * light.excludedMeshes.push(mesh);
-         */
 
-        // hide for now
+        // hide the SpaceVolume
 
         if(mesh) {
 
@@ -1286,7 +1305,7 @@ var PWorld = (function () {
             mesh.setEnabled(false);
             this.godLight.excludedMeshes.push(mesh);
 
-            // attach to parent
+            // attach to parent (universe)
             if(parent) {
                 mesh.parent = parent;
             }
@@ -1307,17 +1326,39 @@ var PWorld = (function () {
                 meshSkyVR.pObj = pObj;
             }
 
-        //10,000,000 universe SpaceVolume
-        // 2,000,000 galaxy Skybox
-        // 2,000,000 galaxy SpaceVolume
+            // load the cubemap texture, apply to BOTH meshes
 
-        // Make the camera's view slightly larger than the Skybox dimensions
-        scene.activeCamera.maxZ = mesh.getBoundingInfo().boundingSphere.radius * 1.2;
+            let model = this.getActiveModel(pObj.data.models);
+        
+            let sbTask = this.cubeMapManager.addCubeTextureTask(
+               'skybox-' + pObj.name,
+               dir + '/textures/' + model.cubemap + '/',
+               ['_px.png', '_py.png', '_pz.png', '_nx.png', '_ny.png', '_nz.png']
+            );
+
+           sbTask.onSuccess = function (task) {
+                console.log('cubemap for:' + pObj.name + ' loaded');
+                window.task = task;
+                // create the material, but do not load the texture
+                meshSky.material = pWorld.setCubeMapMaterial(pObj, dir + '/textures/' + model.cubemap + '/', scene, false);
+                meshSky.material.reflectionTexture = task.texture;
+                meshSky.material.reflectionTexture.coordinatesMode = BABYLON.Texture.SKYBOX_MODE;
+                meshSkyVR.material = meshSky.material;
+           };
+
+           sbTask.onError = function (task, message, exception) {
+                console.log('cubemap ERROR:' + message + ', ' + exception);
+           };
+
+            // actually load the texture
+            this.cubeMapManager.load();
+
+            // Make the camera's view slightly larger than the Skybox dimensions
+            scene.activeCamera.maxZ = mesh.getBoundingInfo().boundingSphere.radius * 1.2;
 
             /////////this.ui.createLabel(pObj, scene);
 
-            // we DO NOT set the universe as the parent for the galaxy
-            // mesh.parent = parent;
+            // create child objects
 
             if(this.util.isArray(pObj.globular_clusters)) {
                 for(let i = 0; i< pObj.globular_clusters.length; i++) {
@@ -1418,6 +1459,11 @@ var PWorld = (function () {
 
             let cam = this.activeCamera;
 
+            // .activeCamera may not be defined during initial loading yet
+            if(!cam) {
+                return;
+            }
+
             // picker for Sprites
             let pickResult = this.pickSprite(this.pointerX, this.pointerY);
 
@@ -1474,36 +1520,41 @@ var PWorld = (function () {
                     console.log('Distance:' + dist + ' max:' + w + ' min:' + h);
                     console.log('Camera at:' + cam.position);
                     //createGUIButton();
-                }
 
+                    // NOTE: TODO: disable "local_group" and "skybox" for picking after debug
+                    console.log('^^^^^^^^^^^^^^^^^^^^^^');
+                    console.log('MULTI-PICK INSIDE MESH:' + m.name + ' pObj:' + m.pObj.name);
+                    // TODO: 'origin' may need to be the point of intersection of the ray, not the
+                    // TODO: mesh position
+                    var origin = m.position;
+                    var forward = new BABYLON.Vector3(0,0,1);
+                    //forward = vecToLocal(forward, box);
+                    var wm = mesh.getWorldMatrix();
+                    var forward = BABYLON.Vector3.TransformCoordinates(forward, wm);
+                
+                    var direction = forward.subtract(origin);
+                    direction = BABYLON.Vector3.Normalize(direction);
 
-                /*
-                TODO: this may need to be multipick, starting the ray across the SpaceVolume
-                var origin = box.position;
-	
-                var forward = new BABYLON.Vector3(0,0,1);		
-                forward = vecToLocal(forward, box);
-            
-                var direction = forward.subtract(origin);
-                direction = BABYLON.Vector3.Normalize(direction);
-            
-                var length = 100;
-            
-                var ray = new BABYLON.Ray(origin, direction, length);
+                    let ray2 = new BABYLON.Ray(
+                        origin,
+                        direction,
+                        m.getBoundingInfo().boundingSphere.radius * 2
+                    );
+                    console.log('ray cast start:' + origin + ' for:' + m.getBoundingInfo().boundingSphere.radius * 2 + ' units');
+                    var hits = scene.multiPickWithRay(ray);
 
-                var hits = scene.multiPickWithRay(ray);
-
-                if (hits){
-                    for (var i=0; i<hits.length; i++){
-                        hits[i].pickedMesh.scaling.y += 0.01;
+                    if (hits){
+                        for (var i = 0; i < hits.length; i++){
+                            console.log('multiPick:' + hits[i].pickedMesh.name);
+                        }
                     }
-                }
 
-                */
+                } // end of picking with ray
 
-        };
 
-        return mesh;
+        }; // end of onPointerDown callback function
+
+        //return mesh;
 
     };
 

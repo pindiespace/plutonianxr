@@ -1,31 +1,29 @@
 
 push to Heroku
-
-block user access until camera defined
-plutonian-scene.js:1462 Uncaught ReferenceError: camera is not defined
-    at t.scene.onPointerDown (plutonian-scene.js:146
-
+--------------
+--------------
 add more stuff to assetManager
-
-mesh picking - get all meshes in a line (or 2nd mesh)
-spaceVolume or Sprite - direct
-inside SpaceVolume - make ray, pick across SpaceVolume
-
+assetManager search for existing asset, don't re-load if already loaded
+--------------
+--------------
+web worker for computing stars
+celestial sprite updates of alpha, size
+orbital calculations
+--------------
 rotate sub-objects in star system
 rotate sub-objects in planetary system
-
+--------------
 specify orbits with transform node
 move drawing to a different object
-
+--------------
 collision detector meshes - proximity?
 move the collision mesh, detect meshes that collide
 https://doc.babylonjs.com/babylon101/cameras,_mesh_collisions_and_gravity
 Create a mesh (can call it ‘collider’), set visibility to 0, turn on collisions and set its position to the webXR camera position collider.position = webXRcamera.position
 Put it in a WebWorker
-
+--------------
 If you want to move forward use const newPosition = webXRcamera.getFrontPosition(0.5) then collider.lookAt(newPosition).
 Create a forward vector, then collider.moveWithCollisions(forwards)
-
 text sprite - basic
 https://www.babylonjs-playground.com/#H7VAZR#1
 
