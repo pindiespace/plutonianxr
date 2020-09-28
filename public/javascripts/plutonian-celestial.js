@@ -5,12 +5,24 @@
  * Hyg Real =       990 parsecs,       9,900 units (stars drawn in 3D)
  * Hyg Max  =   100,000 parsecs,   1,000,000 units (no parallax for star, just a default)
  * (about 10,000 of the 119,000 stars in Hyg3 fall in this category)
+ * 
+ * Models uses
+ * Points (custom in shader)
+ * https://github.com/bilkusg/BabyPlanetarium/blob/master/babysky/stars.ts
+ * Sprites
+ * Meshes
+ * WebWorker to shift each data entry beween these three models
+ * 
+ * Stellar classification parser
+ * https://github.com/codebox/stellar-classification-parser
  */
 
 /**
  * Build the celestial space using Hyg3 database and other sources
  */
 var PCelestial = (function () {
+
+    // static class variables
 
     // constructor
 
@@ -29,12 +41,8 @@ var PCelestial = (function () {
         this.dSpriteScreenSize =      1; // default size of Star sprites
         this.dMaxHygDist       = 100000;
 
-        // Hyg data (JSON)
-        this.hygData           =     [];
+        // SpriteManager for Hyg3 data
         this.spriteManager     =   null;
-
-        // Stellar colors (JSON)
-        this.hygColors         = []; // full set, in JSON file
 
         // SpriteManager and scene
         this.assetManager = null;
@@ -42,82 +50,410 @@ var PCelestial = (function () {
         this.scene = null;
         this.camera = null;
 
-        // TODO: STATIC VARIABLES ARE SLOWER, CONVERT OUR DEFAULTS
-        this.setDefaults();
-
         // computations of planetary positions over time
         this.orrey = new POrrery();
 
+        // see if WebWorker computation is available
+        if (typeof(Worker) !== "undefined") {
+            console.log("LOADING WORKER....................")
+            worker = new Worker('javascripts/plutonian-orrery-worker.js');
+        } 
+
     };
 
-    // default star colors, by one-letter stellar type
-    PCelestial.prototype.dStarColors = [];
+    // prototype class variables
 
-    // default absolute magnitudes, by one-letter stellar type
-    PCelestial.prototype.dAbsMag = [];
+    /*
+     * since we only create one pObject, we make the following arrays, some 
+     * in the class, some loaded from JSON files
+     * dynamically - 2x faster access than if declared as out function (static class)
+     */
 
-    // default Sprite index for star quad image
-    PCelestial.prototype.dSpriteIndex = [];
+    // default star colors, if we can't load the JSON file, by one-letter stellar type
+    PCelestial.prototype.dStarColors = {
+        'w': {r:0.598529412, g: 0.683578431, b: 1},
+        'o': {r:0.598529412, g: 0.683578431, b: 1},
+        'a': {r:0.790196078, g: 0.839607843, b: 1},
+        'b': {r:0.680490196, g: 0.759068627, b: 1},
+        'f': {r:0.933382353, g: 0.930392157, b: 0.991470588},
+        'g': {r:1, g: 0.925686274, b: 0.830882353},
+        'k': {r:1, g: 0.836421569, b: 0.629656863},
+        'm': {r:1, g: 0.755686275, b: 0.421764706},
+        'n': {r:0.987654321, g: 0.746356814, b: 0.416557734},
+        'r': {r:1, g: 0.868921569, b: 0.705735294},
+        'c': {r:1, g: 0.828186274, b: 0.576078431},
+        's': {r:1, g: 0.755686275, b: 0.421764706},
+        'd': {r:0.798823529, g: 0.834901961, b: 0.984313726},
+        'l': {r:1, g:0.4235294, b:0},
+        't': {r:1, g:0.219607843, b:0},
+        'y': {r:1, g:0.3, b:0.1}, // brownish, gas giant able to fuse duterium
+        'p': {r: 0.4034, g: 0.27153, b: 0.1235} //  brown, a gas giant
+    };
 
     /**
-     * Set defaults dynamically (2x faster in JavaScript than static class variable)
-     * OK because we don't make multiple PCelestial instances, just one.
+     * Yerkes prefixes in front of primary letter type, translate to primary type
+     * EXAMPLE: sdB5 -> B5VI 
      */
-    PCelestial.prototype.setDefaults = function () {
-
-        let dStarColors  = this.dStarColors;
-        let dAbsMag      = this.dAbsMag;
-        let dSpriteIndex = this.dSpriteIndex;
-
-        dStarColors['o'] = {r:0.598529412, g: 0.683578431, b: 1},
-        dStarColors['b'] = {r:0.680490196, g: 0.759068627, b: 1},
-        dStarColors['a'] = {r:0.790196078, g: 0.839607843, b: 1},
-        dStarColors['f'] = {r:0.933382353, g: 0.930392157, b: 0.991470588},
-        dStarColors['g'] = {r:1, g: 0.925686274, b: 0.830882353},
-        dStarColors['k'] = {r:1, g: 0.836421569, b: 0.629656863},
-        dStarColors['m'] = {r:1, g: 0.755686275, b: 0.421764706},
-        dStarColors['n'] = {r:0.987654321, g: 0.746356814, b: 0.416557734},
-        dStarColors['w'] = {r:0.598529412, g: 0.683578431, b: 1},
-        dStarColors['r'] = {r:1, g: 0.868921569, b: 0.705735294},
-        dStarColors['c'] = {r:1, g: 0.828186274, b: 0.576078431},
-        dStarColors['s'] = {r:1, g: 0.755686275, b: 0.421764706},
-        dStarColors['d'] = {r:0.798823529, g: 0.834901961, b: 0.984313726},
-        dStarColors['l'] = {r:1, g:0.4235294, b:0},
-        dStarColors['t'] = {r:1, g:0.219607843, b:0};
-        dStarColors['y'] = {r:1, g:0, b:0};
-
-        dAbsMag['o'] = -10, // standard
-        dAbsMag['b'] = -2,
-        dAbsMag['a'] = 2,
-        dAbsMag['f'] = 3,
-        dAbsMag['g'] = 0
-        dAbsMag['k'] = 0,
-        dAbsMag['m'] = 6,
-        dAbsMag['n'] = 0, // less common
-        dAbsMag['w'] = -11,
-        dAbsMag['r'] = 1,
-        dAbsMag['c'] = -1,
-        dAbsMag['s'] = 4,
-        dAbsMag['d'] = 10;
-
-        dSpriteIndex['o'] = 6, //standard
-        dSpriteIndex['b'] = 5,
-        dSpriteIndex['a'] = 4,
-        dSpriteIndex['f'] = 3,
-        dSpriteIndex['g'] = 2,
-        dSpriteIndex['k'] = 1,
-        dSpriteIndex['m'] = 0,
-        dSpriteIndex['n'] = 0, //less common
-        dSpriteIndex['w'] = 6,
-        dSpriteIndex['r'] = 1,
-        dSpriteIndex['c'] = 1,
-        dSpriteIndex['s'] = 0,
-        dSpriteIndex['d'] = 4;
+    PCelestial.prototype.dLumPrefixTrans = {
+        'sd' : 'VI',
+        'd' : 'V',
+        'sg' : 'I',
+        'g' : 'III',
     };
 
-    // functions
+    /**
+     * letter code, Primary type (based on temperature)
+     * [prefix] [letter code] [numeric code 0-9] [luminosity] [suffix]
+     * if numeric code is not present, assume 5
+     */
+    PCelestial.prototype.dStarDesc = {
+        'W': 'Wolf-Rayet star, helium-fusing, mass loss through stellar wind, expanding atmospheric envelope',
+        'O': 'Blue, luminous ultra-hot supergiant',
+        'A': 'Blue luminous giant',
+        'B': 'White giant',
+        'F': 'Yellow-white star', // giant or dwarf
+        'G': 'Yellow star', // giant or dwarf
+        'K': 'Yellow-orange star', // giant dwarf
+        'M': 'Red star', //giant or dwarf
+        'MS':'Red giant, younger, asymptotic-giant branch carbon star',
+        'N': 'Red giant, older carbon star, giant equivalent of lat K to M-type stars',
+        'R': 'Red giant, carbon star equivalent of late G to early K-type stars',
+        'C': 'Red giant, carbon star',
+        'C-R': 'Red giant, carbon star equivalent of late G to early K-type stars',
+        'C-N': 'Red giant, older carbon star, giant equivalent of late K to M-type stars',
+        'C-J': 'Red giant, cool carbon stars with a high content of carbon-13',
+        'C-H': 'Population II analogues of the C-R stars',
+        'C-Hd': 'Hydrogen-deficient carbon stars, similar to late G supergiants with CH and C2 bands added',
+        'S': 'Red giant, asymptotic-giant-branch carbon star, zirconium oxide in spectrum',
+        'SC': 'Red giant, older, asymptotic-giant branch carbon star, high carbon',
+        'D': 'White dwarf', // needs sub-classification
+        'L': 'Hot brown dwarf, lithium in atmosphere',
+        'T': 'Cool brown dwarf, methane in atmosphere',
+        'Y': 'Gas giant, warm, able to fuse deuterium',
+        'P': 'Gas giant, cold, Jupiter-like'
+    };
 
-    // private static variables (slower)
+    /**
+     * secondary classifications starting with 'W' (Wolf-Rayett), greater detail
+     * {@link https://en.wikipedia.org/wiki/Wolf%E2%80%93Rayet_star}
+     * Note: for WR stars, higher numbers mean lower temperatures
+     */
+    PCelestial.prototype.dStarWolfRayetDesc = {
+        'WR':'',
+        'WC':'strong Carbon and Helium lines, Helium absent',
+        'WN':'strong Helium and Nitrogen lines',
+        'WO':'strong Oxygen lines, weak Carbon lines',
+        'WC10':'strong Carbon lines, cool',
+        'WC11':'strong Carbon lines, coolest',
+        'WN10':'strong Nitrogen lines, cool',
+        'WN11':'strong Nitrogen lines, coolest'
+    };
+
+    /*
+     * secondary classifications starting with 'D' (white dwarf), greater detail
+     * [letter code][temperature numeric code (0-9)][suffix]
+     */
+    PCelestial.prototype.dStarWhiteDwarfDesc = {
+        'DA': 'hydrogen-rich atmosphere or outer layer, strong Balmer hydrogen spectral lines',
+        'DB': 'helium-rich atmosphere, neutral helium, He I, spectral lines',
+        'DO': 'helium-rich atmosphere, ionized helium, He II, spectral lines',
+        'DQ': 'carbon-rich atmosphere, atomic or molecular carbon lines',
+        'DZ': 'metal-rich atmosphere, merges DG, DK, DM types',
+        'DG': 'metal-rich atmosphere (old classification)',
+        'DK': 'metal-rich atmosphere (old classification)',
+        'DM': 'metal-rich atmosphere (old classification)',
+        'DC': 'no strong spectral lines',
+        'DX': 'spectral lines unclear',
+        'DAB': 'hydrogen- and helium-rich white dwarf, neutral helium lines',
+        'DAO': 'hydrogen- and helium-rich white dwarf displaying ionized helium lines',
+        'DAZ': 'hydrogen-rich metallic white dwarf',
+        'DBZ': 'helium-rich metallic white dwarf'
+    };
+
+    /**
+     * Luminosity, Harvard classification:
+     * [prefix] [letter code] [numeric code 0-9] [luminosity] [suffix]
+     * {@link https://amedleyofpotpourri.blogspot.com/2019/12/stellar-classification.html}
+     * {@link https://github.com/codebox/stellar-classification-parser.git}
+     */
+    PCelestial.prototype.dStarLumDesc = {
+        '0': 'Hypergiant',
+        'Ia+': 'Hypergiant',
+        'Ia': 'Highly Luminous Supergiant',
+        'Iab': 'Intermediate size Luminous Supergiant',
+        'Ib': 'Less Luminous Supergiant',
+        'I': 'Supergiant',
+        'II': 'Bright Giant',
+        'IIa': 'Luminous Bright Giant',
+        'IIb': 'Less Luminous Bright Giant',
+        'III': 'Giant',
+        'IIIa': 'Luminous Giant',
+        'IIIb': 'Less Luminous Giant',
+        'IV': 'Sub-Giant',
+        'IVa': 'Luminous Sub-Giant',
+        'IVb': 'Less Luminous Sub-Giant',
+        'V' : 'Dwarf (Main Sequence)',
+        'Va' : 'Luminous Dwarf (Main Sequence)',
+        'Vb' : 'Less Luminous Dwarf (Main Sequence)',
+        'VI' : 'Sub-Dwarf',
+        'VIa' : 'Luminous Sub-Dwarf',
+        'VIb' : 'Less Luminous Sub-Dwarf',
+        'VII' : 'White-Dwarf',
+        'VIIa' : 'Luminous White-Dwarf',
+        'VIIb' : 'Less Luminous White-Dwarf'
+    };
+
+    PCelestial.prototype.dWhiteDwarfSuffix = {
+        ':'  : 'Uncertain spectral class',
+        'P'  : 'Magnetic white dwarf with detectable polarization',
+        'E'  : 'White dwarf with emission lines present',
+        'H'  : 'Magnetic white dwarf without detectable polarization',
+        'V'  : 'Variable white dwarf',
+        'PEC': 'Peculiarities exist'
+    };
+
+    /**
+     * {@link https://en.wikipedia.org/wiki/Wolf%E2%80%93Rayet_star}
+     */
+    PCelestial.prototype.dStarWolfRayetSuffix = {
+        'h': 'hydrogen emission',
+        'ha': 'hydrogen emission and absorption',
+        'w': 'weak lines',
+        's': 'strong lines',
+        'b': 'broad strong lines',
+        'd': 'dust (occasionally vd, pd, or ed for variable, periodic, or episodic dust'
+    };
+
+    /**
+     * Sufix for luminosity rather than general suffix
+     */
+    PCelestial.prototype.dLumSuffix = {
+        ':' :  'Uncertain luminosity'
+    };
+    
+    /**
+     * Suffix after prefix, letter type, luminosity
+     * [prefix][letter type][numeric code 0-9][luminosity][suffix]
+     */
+    PCelestial.prototype.dGlobalSuffix = {
+        ':' : 'Uncertain values',
+        '...' : 'Undescribed peculiarities',
+        '!' : 'Special peculiarities',
+        'comp' : 'Composite spectrum',
+        '+': 'Composite spectrum',
+        'e' : 'Emission lines present',
+        '(e)': 'Forbidden emission lines present',
+        '[e]': 'Forbidden emission lines present',
+        'er': 'Reversed, center of emission lines weaker than edges',
+        'eq' : 'Emission lines with P Cygni profile',
+        'f' : 'N III and He II emission',
+        'f*': 'N IV λ4058Å is stronger than the N III λ4634Å, λ4640Å, & λ4642Å line',
+        'f+': 'Si IV λ4089Å & λ4116Å are emitted, in addition to the N III line',
+        '(f)' : 'N III emission, absence or weak absorption of He II',
+        '((f))' : 'He II and weak N III emission',
+        'f?p': 'Strong magnetic field',
+        'h': 'WR stars with hydrogen emission lines',
+        'ha': 'WR stars with hydrogen seen in both absorption and emission.',
+        'He wk' : 'Weak Helium lines',
+        'k': 'Spectra with interstellar absorption features',
+        'm' : 'Enhanced metal features',
+        'n' : 'Broad ("nebulous") absorption due to spinning',
+        'nn' : 'Very broad absorption features',
+        'neb': 'A nebula spectrum is mixed in',
+        'p' : 'Unspecified peculiarity, chemically peculiar star',
+        'pq': 'Peculiar, similar to nova spectrum',
+        'q': 'P Cygni type, expanding gaseous envelope',
+        's' : 'Narrow absorption lines',
+        'ss': 'Very narrow absorption lines',
+        'sh' : 'Shell star features',
+        'v' : 'Variable spectral feature',
+        'var' : 'Variable spectral features',
+        'w' : 'Weak spectral lines',
+        'wl' : 'Weak spectral lines',
+        'wk' : 'Weak spectral lines',
+        'Sr' : 'Strong strontium emission lines',
+        'He' : 'Strong Helium emission lines',
+        'Eu' : 'Strong Europium emission lines',
+        'Si' : 'Strong Silicon emission lines',
+        'Hg' : 'Strong Mercury emission lines',
+        'Mn' : 'Strong Manganese emission lines',
+        'Cr' : 'Strong Chromium emission lines',
+        'Fe' : 'Strong Iron emission lines',
+        'K'  : 'Strong Potassium emission lines'
+    };
+
+    //////////////////////////////////////////////////////////////////
+
+    /**
+     * Use stellar spectum (Harvard/Yerkes classification) to extract stellar data
+     * {@link https://en.wikipedia.org/wiki/Stellar_classification}
+     * [prefix] [letter code] [numeric code 0-9] [Yerkes luminosity] [suffix]
+     * Prefix: translates to Yerkes luminosity
+     * First letter: primary class by effective temperature
+     * First number (0-9): temperature within the class
+     * Yerkes luminosity: Roman Numerals and letters, also indicate 'giant' or 'dwarf'
+     * Suffix: additional information about the star
+     * A slash (/) means that a star is either one class or the other.
+     * A dash (-) means that the star is in between the two classes.
+     * @param {String} spec stellar spectrum
+     */
+    PCelestial.prototype.spectrumToStellarData = function (star) {
+
+        let util = this.util;
+
+        window.star = star;
+        let spect = star.spect;
+
+        let nm =  'spectrumToStellarData WARN:' + star.id + '(' + star.proper + ')' + ' spect:' + spect;
+
+        let done = false; // flag for complete parsing
+    
+        let prefix = '', body = '', type = '', lum = '', suffix = '';
+        let descType = '', descLum = '', descSuf = '';
+
+        // find the position of the first number (range) without using a regex
+        let len = spect.length;
+        let p1 = spect.indexOfFirstNumber();
+        range = spect[p1];
+
+        if(p1 == 0) {
+            console.warn(nm + ' invaid, only a single number');
+        } 
+        else if(p1 == -1) { // number not found
+            prefix = spect.substring(0, len);
+            range = -1;
+        } 
+        else { // number found
+            prefix = spect.substring(0, p1);
+            range = spect[p1];
+            // get longer numbers, e.g. 5.5, avoiding regex, since only numbers and decimals present
+            let c = p1 + 1;
+            while(c < len && (spect[c] == '.') || util.isNumber(spect[c], true)) {
+                range += spect[c++] + ''; // force as string addition
+            }
+            body = spect.substring(c, len); // suffix not defined yet
+
+        }
+        console.log('========')
+        console.log('spect:' + spect + ' p:' + prefix + ' r:' + range + ' l:' + lum + ' b:' + body);
+
+        // we now have the prefix, up to the range, and a body mixed with suffix
+        // split away a Yerkes prefix
+        for (let i in this.dLumPrefixTrans) {
+            if(prefix.indexOf(i) != -1) {
+                console.log('found luminance prefix for:' + spect + ', ' + i)
+                lum = this.dLumPrefixTrans[i];
+                break;
+            }
+        }
+
+        // look for the type, and strip
+        for (let i in this.dStarDesc) {
+            if(prefix.indexOf(i) == 0) {
+                type = i;
+                descType = this.dStarDesc[i]; 
+                console.log('found TYPE ' + i + ' in:' + spect)
+
+                // sub-types for white dwarfs, wolf-rayet
+                if (type == 'D') {
+                    for (let j in this.dStarWhiteDwarfDesc) {
+                        if(prefix.indexOf(j) == 0) {
+                            console.log('found SUBTYPE ' + j + 'in:' + prefix);
+                            type = j;
+                            descType += this.dStarWhiteDwarfDesc[j];
+                            prefix = prefix.substring(j.length, prefix.length);
+                        }
+                    }
+                
+                }
+                else if (type == 'W') {
+                    for (let j in this.dStarWolfRayetDesc) {
+                        if(prefix.indexOf(j) == 0) {
+                            console.log('found SUBTYPE ' + j + ' in:' + prefix)
+                            type = j;
+                            descType += this.dStarWolfRayetDesc[JSONCookie];
+                            prefix = prefix.substring(j.length, prefix.length);
+                        }
+
+                    }
+
+                } else {
+                    prefix = prefix.substring(i.length, prefix.length);
+                }
+
+                break;
+            }
+        }
+
+        console.log('type:' + type + ' prefix:' + prefix);
+
+        // look for a luminosity
+        for (let i in this.dStarLumDesc) {
+            if(body.indexOf(i) == 0) {
+                console.log('found LUM ' + i + ' in:' + spect)
+                lum = i;
+                descLum = this.dStarLumDesc[i];
+                body = body.substring(0, body.length);
+                break;
+            }
+        }
+
+
+    };
+
+    //////////////////////////////////////////////////////////////////
+
+    // default Sprite index table for star quad image
+    PCelestial.prototype.dSpriteIndex = [
+        {'w': 6},
+        {'o': 6}, //standard
+        {'b': 5},
+        {'a': 4},
+        {'f': 3},
+        {'g': 2},
+        {'k': 1},
+        {'m': 0},
+        {'n': 0}, //less common
+        {'r': 1},
+        {'c': 1},
+        {'s': 0},
+        {'d': 4},
+        {'y': 6}, // TODO: add
+        {'p': 7}  // TODO: add
+    ];
+
+    // default absolute magnitude table}, by one-letter stellar type
+    PCelestial.prototype.dAbsMag = [
+        {'w': -11}, 
+        {'o': -10}, // standard
+        {'a':   2},
+        {'b':  -2},
+        {'f':   3},
+        {'g':   0},
+        {'k':   0},
+        {'m':   6},
+        {'n':   0}, // less common
+        {'r':   1},
+        {'c':  -1},
+        {'s':   4},
+        {'d':  10},
+        {'y':  15},
+        {'p':  18}
+    ];
+
+    // dynamically-filled prototype variables
+
+    // holds data loaded from hyg3
+    PCelestial.prototype.hygData = [];
+ 
+    /**
+     * dynamically filled, blackbody colors table
+     * {@link http://www.vendian.org/mncharity/dir3/blackbody/UnstableURLs/bbr_color.html}
+     */
+    PCelestial.prototype.hygBBColors = [];
+
+    // Stellar colors based on spectrum (JSON)
+    PCelestial.prototype.hygColors = []; // full set, in JSON file
 
     // functions
 
@@ -182,11 +518,12 @@ var PCelestial = (function () {
     };
 
     /**
-     * Convert b-v values reported to stars to RGB color
+     * Convert b-v (colorindex) values reported to stars to RGB color
      * @param {Number} bv the b-v value for the star.s
      * {@link https://stackoverflow.com/questions/21977786/star-b-v-color-index-to-apparent-rgb-color}
      * {@link http://www.vendian.org/mncharity/dir3/blackbody/UnstableURLs/bbr_color.html}
      * {@link https://www.pas.rochester.edu/~emamajek/EEM_dwarf_UBVIJHK_colors_Teff.txt}
+     * {@link https://en.wikipedia.org/wiki/Color_index}
      */
     PCelestial.prototype.bvToRGB = function (bv) {
 
@@ -237,6 +574,48 @@ var PCelestial = (function () {
         };
 
     };
+
+    /**
+     * convert a blue-violet color index (B-V) to a temperature, table lookup
+     * {@link https://stackoverflow.com/questions/21977786/star-b-v-color-index-to-apparent-rgb-color}
+     * @param {Number} ci 
+     */
+    PCelestial.prototype.bvTableToRGB = function (ci) {
+        let t1 = (4600 * (1 / (0.92 * ci + 1.7) + 1 / (0.92 * ci + 0.62)));
+        return this.tempToBlackbodyColor(t1);
+    };
+
+    /**
+     * compute stellar color from a temperature
+     * @param {Number} temp 
+     */
+    PCelestial.prototype.tempToBlackbodyColor = function (temp) {
+        
+        let t = Math.floor(temp / 200);
+        t = t * 200;
+        if (t < 1000) {
+          t = 1000;
+        } else if (t > 29800) {
+          t = 29800;
+        }
+
+        const c = this.hygBBColors[t];
+
+    };
+
+    /*
+     * what the simulation needs to output
+     * 
+     * Augment the hyg object (which is like pObj.data) with
+     * Description
+     * computed color
+     * computed size (absolute)
+     * 
+     * use stellar type to set...
+     * computed color
+     * computed size (actual radius)
+     * computed sprite size
+     */
 
     /** 
      * Given a pObj, return the correct scaling
@@ -538,6 +917,32 @@ var PCelestial = (function () {
     };
 
     /**
+     * Load rgb color versus temperature table based on blackbody calculations
+     * {@link http://www.vendian.org/mncharity/dir3/blackbody/UnstableURLs/bbr_color.html}
+     * @param {BABYLON.AssetsManager} assetManager 
+     * @param {String} dir loaction of file
+     */
+    PCelestial.prototype.loadStarColorsByBlackbody = function (assetManager, dir) {
+
+        let celestial = this;
+
+        console.log("------------------------------");
+        console.log('loading star colors by blackbody:' + dir);
+
+        const loadBlackbody = assetManager.addTextFileTask('blackbody', dir);
+
+        loadBlackbody.onSuccess = async function (bbColors) {
+            console.log('PCELESTIAL Stellar Blackbody colors loaded, parsing data...')
+            celestial.hygBBColors =  JSON.parse(bbColors.text);
+        };
+
+        loadBlackbody.onTaskError = function (task) {
+            console.log('task failed', task.errorObject.message, task.errorObject.exception);
+        };
+
+    };
+
+    /**
      * Load stellar colors for all stellar types from JSON data
      * JSON file source
      * @link {http://www.isthe.com/chongo/tech/astro/HR-temp-mass-table-byhrclass.html}
@@ -549,20 +954,17 @@ var PCelestial = (function () {
      * @link {http://www.livingfuture.cz/stars.php}
      * @link {http://www.vendian.org/mncharity/dir3/blackbody/UnstableURLs/bbr_color.html}
      */
-    PCelestial.prototype.loadStarColors = function (assetManager, model, dir) {
+    PCelestial.prototype.loadStarColorsBySpectrum = function (assetManager, dir) {
 
         let celestial = this;
-        let colors = dir + model.colors;
 
         console.log("------------------------------");
-        console.log('loading colors for all stellar types:' + colors)
+        console.log('loading colors for all stellar types:' + dir)
 
-        const loadColors = assetManager.addTextFileTask('starcolors', colors);
+        const loadColors = assetManager.addTextFileTask('starcolors', dir);
 
         loadColors.onSuccess = async function (colors) {
-
             console.log('PCELESTIAL Stellar colors loaded, parsing data...')
-
             celestial.hygColors =  JSON.parse(colors.text);
     
         };
@@ -573,33 +975,21 @@ var PCelestial = (function () {
 
     };
 
-    PCelestial.prototype.loadStarData = function (assetManager, model, dir) {
+    /**
+     * Load the hyg file
+     * @param {BABYLON.AssetsManager} assetManager 
+     * @param {Object} model 
+     * @param {string} dir 
+     */
+    PCelestial.prototype.loadStarHygData = function (assetManager, dir) {
 
-        let util = this. util;
         let celestial = this;
 
         // load the Hyg3 database
-        let hyg = dir + model.hyg;
-        let loadHYG = assetManager.addTextFileTask('stardata', hyg);
+        let loadHYG = assetManager.addTextFileTask('stardata', dir);
 
         loadHYG.onSuccess = async function (stars) {
-
             celestial.hygData = JSON.parse(stars.text);
-
-/*
-            // Async version of JSON.parse, using Fetch API
-            util.asyncJSON(hyg, async function (stars) {
-                console.log('@@@@@@@@@@building stars')
-                if(celestial.checkHygData(stars)) {
-                    celestial.hygData = stars;
-                    //this.spriteMgr = await celestial.computeHygSprite(stars, dir + 'sprite/textures/' + model.spritesheet, model.size, scene).then((spriteManagerStars) => {
-                    //    console.log('@@@@@@@@@@@@Hyg data loaded');
-                    //});
-                }
-
-            });
-*/
-
         };
 
         loadHYG.onTaskError = function (task) {
@@ -637,11 +1027,18 @@ var PCelestial = (function () {
             console.error('loadHygData ERROR: invalid hyg data, dir:' + dir + ' file:' + model.hyg);
         }
 
-        // if present, load stellar colors
-        this.loadStarColors(assetManager, model, dir);
+        // if present, load stellar colors by stellar spectrum
+        if(util.isString(model.colors)) {
+            this.loadStarColorsBySpectrum(assetManager, dir + model.colors);
+        }
+
+        // if present, load stellar colors by ci index (temperature)
+        if(util.isString(model.blackbody)) {
+            this.loadStarColorsByBlackbody(assetManager, dir + model.blackbody);
+        }
 
         // load stellar data
-        this.loadStarData(assetManager, model, dir);
+        this.loadStarHygData(assetManager, dir + model.hyg);
 
         assetManager.onProgress = function(remainingCount, totalCount, lastFinishedTask) {
                 console.log('Loading Hyg database files. ' + remainingCount + ' out of ' + totalCount + ' items still need to be loaded.');
@@ -653,7 +1050,7 @@ var PCelestial = (function () {
             // TODO: could put an 'await' here for JSON parsing for both...
             let mgr = await celestial.computeHygSprite(dir + 'sprite/textures/' + model.spritesheet, model.size, scene)
             .then((spriteManagerStars) => {
-                console.log('Finished computing  Hyg database')
+                console.log('Finished computing Hyg database')
             });
 
             console.log('LOADED Hyg database');
@@ -701,20 +1098,28 @@ var PCelestial = (function () {
 
         console.log("@@@@@COMPUTING HygSprite")
 
-        for (let i = 0; i < hygData.length; i++) {
-        //for (let i = 0; i < 1000; i++) {
+        //for (let i = 0; i < hygData.length; i++) {
+        for (let i = 0; i < 100; i++) {
+
             star = hygData[i];
             name = this.getHygName(star);
+
             //console.log("name is:" + name)
             color = this.getHygColor(star);
+
+            // additional data from spectrum
+            spec = this.spectrumToStellarData(star);
+
+            // TODO: radius based on temperature
+
             //console.log("color is:" + color)
             spriteIndex = this.getHygSpriteIndex(star);
+
             //console.log("index is:" + spriteIndex)
 
         }
 
         console.log("@@@@@@@@@@@@COMPUTED HygSprite")
-
 
         ///////////////////////////////////
         ///////////////////////////////////
@@ -1083,6 +1488,7 @@ var computeHygSprite = async function (hygData, spriteFile, size, scene) {
         }
 
         // update function for sprites
+        // note: this is NOT a bottleneck for rendering at present!
         scene.registerBeforeRender(() => {
             let dx = pos.x - oPos.x,
             dy = pos.y - oPos.y,

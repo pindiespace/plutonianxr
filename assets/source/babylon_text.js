@@ -1,3 +1,55 @@
+
+    // THIS WORKS WITH EDGE AND DEFAULT CONTROLLERS
+    // WebXR
+    const xrDefault = await scene.createDefaultXRExperienceAsync() // WebXRDefaultExperience
+    const xrHelper = xrDefault.baseExperience
+    
+    // *** Interactions ***
+    const selectedMeshes = {}
+
+    // POINTERDOWN
+    scene.onPointerObservable.add((pointerInfo) => {
+        const { pickInfo } = pointerInfo
+        const { hit } = pickInfo
+        const { pickedMesh } = pickInfo
+        if (!hit) return
+        if (!pickedMesh) return
+        if (!pickedMesh.startInteraction) return
+        selectedMeshes[pointerInfo.event.pointerId] = pickedMesh
+        if (xrHelper && xrHelper.state === BABYLON.WebXRState.IN_XR) { // XR Mode
+            const xrInput = xrDefault.pointerSelection.getXRControllerByPointerId(pointerInfo.event.pointerId)
+            if (!xrInput) return
+            const motionController = xrInput.motionController
+            if (!motionController) return
+            pickedMesh.startInteraction(pointerInfo, motionController.rootMesh)
+        } else {
+            pickedMesh.startInteraction(pointerInfo, scene.activeCamera)
+        }
+    }, BABYLON.PointerEventTypes.POINTERDOWN)
+
+    // POINTERMOVE
+    scene.onPointerObservable.add((pointerInfo) => {
+        const pickedMesh = selectedMeshes[pointerInfo.event.pointerId]
+        if (pickedMesh && pickedMesh.moveInteraction) {
+            pickedMesh.moveInteraction(pointerInfo)
+        }
+    }, BABYLON.PointerEventTypes.POINTERMOVE)
+
+    // POINTERUP
+    scene.onPointerObservable.add((pointerInfo) => {
+        const pickedMesh = selectedMeshes[pointerInfo.event.pointerId]
+        if (pickedMesh) {
+            if (pickedMesh.endInteraction) {
+                pickedMesh.endInteraction(pointerInfo)
+            }
+            delete selectedMeshes[pointerInfo.event.pointerId]
+        }
+    }, BABYLON.PointerEventTypes.POINTERUP)
+
+
+
+
+/////////////////////////////////////////////////////////////////
 class Playground { 
     public static CreateScene(engine: BABYLON.Engine, canvas: HTMLCanvasElement): BABYLON.Scene {
         // This creates a basic Babylon Scene object (non-mesh)

@@ -12,6 +12,10 @@ var PWorld = (function () {
 
     function PWorld() {
 
+        // debugging layer TODO: remove later
+        this.DEBUG = true; // for scene inspector
+        if(this.DEBUG) this.initDebug();
+
         // visual elements
         this.glow                      = null;        // glow layer
         this.godLight                  = null;       // directional Light for SpaceVolume only
@@ -342,6 +346,8 @@ var PWorld = (function () {
                 segments: data.segments || this.SEGMENTS_DEFAULT
                 }, scene);
 
+        //mesh.needDepthPrePass = true;
+
         /* 
          * All objects have a SpaceVolume. There is no separate material for 
          * SpaceVolume - all objects have a translucent sphere, back culling off. 
@@ -433,8 +439,9 @@ var PWorld = (function () {
     * @param {String} dir 
     * @param {Scene} scene
     * @param {Boolean} useVR
-    * @param {Boolean} loadMaterial flag to load the material. VR and non-VR skyboxes 
-    * share the same material. The first one loaded shares its material with the second.
+    * @param {Boolean} loadMaterial flag to load the material immediately, or later, as 
+    * is done by .loadGalaxy for VR and non-VR skyboxes. This allows them to
+    * share the same material.
     */
     PWorld.prototype.loadSkybox = function (pObj, dir, scene, useVR = false, loadMaterial = true) {
 
@@ -635,7 +642,7 @@ var PWorld = (function () {
      * @param {String} dir directory for nebula data in assets
      * @param {BABYLON.Scene} current scene being rendered to
      */
-    PWorld.prototype.loadCloudModel = function (pObj, dir, scene) {
+    PWorld.prototype.loadCloudModel = function (pObj, dir, scene, parent) {
 
         console.log("------------------------------");
         console.log("drawing CloudModel:" + pObj.name)
@@ -997,8 +1004,13 @@ var PWorld = (function () {
 
     /**
      * load a free-floating planet not attached to a star system
+     * @param {PObj} pObj the data object for the planet
+     * @param {String} dir the directory where textures, models are stored
+     * @param {PObj} parent the parent object (not the mesh itself)
+     * @param {Boolean} loadMaterial load material immediately, or wait, e.g. so 
+     * a StarSystem can load its textures all at once
      */
-    PWorld.prototype.loadPlanetModel = function (pObj, dir, scene, parent) {
+    PWorld.prototype.loadPlanetModel = function (pObj, dir, scene, parent, loadMaterial = true) {
 
         let util = this.util;
         let celestial = this.celestial;
@@ -1060,7 +1072,7 @@ var PWorld = (function () {
         this.setMeshMetaData(pObj, scene);
 
         // create 2D GUI label
-        this.ui.createLabel(pObj, scene, false, false);
+        //////////////////////this.ui.createLabel(pObj, scene, false, false);
 
         return mesh;
 
@@ -1081,7 +1093,7 @@ var PWorld = (function () {
 
         if(mesh) {
 
-            this.ui.createLabel(pObj, scene, true, true);
+            ////////////////////////this.ui.createLabel(pObj, scene, true, true);
 
             // draw the moons
 
@@ -1110,7 +1122,7 @@ var PWorld = (function () {
 
         if(mesh) {
 
-            this.ui.createLabel(pObj, scene, true, true);
+            //////////////////////this.ui.createLabel(pObj, scene, true, true);
 
             // draw the moons
 
@@ -1138,7 +1150,7 @@ var PWorld = (function () {
 
         if (mesh) {
 
-            this.ui.createLabel(pObj, scene);
+            ///////////////////////this.ui.createLabel(pObj, scene);
 
             // Load planets
             if(util.isArray(pObj.planets)) {
@@ -1176,6 +1188,9 @@ var PWorld = (function () {
             mesh.pObj = pObj;
             pObj.mesh = mesh;
 
+            // TODO: delay texture loading for a StarSystem, do it all at once
+            // after everything in the StarSystem is loaded
+
             // TODO:
             // TODO:
             // TODO:
@@ -1185,7 +1200,8 @@ var PWorld = (function () {
             //pObj.tMesh = new BABYLON.TransformNode("root"); 
 
             // add 2 'false' to turn off visibility and pickability
-            this.ui.createLabel(pObj, scene);
+            //this.ui.createMeshLabel(pObj, scene);
+            ////////////////////////////this.ui.createGUILabel(pObj, scene); // 2D ONLY
 
             if(util.isArray(pObj.stars)) {
                 for(let i = 0; i < pObj.stars.length; i++) {
@@ -1378,6 +1394,7 @@ var PWorld = (function () {
                 }
             }
 
+            // this drops us to 30 FPS!!!!
             if(this.util.isArray(pObj.stardomes)) {
                 for (let i = 0; i < pObj.stardomes.length; i++) {
                     this.loadStarDome(pObj.stardomes[i], dir + '/stardomes', scene, mesh);
@@ -1505,7 +1522,7 @@ var PWorld = (function () {
 
             // throw a ray from the camera
             // https://doc.babylonjs.com/babylon101/raycasts
-            let ray = this.createPickingRay(scene.pointerX, scene.pointerY, BABYLON.Matrix.Identity(), camera);	
+            let ray = this.createPickingRay(scene.pointerX, scene.pointerY, BABYLON.Matrix.Identity(), cam);	
 
                 let hit = this.pickWithRay(ray);
 
@@ -1722,15 +1739,57 @@ var PWorld = (function () {
         // TODO: not used yet. Check when API exposes it.
         const HMDXRButton = document.getElementsByClassName('xr-toggle.button')[0];
 
+        // DOUBLES rendering speed if present in browser, kills highlight Layer
+        let multiView = true;
+
         // XR
         const xrHelper = await scene.createDefaultXRExperienceAsync({
             //floorMeshes: [environment.ground],
             //disableDefaultUI : true,
+            useMultiview: multiView, 
             createDeviceOrientationCamera: false
         }).then(helper => {
 
                 window.helper = helper;
 
+                // helper.baseExperience.camera
+
+                ////helper.enableInteractions();
+
+                // add features (physics, teleportation)
+                const fm = helper.baseExperience.featuresManager;
+
+                /*
+                use 'stable' or 'latest'
+                const xrTeleportation = fm.enableFeature(BABYLON.WebXRFeatureName.TELEPORTATION, 'stable', {
+                    xrInput: xrHelper.input,
+                    floorMeshes: [ground],
+                    defaultTargetMeshOptions: {
+                        torusArrowMaterial: teleportMaterial,
+                        teleportationFillColor: '#035bff',
+                        teleportationBorderColor: 'red'
+                    }
+                });
+
+                const xrPhysics = fm.enableFeature(BABYLON.WebXRFeatureName.PHYSICS_CONTROLLERS, "latest", {
+                    xrInput: xrHelper.input,
+                    physicsProperties: {
+                        restitution: 0.5,
+                        impostorSize: 0.1,
+                        impostorType: BABYLON.PhysicsImpostor.BoxImpostor
+                    },
+                    enableHeadsetImpostor: true
+                });
+
+                */
+
+                // gaze controller mode
+                helper.pointerSelection = fm.enableFeature(BABYLON.WebXRControllerPointerSelection, 'latest', {
+                    forceGazeMode: true,
+                    xrInput: helper.input
+                });
+
+                // capture entry into and exit from VR
                 helper.baseExperience.onStateChangedObservable.add((state) => {
 
                 switch(state) {
@@ -1779,7 +1838,10 @@ var PWorld = (function () {
  
             await util.sleep(1000); ///////////////////////////////
 
-            let sc = this.createScene(engine).then(returnedScene => { 
+            let sc = this.createScene(engine).then(returnedScene => {
+
+                //window.scene = returnedScene;
+                pWorld.scene = returnedScene;
 
                 let as = pWorld.createAssets(returnedScene).then(returnedAssets => {
 
@@ -1806,6 +1868,70 @@ var PWorld = (function () {
     
         } // valid engine
     };
+
+    ////////////////////////////////////////////////////////////////////////////
+    /**
+     * initialize debug layer
+     * @param {BABYLON.Scene} scene 
+     */
+    PWorld.prototype.initDebug = function (scene) {
+
+        let pWorld = this;
+
+        // add keydowns
+        window.addEventListener('keydown', (e) => {
+            //console.log("key is:" + e.key)
+            switch(e.key) {
+                case 'F2':
+                    pWorld.toggleDebug(this.scene);
+                    break;
+            }
+        });
+
+        this.DEBUG = false; //matches toggle
+
+    };
+
+    /**
+     * Turn debugging tools on and off
+     * https://doc.babylonjs.com/how_to/debug_layer
+     * Must load this first:
+     * https://preview.babylonjs.com/inspector/babylon.inspector.bundle.js
+     * @param{BABYLON.Scene} scene
+     * @param{Boolean} forceTrue 
+     */
+    PWorld.prototype.toggleDebug = function (scene) {
+
+        const config = {
+            overlay: false,
+            globalRoot:document.getElementsByTagName('body')[0]
+        };
+
+        let floatingHeader = document.getElementsByClassName('floating-header')[0];
+        let floatingFooter = document.getElementsByClassName('floating-footer')[0];
+
+         if (this.DEBUG === false) {
+
+            floatingHeader.style.display = 'none';
+            floatingFooter.style.display = 'none';
+
+            scene.debugLayer.show(config).then((layer) => {
+                // force-select a specific entity and highlight a specific portion of its property grid:
+                //layer.select(pbrmaterial, "ANISOTROPIC");
+            });
+            this.DEBUG = true;
+
+        } else {
+
+            floatingHeader.style.disply = 'block';
+            floatingFooter.style.display = 'block';
+            scene.debugLayer.hide();
+            this.DEBUG = false;
+
+        }
+
+    };
+    ////////////////////////////////////////////////////////////////////////////
 
     // return the world object
 

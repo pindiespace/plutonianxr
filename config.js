@@ -6,13 +6,14 @@
  * Cookie is to send sameSite attribute in modern browsers.
  *
  * NOTE: for Heroku, turn OFF cookie and useSSL: false
+ * Note: must restart manually, even if nodemon is running!
  */
 
 const config = {
     port: 3000,
     portSecure: 443,
-    useSSL: false, // off for heroku
-    useCookie: false,  // off for heroku
+    useSSL: true, // off for heroku
+    useCookie: true,  // off for heroku
     appName: 'Plutonian XR',
     appTagline: 'A WebXR experience built with BabylonJS',
     appSessionName: 'plutonianXR'

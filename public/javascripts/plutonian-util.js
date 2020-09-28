@@ -52,16 +52,16 @@ var PUtil = (function () {
 
     };
 
-    PUtil.prototype.isNumber = function (value) {
+    PUtil.prototype.isNumber = function (value, suppress = false) {
 
         let v = parseFloat(value);
 
         if(isNaN(v)) {
             if(this.isString(value)) {
                 if(value.indexOf('−') != -1) {
-                    console.error('isNumber ERROR: number:' + value + ' is not using correct minus symbol');
+                    if(!suppress) console.error('isNumber ERROR: number:' + value + ' is not using correct minus symbol');
                 } else {
-                    console.error('isNumber ERROR: bad number:' + value);
+                    if(!suppress) console.error('isNumber ERROR: bad number:' + value);
                 }
             }
         }
@@ -111,6 +111,12 @@ var PUtil = (function () {
         return Math.abs( parseInt( n ) % 2 ) == 1;
     };
 
+    /**
+     * check if WebWorkers are supported
+     */
+    PUtil.prototype.hasWorker = function () {
+        return (typeof(Worker) !== 'undefined');
+    };
 
     /** 
      * Scale a color up to the top, or down to the bottom 
@@ -350,4 +356,15 @@ String.prototype.stripLeft = function (charlist) {
    */
   String.prototype.stripWhitespace = function (str) {
     return str.replace(/\s+/g, '');
+  };
+
+  /**
+   * find the position of the first number in a string
+   * FASTER than str.search() with regex, or .indexOf()
+   * @param {String} str 
+   */
+  String.prototype.indexOfFirstNumber = function () {
+      let i = 0;
+    for (; this[i] < '0' || this[i] > '9'; i++);
+    return i == this.length ? -1 : i;
   };

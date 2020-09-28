@@ -11,36 +11,140 @@ var PUI = (function() {
     function PUI (util) {
 
         this.util = util;
+        this.labels = []; // array of objects
+
+    };
+
+    PUI.prototype.wrapText = function(context, text, x, y, maxWidth, lineHeight) {
+        var words = text.split(' ');
+        var line = '';
+        var numberOfLines = 0;
+    
+        for (var n = 0; n < words.length; n++) {
+            var testLine = line + words[n] + ' ';
+            var metrics = context.measureText(testLine);
+            var testWidth = metrics.width;
+    
+            if (testWidth > maxWidth && n > 0) {
+                context.fillText(line, x, y);
+                line = words[n] + ' ';
+                y += lineHeight;
+                numberOfLines++;
+            }
+            else {
+                line = testLine;
+            }
+        }
+        context.fillText(line, x, y);
+    
+        return numberOfLines;
+    };
+
+    /**
+     * 
+     * @param {PObj} pObj data structure for planets
+     * https://www.babylonjs-playground.com/#7PLYSR#2
+     * https://www.babylonjs-playground.com/#UJEIL#2
+     * @param {BABYLON.Scene} scene 
+     * @param {Boolean} isVisible 
+     * @param {Boolean} isPickable 
+     */
+    PUI.prototype.createMeshLabel = function (pObj, scene, isVisible = true, isPickable = true) {
+
+        // create a dynamic texture, write text to it
+        var dynamicTexture = new BABYLON.DynamicTexture('meshLabel', 512, scene, true);
+            dynamicTexture.hasAlpha = true;
+
+            var textureContext = dynamicTexture.getContext();
+            textureContext.save();
+            textureContext.textAlign = "center";
+            textureContext.font = "18px Calibri";
+        
+            var lineHeight = 144;
+            var lineWidth = 1000;
+            var fontHeight = 72;
+            var offset = 5;
+        
+            var numberOfLines = 1; 
+            var textHeight = fontHeight + offset;
+            var labelHeight = numberOfLines * lineHeight + (2 * offset);
+            textureContext.fillStyle = "white";
+            textureContext.fillRect(0, 0, dynamicTexture.getSize().width, labelHeight);
+            textureContext.fillStyle = "green";
+            textureContext.fillRect(0, labelHeight, dynamicTexture.getSize().width, dynamicTexture.getSize().height);
+            textureContext.fillStyle = "black";
+
+            let text = pObj.name;
+
+            this.wrapText(textureContext, text, dynamicTexture.getSize().width / 2, textHeight, lineWidth, lineHeight);
+            textureContext.restore();
+        
+            dynamicTexture.update(false);
+
+            let offsetVector = new BABYLON.Vector3(2, 2, 0);
+
+            // make the mesh
+            var label = BABYLON.Mesh.CreatePlane('', 2, scene);
+            label.parent = pObj.mesh;
+            label.position.x = offsetVector.x;
+            label.position.y = offsetVector.y;
+            label.billboardMode = BABYLON.Mesh.BILLBOARDMODE_ALL;
+
+            label.material = new BABYLON.StandardMaterial('', scene)
+            label.material.emissiveTexture = dynamicTexture;
+            label.material.diffuseColor = BABYLON.Color3.Green()
+
+
+            // draw the lines to the PObj
+            var myLines = BABYLON.Mesh.CreateLines(pObj.name + '-label-line', [
+                label.position,
+                pObj.mesh.position
+            ], scene);
+            myLines.color = new BABYLON.Color3(1, 0, 0);
+
 
     };
 
     /**
      * Create a label for the object
      */
-    PUI.prototype.createLabel = function (pObj, scene, isVisible = true, isPickable = true) {
+    PUI.prototype.createGUILabel = function (pObj, scene, isVisible = true, isPickable = true) {
 
-        return;
-        /////////////////////////
-        console.log("POBJ.mesh is:" + pObj.mesh)
-        console.log("POSITION IS:" + mesh.position)
-        var rect = new BABYLON.GUI.Rectangle();
-        if(!isVisible) rect.isVisible = false;
-        if(!isPickable) rect.isHitTestVisible = false;
+        // GUI
+        var advancedTexture = BABYLON.GUI.AdvancedDynamicTexture.CreateFullscreenUI("UI");
 
-        // .isVisible true, false
-        // .isFocusInvisible
-        // .isHitTestVisible (toggle mesh picking)
-        rect.width = "150px";
-        rect.height = "40px";
-        rect.color = "rgba(255,255,255,0.37)";
-        rect.thickness = 0;
-        rect.background = "transparent";
-        scene.gui.addControl(rect);
+        var rect1 = new BABYLON.GUI.Rectangle();
+        rect1.width = 0.2;
+        rect1.height = "40px";
+        rect1.cornerRadius = 20;
+        rect1.color = "Orange";
+        rect1.thickness = 4;
+        rect1.background = "green";
+        advancedTexture.addControl(rect1);
+        rect1.linkWithMesh(pObj.mesh);   
+        rect1.linkOffsetY = -150;
+
         var label = new BABYLON.GUI.TextBlock();
         label.text = pObj.name;
-        rect.addControl(label);
-        rect.linkWithMesh(pObj.mesh);
-        rect.linkOffsetY = -80;
+        rect1.addControl(label);
+
+        var target = new BABYLON.GUI.Ellipse();
+        target.width = "20px";
+        target.height = "20px";
+        target.color = "Orange";
+        target.thickness = 4;
+        target.background = "green";
+        advancedTexture.addControl(target);
+        target.linkWithMesh(pObj.mesh);   
+
+        var line = new BABYLON.GUI.Line();
+        line.lineWidth = 4;
+        line.color = "Orange";
+        line.y2 = 20;
+        line.linkOffsetY = -10;
+        advancedTexture.addControl(line);
+        line.linkWithMesh(pObj.mesh); 
+        line.connectedControl = rect1; 
     };
 
     return PUI;

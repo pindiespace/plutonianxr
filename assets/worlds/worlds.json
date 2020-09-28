@@ -129,6 +129,7 @@
                                 "hyg": "hyg_20.json",
                                 "spritesheet": "star_sprite128.png",
                                 "colors": "star_colors.json",
+                                "blackbody": "blackbody.json",
                                 "size": 128,
                                 "active":false
                             },
@@ -137,11 +138,13 @@
                                 "spritesheet": "star_sprite256.png",
                                 "size": 256,
                                 "colors": "star_colors.json",
+                                "blackbody": "blackbody.json",
                                 "active":true
                             },
                             "point20": {
                                 "hyg": "hyg_20.json",
                                 "colors": "star_colors.json",
+                                "blackbody": "blackbody.json",
                                 "active": false
                             }
                         },

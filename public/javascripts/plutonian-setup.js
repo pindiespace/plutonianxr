@@ -12,6 +12,7 @@ var PSetup = (function() {
         this.canvas = null;
         this.engine = null;
 
+        // TODO: integrate with plutonian-ui.js
         this.CANVAS_ID_DEFAULT = 'primary-xr-canvas';
 
     };

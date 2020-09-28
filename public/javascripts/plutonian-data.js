@@ -43,6 +43,9 @@ var PData = (function () {
         this.pObj_ERROR   = -1;
         this.hygObj_ERROR = -1;
         this.EMPTY        = '';
+        this.ZERO         =  0;
+        this.FALSE        =  false;
+        this.TRUE         =  true;
         this.UNKNOWN      = 'unknown';
 
         // initialize PCTYPECHECK array for fast type checking
@@ -102,6 +105,63 @@ var PData = (function () {
         // TODO:
 
         return true;
+
+    };
+
+    /**
+     * Create an empty PObj
+     * @param {String} key 
+     * @param {String} dname 
+     * @param {String} name 
+     * @param {String} description 
+     * @param {Boolean} suppress 
+     */
+    PData.prototype.createPObj = function (key, dname, name, description, suppress = false) {
+
+        return {
+            key: key || this.EMPTY,
+            dname: dname || this.EMPTY,
+            name: name || this.EMPTY,
+            description: description || this.EMPTY
+        };
+
+    };
+
+    /**
+     * Crate a PData object
+     * @param {this.PCTYPES} type 
+     * @param {Number} diameter 
+     * @param {Number} ra 
+     * @param {Number} dec 
+     * @param {Number} dist 
+     * @param {Array} rotation 
+     * @param {Array} color 
+     * @param {Boolean} suppress 
+     */ 
+    PData.prototype.createPData = function (type, diameter, ra, dec, dist, rotation, color, suppress = false) {
+
+        let util = this.util;
+
+        if(!this.PCTYPECHECK[data.type]) {
+            if(!suppress) console.error('createPData ERROR:' + name + 'type:' + data.type + ' not registered');
+            return {};
+        }
+
+
+        if(!util.isArray(rotation) || rotation.length != 3) {
+
+        }
+
+        return {
+            type: type,
+            diameter: diameter || this.ZERO,
+            ra: ra || this.ZERO,
+            dec: dec || this.ZERO,
+            dist: dist || this.ZERO,
+            rotation: rotation,
+            color: color,
+            models: {}
+        };
 
     };
 
@@ -237,6 +297,7 @@ var PData = (function () {
 
     };
 
+
     PData.prototype.checkModel = function (models, name, suppress = false) {
 
         let util = this.util;
@@ -299,6 +360,13 @@ var PData = (function () {
     //if(!hygObj.var_min) = 1;
     //if(!hygObj.var_max) = 1;
 
+    };
+
+    /**
+     * Given a hyg data-like object, convert to a pObj
+     */
+    PData.prototype.hygToPObj = function () {
+        
     };
 
     return PData;
