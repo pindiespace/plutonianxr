@@ -112,6 +112,55 @@ var PUtil = (function () {
     };
 
     /**
+     * Check if a string is all numeric symbols (not an actual test for computable number)
+     * @param {String} ch 
+     */
+    PUtil.prototype.isNumeric = function (ch) {
+        let len = ch.length;
+        if(!len) return false;
+        let k = ch.charCodeAt(0);
+        if(ch.charCodeAt(0) < 48 || ch.charCodeAt(0) > 57) return false; // ',33'
+        for(let i = 1; i < len; i++) {
+            k = ch.charCodeAt(i);
+            if ((k < 48 && k != 46 && k != 44) || k > 57) return false;
+        }
+        return true;
+    };
+
+
+    /**
+     * check if a character string is all lowercase
+     * @param {String} ch 
+     */
+    PUtil.prototype.isUpperCase = function (ch) {
+        let len = ch.length;
+        if(!len) return false;
+        let k = ch.charCodeAt(0);
+        if (k < 65 || k > 90) return false;
+        for(let i = 1; i < len; i++) {
+            k = ch.charCodeAt(i);
+            if (k < 65 || k > 90) return false;
+        }
+        return true;
+    };
+
+    /**
+     * check if a character string is all lowercase
+     * @param {String} ch 
+     */
+    PUtil.prototype.isLowerCase = function (ch) {
+        let len = ch.length;
+        if(!len) return false;
+        let k = ch.charCodeAt(0);
+        if (k < 97 || k >= 122) return false;
+        for(let i = 1; i < len; i++) {
+            let k = ch.charCodeAt(i);
+            if (k < 97 || k >= 122) return false;
+        }
+        return true;
+    };
+
+    /**
      * check if WebWorkers are supported
      */
     PUtil.prototype.hasWorker = function () {
@@ -331,40 +380,67 @@ var PUtil = (function () {
 String.prototype.stripLeft = function (charlist) {
     if (charlist === undefined) charlist = "\s";
     return this.replace(new RegExp("^[" + charlist + "]+"), "");
-  };
+};
 
 /**
  * strip characters from the right side of a String
  * @param {String} charlist list of characters to strip
  */
-  String.prototype.stripRight = function (charlist) {
+String.prototype.stripRight = function (charlist) {
     if (charlist === undefined) charlist = "\s";
-    return this.replace(new RegExp("[" + charlist + "]+$"), "");
-  };
+        return this.replace(new RegExp("[" + charlist + "]+$"), "");
+};
 
-  /**
-   * trim characters from both sides of string
-   * @param {String} charlist list of characters to strip
-   */
-  String.prototype.strip = function (charlist) {
+/**
+ * trim characters from both sides of string
+ * @param {String} charlist list of characters to strip
+ */
+String.prototype.strip = function (charlist) {
     return this.trimLeft(charlist).trimRight(charlist);
-  };
+};
 
-  /**
-   * @param {String} str the string to strip whitespace from
-   * remove all whitespace fro a string
-   */
-  String.prototype.stripWhitespace = function (str) {
-    return str.replace(/\s+/g, '');
-  };
+/**
+ * @param {String} str the string to strip whitespace from
+ * remove all whitespace fro a string
+ */
+String.prototype.stripWhitespace = function () {
+    this.replace(/\s+/g, '');
+};
 
-  /**
-   * find the position of the first number in a string
-   * FASTER than str.search() with regex, or .indexOf()
-   * @param {String} str 
-   */
-  String.prototype.indexOfFirstNumber = function () {
-      let i = 0;
-    for (; this[i] < '0' || this[i] > '9'; i++);
-    return i == this.length ? -1 : i;
-  };
+// These methods speed up the operation of non-regex string parsing
+
+/**
+ * specific for parsing some strings (e.g. stellar types)
+ * - Find the first numeric string
+ * - return string start
+ * - optional start beyond position = 0 in the string
+ * @param {Number} start optional start in interior of string
+ */
+String.prototype.parseNumeric = function (start = 0) {
+
+    let i = start, ii = 0; 
+
+    if(start > this.length) {
+        console.error('parseNumeric ERROR: invalid start:' + start);
+        return null;
+    }
+
+    for (; (this[i] < '0' || this[i] > '9') && this[i] != '.'; i++); // scan until first numeric character
+
+    if(i == this.length) {
+        return null;
+    } else {
+        ii = i;
+        for (; (this[ii] >= '0' && this[ii] <= '9') || this[ii] == '.' || this[ii] == ','; ii++);
+        if(this[ii - 1] == '.' || this[ii - 1] == ',') ii--;
+    }
+
+    let s = this.substring(i, ii);
+    if(ii == this.length) ii = -1;  // number ended the string
+    return {
+        start1: i,
+        start2: ii,
+        num: s
+    }
+
+};

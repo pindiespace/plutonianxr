@@ -17,6 +17,7 @@
  * https://github.com/codebox/stellar-classification-parser
  */
 
+
 /**
  * Build the celestial space using Hyg3 database and other sources
  */
@@ -50,6 +51,9 @@ var PCelestial = (function () {
         this.scene = null;
         this.camera = null;
 
+        // stellar spectra
+        this.spectra = new PSpectrum();
+
         // computations of planetary positions over time
         this.orrey = new POrrery();
 
@@ -68,340 +72,6 @@ var PCelestial = (function () {
      * in the class, some loaded from JSON files
      * dynamically - 2x faster access than if declared as out function (static class)
      */
-
-    // default star colors, if we can't load the JSON file, by one-letter stellar type
-    PCelestial.prototype.dStarColors = {
-        'w': {r:0.598529412, g: 0.683578431, b: 1},
-        'o': {r:0.598529412, g: 0.683578431, b: 1},
-        'a': {r:0.790196078, g: 0.839607843, b: 1},
-        'b': {r:0.680490196, g: 0.759068627, b: 1},
-        'f': {r:0.933382353, g: 0.930392157, b: 0.991470588},
-        'g': {r:1, g: 0.925686274, b: 0.830882353},
-        'k': {r:1, g: 0.836421569, b: 0.629656863},
-        'm': {r:1, g: 0.755686275, b: 0.421764706},
-        'n': {r:0.987654321, g: 0.746356814, b: 0.416557734},
-        'r': {r:1, g: 0.868921569, b: 0.705735294},
-        'c': {r:1, g: 0.828186274, b: 0.576078431},
-        's': {r:1, g: 0.755686275, b: 0.421764706},
-        'd': {r:0.798823529, g: 0.834901961, b: 0.984313726},
-        'l': {r:1, g:0.4235294, b:0},
-        't': {r:1, g:0.219607843, b:0},
-        'y': {r:1, g:0.3, b:0.1}, // brownish, gas giant able to fuse duterium
-        'p': {r: 0.4034, g: 0.27153, b: 0.1235} //  brown, a gas giant
-    };
-
-    /**
-     * Yerkes prefixes in front of primary letter type, translate to primary type
-     * EXAMPLE: sdB5 -> B5VI 
-     */
-    PCelestial.prototype.dLumPrefixTrans = {
-        'sd' : 'VI',
-        'd' : 'V',
-        'sg' : 'I',
-        'g' : 'III',
-    };
-
-    /**
-     * letter code, Primary type (based on temperature)
-     * [prefix] [letter code] [numeric code 0-9] [luminosity] [suffix]
-     * if numeric code is not present, assume 5
-     */
-    PCelestial.prototype.dStarDesc = {
-        'W': 'Wolf-Rayet star, helium-fusing, mass loss through stellar wind, expanding atmospheric envelope',
-        'O': 'Blue, luminous ultra-hot supergiant',
-        'A': 'Blue luminous giant',
-        'B': 'White giant',
-        'F': 'Yellow-white star', // giant or dwarf
-        'G': 'Yellow star', // giant or dwarf
-        'K': 'Yellow-orange star', // giant dwarf
-        'M': 'Red star', //giant or dwarf
-        'MS':'Red giant, younger, asymptotic-giant branch carbon star',
-        'N': 'Red giant, older carbon star, giant equivalent of lat K to M-type stars',
-        'R': 'Red giant, carbon star equivalent of late G to early K-type stars',
-        'C': 'Red giant, carbon star',
-        'C-R': 'Red giant, carbon star equivalent of late G to early K-type stars',
-        'C-N': 'Red giant, older carbon star, giant equivalent of late K to M-type stars',
-        'C-J': 'Red giant, cool carbon stars with a high content of carbon-13',
-        'C-H': 'Population II analogues of the C-R stars',
-        'C-Hd': 'Hydrogen-deficient carbon stars, similar to late G supergiants with CH and C2 bands added',
-        'S': 'Red giant, asymptotic-giant-branch carbon star, zirconium oxide in spectrum',
-        'SC': 'Red giant, older, asymptotic-giant branch carbon star, high carbon',
-        'D': 'White dwarf', // needs sub-classification
-        'L': 'Hot brown dwarf, lithium in atmosphere',
-        'T': 'Cool brown dwarf, methane in atmosphere',
-        'Y': 'Gas giant, warm, able to fuse deuterium',
-        'P': 'Gas giant, cold, Jupiter-like'
-    };
-
-    /**
-     * secondary classifications starting with 'W' (Wolf-Rayett), greater detail
-     * {@link https://en.wikipedia.org/wiki/Wolf%E2%80%93Rayet_star}
-     * Note: for WR stars, higher numbers mean lower temperatures
-     */
-    PCelestial.prototype.dStarWolfRayetDesc = {
-        'WR':'',
-        'WC':'strong Carbon and Helium lines, Helium absent',
-        'WN':'strong Helium and Nitrogen lines',
-        'WO':'strong Oxygen lines, weak Carbon lines',
-        'WC10':'strong Carbon lines, cool',
-        'WC11':'strong Carbon lines, coolest',
-        'WN10':'strong Nitrogen lines, cool',
-        'WN11':'strong Nitrogen lines, coolest'
-    };
-
-    /*
-     * secondary classifications starting with 'D' (white dwarf), greater detail
-     * [letter code][temperature numeric code (0-9)][suffix]
-     */
-    PCelestial.prototype.dStarWhiteDwarfDesc = {
-        'DA': 'hydrogen-rich atmosphere or outer layer, strong Balmer hydrogen spectral lines',
-        'DB': 'helium-rich atmosphere, neutral helium, He I, spectral lines',
-        'DO': 'helium-rich atmosphere, ionized helium, He II, spectral lines',
-        'DQ': 'carbon-rich atmosphere, atomic or molecular carbon lines',
-        'DZ': 'metal-rich atmosphere, merges DG, DK, DM types',
-        'DG': 'metal-rich atmosphere (old classification)',
-        'DK': 'metal-rich atmosphere (old classification)',
-        'DM': 'metal-rich atmosphere (old classification)',
-        'DC': 'no strong spectral lines',
-        'DX': 'spectral lines unclear',
-        'DAB': 'hydrogen- and helium-rich white dwarf, neutral helium lines',
-        'DAO': 'hydrogen- and helium-rich white dwarf displaying ionized helium lines',
-        'DAZ': 'hydrogen-rich metallic white dwarf',
-        'DBZ': 'helium-rich metallic white dwarf'
-    };
-
-    /**
-     * Luminosity, Harvard classification:
-     * [prefix] [letter code] [numeric code 0-9] [luminosity] [suffix]
-     * {@link https://amedleyofpotpourri.blogspot.com/2019/12/stellar-classification.html}
-     * {@link https://github.com/codebox/stellar-classification-parser.git}
-     */
-    PCelestial.prototype.dStarLumDesc = {
-        '0': 'Hypergiant',
-        'Ia+': 'Hypergiant',
-        'Ia': 'Highly Luminous Supergiant',
-        'Iab': 'Intermediate size Luminous Supergiant',
-        'Ib': 'Less Luminous Supergiant',
-        'I': 'Supergiant',
-        'II': 'Bright Giant',
-        'IIa': 'Luminous Bright Giant',
-        'IIb': 'Less Luminous Bright Giant',
-        'III': 'Giant',
-        'IIIa': 'Luminous Giant',
-        'IIIb': 'Less Luminous Giant',
-        'IV': 'Sub-Giant',
-        'IVa': 'Luminous Sub-Giant',
-        'IVb': 'Less Luminous Sub-Giant',
-        'V' : 'Dwarf (Main Sequence)',
-        'Va' : 'Luminous Dwarf (Main Sequence)',
-        'Vb' : 'Less Luminous Dwarf (Main Sequence)',
-        'VI' : 'Sub-Dwarf',
-        'VIa' : 'Luminous Sub-Dwarf',
-        'VIb' : 'Less Luminous Sub-Dwarf',
-        'VII' : 'White-Dwarf',
-        'VIIa' : 'Luminous White-Dwarf',
-        'VIIb' : 'Less Luminous White-Dwarf'
-    };
-
-    PCelestial.prototype.dWhiteDwarfSuffix = {
-        ':'  : 'Uncertain spectral class',
-        'P'  : 'Magnetic white dwarf with detectable polarization',
-        'E'  : 'White dwarf with emission lines present',
-        'H'  : 'Magnetic white dwarf without detectable polarization',
-        'V'  : 'Variable white dwarf',
-        'PEC': 'Peculiarities exist'
-    };
-
-    /**
-     * {@link https://en.wikipedia.org/wiki/Wolf%E2%80%93Rayet_star}
-     */
-    PCelestial.prototype.dStarWolfRayetSuffix = {
-        'h': 'hydrogen emission',
-        'ha': 'hydrogen emission and absorption',
-        'w': 'weak lines',
-        's': 'strong lines',
-        'b': 'broad strong lines',
-        'd': 'dust (occasionally vd, pd, or ed for variable, periodic, or episodic dust'
-    };
-
-    /**
-     * Sufix for luminosity rather than general suffix
-     */
-    PCelestial.prototype.dLumSuffix = {
-        ':' :  'Uncertain luminosity'
-    };
-    
-    /**
-     * Suffix after prefix, letter type, luminosity
-     * [prefix][letter type][numeric code 0-9][luminosity][suffix]
-     */
-    PCelestial.prototype.dGlobalSuffix = {
-        ':' : 'Uncertain values',
-        '...' : 'Undescribed peculiarities',
-        '!' : 'Special peculiarities',
-        'comp' : 'Composite spectrum',
-        '+': 'Composite spectrum',
-        'e' : 'Emission lines present',
-        '(e)': 'Forbidden emission lines present',
-        '[e]': 'Forbidden emission lines present',
-        'er': 'Reversed, center of emission lines weaker than edges',
-        'eq' : 'Emission lines with P Cygni profile',
-        'f' : 'N III and He II emission',
-        'f*': 'N IV λ4058Å is stronger than the N III λ4634Å, λ4640Å, & λ4642Å line',
-        'f+': 'Si IV λ4089Å & λ4116Å are emitted, in addition to the N III line',
-        '(f)' : 'N III emission, absence or weak absorption of He II',
-        '((f))' : 'He II and weak N III emission',
-        'f?p': 'Strong magnetic field',
-        'h': 'WR stars with hydrogen emission lines',
-        'ha': 'WR stars with hydrogen seen in both absorption and emission.',
-        'He wk' : 'Weak Helium lines',
-        'k': 'Spectra with interstellar absorption features',
-        'm' : 'Enhanced metal features',
-        'n' : 'Broad ("nebulous") absorption due to spinning',
-        'nn' : 'Very broad absorption features',
-        'neb': 'A nebula spectrum is mixed in',
-        'p' : 'Unspecified peculiarity, chemically peculiar star',
-        'pq': 'Peculiar, similar to nova spectrum',
-        'q': 'P Cygni type, expanding gaseous envelope',
-        's' : 'Narrow absorption lines',
-        'ss': 'Very narrow absorption lines',
-        'sh' : 'Shell star features',
-        'v' : 'Variable spectral feature',
-        'var' : 'Variable spectral features',
-        'w' : 'Weak spectral lines',
-        'wl' : 'Weak spectral lines',
-        'wk' : 'Weak spectral lines',
-        'Sr' : 'Strong strontium emission lines',
-        'He' : 'Strong Helium emission lines',
-        'Eu' : 'Strong Europium emission lines',
-        'Si' : 'Strong Silicon emission lines',
-        'Hg' : 'Strong Mercury emission lines',
-        'Mn' : 'Strong Manganese emission lines',
-        'Cr' : 'Strong Chromium emission lines',
-        'Fe' : 'Strong Iron emission lines',
-        'K'  : 'Strong Potassium emission lines'
-    };
-
-    //////////////////////////////////////////////////////////////////
-
-    /**
-     * Use stellar spectum (Harvard/Yerkes classification) to extract stellar data
-     * {@link https://en.wikipedia.org/wiki/Stellar_classification}
-     * [prefix] [letter code] [numeric code 0-9] [Yerkes luminosity] [suffix]
-     * Prefix: translates to Yerkes luminosity
-     * First letter: primary class by effective temperature
-     * First number (0-9): temperature within the class
-     * Yerkes luminosity: Roman Numerals and letters, also indicate 'giant' or 'dwarf'
-     * Suffix: additional information about the star
-     * A slash (/) means that a star is either one class or the other.
-     * A dash (-) means that the star is in between the two classes.
-     * @param {String} spec stellar spectrum
-     */
-    PCelestial.prototype.spectrumToStellarData = function (star) {
-
-        let util = this.util;
-
-        window.star = star;
-        let spect = star.spect;
-
-        let nm =  'spectrumToStellarData WARN:' + star.id + '(' + star.proper + ')' + ' spect:' + spect;
-
-        let done = false; // flag for complete parsing
-    
-        let prefix = '', body = '', type = '', lum = '', suffix = '';
-        let descType = '', descLum = '', descSuf = '';
-
-        // find the position of the first number (range) without using a regex
-        let len = spect.length;
-        let p1 = spect.indexOfFirstNumber();
-        range = spect[p1];
-
-        if(p1 == 0) {
-            console.warn(nm + ' invaid, only a single number');
-        } 
-        else if(p1 == -1) { // number not found
-            prefix = spect.substring(0, len);
-            range = -1;
-        } 
-        else { // number found
-            prefix = spect.substring(0, p1);
-            range = spect[p1];
-            // get longer numbers, e.g. 5.5, avoiding regex, since only numbers and decimals present
-            let c = p1 + 1;
-            while(c < len && (spect[c] == '.') || util.isNumber(spect[c], true)) {
-                range += spect[c++] + ''; // force as string addition
-            }
-            body = spect.substring(c, len); // suffix not defined yet
-
-        }
-        console.log('========')
-        console.log('spect:' + spect + ' p:' + prefix + ' r:' + range + ' l:' + lum + ' b:' + body);
-
-        // we now have the prefix, up to the range, and a body mixed with suffix
-        // split away a Yerkes prefix
-        for (let i in this.dLumPrefixTrans) {
-            if(prefix.indexOf(i) != -1) {
-                console.log('found luminance prefix for:' + spect + ', ' + i)
-                lum = this.dLumPrefixTrans[i];
-                break;
-            }
-        }
-
-        // look for the type, and strip
-        for (let i in this.dStarDesc) {
-            if(prefix.indexOf(i) == 0) {
-                type = i;
-                descType = this.dStarDesc[i]; 
-                console.log('found TYPE ' + i + ' in:' + spect)
-
-                // sub-types for white dwarfs, wolf-rayet
-                if (type == 'D') {
-                    for (let j in this.dStarWhiteDwarfDesc) {
-                        if(prefix.indexOf(j) == 0) {
-                            console.log('found SUBTYPE ' + j + 'in:' + prefix);
-                            type = j;
-                            descType += this.dStarWhiteDwarfDesc[j];
-                            prefix = prefix.substring(j.length, prefix.length);
-                        }
-                    }
-                
-                }
-                else if (type == 'W') {
-                    for (let j in this.dStarWolfRayetDesc) {
-                        if(prefix.indexOf(j) == 0) {
-                            console.log('found SUBTYPE ' + j + ' in:' + prefix)
-                            type = j;
-                            descType += this.dStarWolfRayetDesc[JSONCookie];
-                            prefix = prefix.substring(j.length, prefix.length);
-                        }
-
-                    }
-
-                } else {
-                    prefix = prefix.substring(i.length, prefix.length);
-                }
-
-                break;
-            }
-        }
-
-        console.log('type:' + type + ' prefix:' + prefix);
-
-        // look for a luminosity
-        for (let i in this.dStarLumDesc) {
-            if(body.indexOf(i) == 0) {
-                console.log('found LUM ' + i + ' in:' + spect)
-                lum = i;
-                descLum = this.dStarLumDesc[i];
-                body = body.substring(0, body.length);
-                break;
-            }
-        }
-
-
-    };
-
-    //////////////////////////////////////////////////////////////////
 
     // default Sprite index table for star quad image
     PCelestial.prototype.dSpriteIndex = [
@@ -443,11 +113,11 @@ var PCelestial = (function () {
 
     // dynamically-filled prototype variables
 
-    // holds data loaded from hyg3
+    // holds data loaded from hyg3 (JSON)
     PCelestial.prototype.hygData = [];
  
     /**
-     * dynamically filled, blackbody colors table
+     * dynamically filled, blackbody colors table (JSON)
      * {@link http://www.vendian.org/mncharity/dir3/blackbody/UnstableURLs/bbr_color.html}
      */
     PCelestial.prototype.hygBBColors = [];
@@ -819,7 +489,7 @@ var PCelestial = (function () {
 
         let   c = null;
         let   s = star.spect;
-        let dsc = this.dStarColors;
+        let dsc = this.spectra.dStarColors;
 
         // look for an exact match
         c = this.hygColors[s];
@@ -1098,19 +768,38 @@ var PCelestial = (function () {
 
         console.log("@@@@@COMPUTING HygSprite")
 
-        //for (let i = 0; i < hygData.length; i++) {
-        for (let i = 0; i < 100; i++) {
+        // create properties objects (up to four) for a Star. Multiple sources used to fill out
+        let props = new Array(4);
+        for (let i = 0; i < props.length; i++) {
+            props[i] = {
+                type: {key:'', key2:''},
+                range: {key:'', value:NaN},
+                luminance: {key:'', value:NaN}
+            }
+        }
+
+        for (let i = 0; i < hygData.length; i++) {
+        //for (let i = 0; i < 10000; i++) {
 
             star = hygData[i];
             name = this.getHygName(star);
 
+            // initialize our temp props array
+            for (let i = 0; i < props.length; i++) {
+                props[i].type.key = '', 
+                props[i].type.key2 = '',
+                props[i].luminance.key ='',
+                props[i].luminance.value = NaN;
+            }
+
+            // additional data from spectrum
+            ////////spec = this.spectrumToStellarData(star, props);
+            spec = this.spectra.spectrumToStellarData(star, props);
+
             //console.log("name is:" + name)
             color = this.getHygColor(star);
 
-            // additional data from spectrum
-            spec = this.spectrumToStellarData(star);
-
-            // TODO: radius based on temperature
+            // TODO: radius based on temperature (TODO: IN JSON)
 
             //console.log("color is:" + color)
             spriteIndex = this.getHygSpriteIndex(star);

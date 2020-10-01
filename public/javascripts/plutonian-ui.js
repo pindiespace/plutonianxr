@@ -42,7 +42,7 @@ var PUI = (function() {
 
     /**
      * 
-     * @param {PObj} pObj data structure for planets
+     * @param {PObj} pObj labels
      * https://www.babylonjs-playground.com/#7PLYSR#2
      * https://www.babylonjs-playground.com/#UJEIL#2
      * @param {BABYLON.Scene} scene 
