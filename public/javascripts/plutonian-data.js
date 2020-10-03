@@ -77,13 +77,12 @@ var PData = (function () {
                 con: this.ZERO
             },
             range: { // range (0-9)
-                key: this.EMPTY, // no key in almost all cases
                 value: this.NAN,  // value (in spectrum string)
                 con: this.ZERO
             },
-            luminance: { // luminance (I, II, III,...)
+            luminosity: { // luminosity (I, II, III,...)
                 key: this.EMPTY,  // key for description (values in PSpectrum, star/Sun)
-                value: this.NAN,   // value (estimated from luminance key)
+                value: this.NAN,   // value (estimated from luminosity key)
                 con: this.ZERO
             },
             mass: {
@@ -116,6 +115,10 @@ var PData = (function () {
                 value: this.NAN,
                 con: this.ZERO
             }, //absolute magnitude
+            bolo: {
+                value: this.NAN,
+                con: this.ZERO
+            },
             var: {
                 lum1: this.NAN,
                 lum2: this.NAN,

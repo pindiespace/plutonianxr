@@ -35,6 +35,8 @@ var PCelestial = (function () {
         // data model for hyg3 database
         this.PCTYPES = this.pdata.PCTYPES;
 
+        this.parsec = 3.26156; // light years in a parset
+
         this.dParsecUnits      =     10; // scale parsec distances to the simulation
         this.dKmUnits          =   2370; // 1 unit = 2370km, Pluto = 2370/2370 = 1.0
         this.dMUnits           =   1000; // 1 unit = 1000 meters, Voyager 1000/1000 = 1.0

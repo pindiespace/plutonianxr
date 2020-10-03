@@ -24,6 +24,19 @@ var PSpectrum = (function () {
 
     };
 
+    /**
+     * many properties are expressed as multiples of the Sun
+     */
+    PSpectrum.prototype.SOL = {
+        mass: 1,
+        radius: 1,
+        radiusKm: 695700,
+        lumWatts: 3.828E26,
+        absmag: 4.83,
+        temp: 5778, // kelvins
+        metallicity: 1.0
+    }
+
     // default star colors, if we can't load the JSON file, by one-letter stellar type
     PSpectrum.prototype.dStarColors = {
         'W': {r:0.598529412, g: 0.683578431, b: 1},
@@ -168,9 +181,11 @@ var PSpectrum = (function () {
         'IV': ' Sub-Giant',
         'IVa': ' Luminous Sub-Giant',
         'IVb': ' Less Luminous Sub-Giant',
+        'VIab': '  Luminous dwarf',
         'V' : ' Dwarf (Main Sequence)',
         'Va' : ' Luminous Dwarf (Main Sequence)',
-        'Vb' : ' Less Luminous Dwarf (Main Sequence)',
+        'Vb' : ' Regular Dwarf (Main Sequence)',
+        'Vz' : ' Lower main sequence Dwarf',
         'VI' : ' Sub-Dwarf',
         'VIa' : ' Luminous Sub-Dwarf',
         'VIb' : ' Less Luminous Sub-Dwarf',
@@ -309,7 +324,7 @@ var PSpectrum = (function () {
     };
 
     /** 
-     * properties, based on [type][range][luminance] 
+     * properties, based on [type][range][luminosity]
      * e.g. 'O1Ia0'
      * {@link http://www.isthe.com/chongo/tech/astro/HR-temp-mass-table-byhrclass.html}
      */
@@ -343,6 +358,10 @@ var PSpectrum = (function () {
      * Ia/ab -> Ia-Iab
      * III/III-IV -> III/IV (small difference)
      * {@link http://simbad.u-strasbg.fr/simbad/sim-display?data=sptypes}
+
+        NOTE: for 'delta del' suffix, change type to a, add 'm' suffix
+        https://en.wikipedia.org/wiki/Chemically_peculiar_star
+        https://heasarc.gsfc.nasa.gov/W3Browse/all/cpstars.html
      */
     PSpectrum.prototype.transformSpec = function (spect, flag) {
 
@@ -358,7 +377,7 @@ var PSpectrum = (function () {
     };
 
     /**
-     * Convert the Yerkex prefix to a Harvard luminance value, and remove from spectrum.
+     * Convert the Yerkex prefix to a Harvard luminosity value, and remove from spectrum.
      * @param {String} spect the spectrum
      * @param {Object} prop the properties output object, defined in PData
      */
@@ -369,7 +388,7 @@ var PSpectrum = (function () {
             if (l == 0) {
                 if (flag) console.log('found Yerkes prefix for:' + spect + ': ' + i)
                 lum = this.dLumPrefixTrans[i];
-                prop.luminance.key = this.dLumPrefixTrans[i]; // use to get desc
+                prop.luminosity.key = this.dLumPrefixTrans[i]; // use to get desc
                 return spect.substring(i.length); // swap luminace to end
 
             } else if (l > 0 && flag) console.log('strange Yerkes...., l:' + l)
@@ -462,33 +481,42 @@ var PSpectrum = (function () {
     };
 
     /**
-     * parse the luminance classification
+     * parse the luminosity classification
      * @param {String} spect the current spectrum string (may be truncated)
      * @param {Object} prop stellar property, defined in PData
      */
-    PSpectrum.prototype.parseSpectrumLuminance = function (spect, prop, flag) {
+    PSpectrum.prototype.parseSpectrumLuminosity = function (spect, prop, flag) {
         // TODO: spect.length != 0 test
         // TODO: Ia0-a means Ia0 - Ia
-        let k = '', kl = 0;
+        let k = ''; // longest match
         for(let i in this.dStarLumDesc) {
             let l = spect.indexOf(i);
-            if (l == 0) {
-                //if (flag) console.log('found luminance for:' + spect + ', ' + i);
-                // greedy, take the biggest match = "ibb" over "ib" or "i"
-                if (i.length > k) {
-                    k = i; kl = l;
+            // record the new match, store if longer than previous one
+            if (l != -1) {
+                if(i.length > k.length) { // new match is longer than previous (k)
+                    k = i;
                 }
-                //prop.luminance.key = i; // description in dStarLumDesc under key
-                //prop.luminance.value = this.dLumClassMagnitude[i]; // ROUGH
-                //return spect.substring(l);
-            } else if (l != -1 && flag) console.warn('strange Luminance position...., l:' + l + ' is:' + i)
+                // keep looking, looking for longer match...
+            }
+            // if we get a match beyond zero, there's a suffix, remove it
+            if (l > 0) { // suffix between type and luminosity?
+                if (flag) console.warn('strange Luminosity position...., l:' + l + ' for:' + i)
+                    // if there was an intervening suffix before luminosity, parse it away
+                    let s = spect.substring(0, l);
+                    spect = spect.substring(l); // trim it off, luminosity = 0 in next loop
+                    if(flag) console.warn('trimming off:"' + s + '" spect:' + spect)
+                    this.parseSpectrumMods(s, prop, flag);
+            }
 
         }
-        if (flag) console.log('final luminance:' + k + ' new start:' + kl)
+        if (flag) console.log('final luminosity:' + k)
+
+        // get the luminosity key and magnitude
         if (k.length) {
-            prop.luminance.key = k;
-            prop.luminance.value = this.dLumClassMagnitude[k];
-            return spect.substring(kl + k.length);
+            prop.luminosity.key = k;
+            prop.luminosity.value = this.dLumClassMagnitude[k];
+
+            return spect.substring(k.length);
         }
 
         return spect;
@@ -541,11 +569,16 @@ var PSpectrum = (function () {
                                 if (this.dStarModAmbigStart[i].indexOf(p2) != -1)
                                     lok = false
                             if (lok && rok) {
-                                prop.mods.push(i);
-                                lok = rok = true;
+                                if(flag) console.log('prop.mods indexOf(' + i + ') is:' + prop.mods.indexOf(i))
+                                if(prop.mods.indexOf(i) != -1) { // avoid duplicates
+                                    prop.mods.push(i);
+                                }
+                                lok = rok = true; // reset (may be redundant)
                             }
                         default:
-                            prop.mods.push(i);
+                            if (prop.mods.indexOf(i) != -1) { // avoid duplicates
+                                prop.mods.push(i);
+                            }
                             break;
 
                     }
@@ -553,7 +586,7 @@ var PSpectrum = (function () {
                 } //else if (flag) console.warn('suffix:' + i + ' found beyond zero');
 
             }
-            if (flag) console.log('mods:' + prop.mods);
+            if (flag) console.log('mods:"' + prop.mods + '"');
         }
 
         return spect;
@@ -567,18 +600,35 @@ var PSpectrum = (function () {
         let util = this.util;
         let t = prop.type.key,
         r = prop.range.value,
-        l = prop.luminance.key;
+        l = prop.luminosity.key;
 
-        if (flag) console.log("spectrumProps:" + t + r + l)
+        if (flag) console.log("scan spectrumProps with:" + t + r + l)
 
+        // TODO: introduce equations at this link for approx age
+        // http://www.handprint.com/ASTRO/specclass.html
         // TODO: NOT GETTING HITS
+        // TODO: parse type and celestial for direct lookup, as first try
 
         if(t.length && r > 0 && r < 10 && l.length) {
             let lp = this.spectLookup[t + r + l];
             if (lp) {
-                if(flag) console.log('spectrumProps HIT')
+                if(flag) console.log('spectrumProps (' + t + r + l + ') HIT')
+                // TODO: confidence interval
+                prop.mass.value = lp.mass,
+                prop.luminosity.value = lp.luminosity,
+                prop.radius.value = lp.radius,
+                prop.temp.value = lp.temp,
+                prop.ci.value = lp.ci,
+                prop.absmag.value = lp.absmag,
+                prop.bolo.value = lp.bolo,
+                prop.color.r = lp.r,
+                prop.color.g = lp.g,
+                prop.color.b = lp.b;
+                window.prop = prop; /////////////////////
             }
         }
+
+
 
         return prop;
 
@@ -588,12 +638,8 @@ var PSpectrum = (function () {
      * Use stellar spectum (Harvard/Yerkes classification) to extract stellar data
      * {@link https://en.wikipedia.org/wiki/Stellar_classification}
      * [prefix][type code] [numeric code 0-9] [Yerkes luminosity] [suffix]
-     * adds properties to the supplied 'star' object
-     * in hyg3 fields
-     * - lum - use luminace to compute brightness relative to sun, in the 
-     * - var - variable star
-     * in plutonian fields
-     * extended descriptions based on type and luminance
+     * adds properties to the supplied 'star' object in hyg3 fields
+     * extended descriptions based on type and luminosity
      * @param {Object} star hyg3 (truncated) fields
      * @param {Object} props stellar properties object, defined in PData
      */
@@ -626,35 +672,43 @@ var PSpectrum = (function () {
         // replace a few patterns for easier parsing
         spect = this.transformSpec(spect);
 
-        // split on - or /, save as one or two (more is probably an error)
+        let s = {
+            spect: spect,
+            props: []
+        };
+        let props = s.props;
+
+        /*
+         * split on - or /, save the individual spectra and fragments
+         * a '/' means composite (possible multiple star)
+         * a '-' means between the two types
+         * TODO: need to know the separators!!!!
+         * TODO: figure out if we were split from a '/' or a '-'
+         * TODO: regex for simultaneous search: (?=.*\/)(?=.*-)
+         * TODO: spectra: "spect":"A2/3mA4-A7",
+         * TODO: have to compute similar to that for luminance
+         * A2  3mA4 - A7
+         */
         let spects = spect.split(/\/|-/);
 
         if (spects.length > 3) {
             console.warn('spectrumToStellarData WARN: separators >2:' + spects.length + ' spect:' + spect)
         }
 
-        // spects[0], spects[1], spects[2], spects[3]
-        let s = {
-            spect: spect, // original spectra
-            props: []
-        };
-
-        let props = s.props;
-
         // find patterns and return substring missing pattern
         for(let i = 0; i < spects.length; i++) {
-            props.push(pdata.createPSpectrum());
-            ////props[i].spect = spect; // TODO: REMOVE
+            props.push(pdata.createPSpectrum()); // make our props object
+            props[i].spect = spects[i]; // TODO: REMOVE
             spects[i] = this.parseYerkesPrefix(spects[i], props[i], flag);
-            if (flag) console.log('spects['+ i + '] Yerkes parsed:[' + spects[i] + ']');
+            if (flag) console.log('spects['+ i + '] Yerkes parsed:[' + spects[i] + '] remains');
             spects[i] = this.parseSpectrumType(spects[i], props[i], flag);
-            if (flag) console.log('spects[' + i + '] type parsed:[' + spects[i] + ']');
+            if (flag) console.log('spects[' + i + '] type parsed:[' + spects[i] + '] remains');
             spects[i] = this.parseSpectrumRange(spects[i], props[i], flag);
-            if (flag) console.log('spects[' + i + ']  range parsed:[' + spects[i] + ']');
-            spects[i] = this.parseSpectrumLuminance(spects[i], props[i], flag);
-            if (flag) console.log('spects[' + i + '] luminance parsed:[' + spects[i] + ']');
+            if (flag) console.log('spects[' + i + ']  range parsed:[' + spects[i] + '] remains');
+            spects[i] = this.parseSpectrumLuminosity(spects[i], props[i], flag);
+            if (flag) console.log('spects[' + i + '] luminosity parsed:[' + spects[i] + '] remains');
 
-            // if we have a type, range, and luminance, do a lookup for additional results
+            // if we have a type, range, and luminosity, do a lookup for additional results
 
             props[i] = this.getSpectrumProps(props[i], flag);
 
@@ -663,13 +717,6 @@ var PSpectrum = (function () {
             if(flag) console.log('-----')
 
         }
-
-        // scan for multiple suffixes, using switch
-        // to resolve ambiguities like 'ss' versus 's' versus 'sh'
-        // advance pointer to end
-        // NOTE: for 'delta del' suffix, change type to a, add 'm' suffix
-        // https://en.wikipedia.org/wiki/Chemically_peculiar_star
-        // https://heasarc.gsfc.nasa.gov/W3Browse/all/cpstars.html
 
         //////////////////////////////////////////////////
         // save a copy for testing
@@ -690,14 +737,16 @@ var PSpectrum = (function () {
         for (let i = 0; i < s.props.length; i++) {
             let prop = s.props[i];
             let t = this.dStarDesc[prop.type.key];
-            let l = this.dStarLumDesc[prop.luminance.key];
+            let l = this.dStarLumDesc[prop.luminosity.key];
             if (l) {
                 let idx = t.indexOf(' star');
                 t = t.substring(0, idx);
                 t += l;
             }
-            console.log('type:' + prop.type.key + ' ('+ t +'),' + ' absolute magnitude:' + prop.luminance.value);
+            console.log('type:' + prop.type.key + ' ('+ t +'),' + ' absolute magnitude:' + prop.luminosity.value + '(' + prop.luminosity.key + ')');
             console.log('range:' + prop.range.value);
+            console.log('mass:' + prop.mass.value + ' radius:' + prop.radius.value + ' temp:' + prop.temp.value);
+
 
         }
 
@@ -796,18 +845,48 @@ var PSpectrum = (function () {
     };
 
     /**
-     * magnitude to luminosity
-     * A change of 5 magnitudes is defined to be exactly a change of 100 in luminosity, 
-     * (i.e., energy output per unit time). This means that a change of 1 magnitudes is a 
-     * change in luminosity of 2.5118864 ... ≅ 2.512.
-     * {@link http://www.physics.unlv.edu/~jeffery//astro/star/star_hr_lum.html}
+     * Compute absolute magnitude from magnitude
+     * {@link http://cas.sdss.org/dr3/en/proj/advanced/hr/radius1.asp}
      */
-    PSpectrum.prototype.magToLum = function (mag) {
-        // TODO:
+    PSpectrum.prototype.computeAbsMag = function (mag, dist) {
+        return mag - (5 * (Math.log10(dist) - 1));
     };
 
-    PSpectrum.prototype.lumToMag = function (lum) {
+    /**
+     * compute luminosity from radius and temperature
+     * {@link https://www.omnicalculator.com/physics/luminosity}
+     */
+    PSpectrum.prototype.computeLuminosity = function (radius, temperature) {
+        return  = Math.pow(radius/this.SOL.radiusKm, this.SOL.temp) * Math.pow(temp, 4);
+    };
 
+    /**
+     * Compute stellar radius, based on luminosity
+     * - luminosity ratio to solar luminosity
+     * - temperature ratio to solar temperature
+     * {@link http://www.handprint.com/ASTRO/specclass.html}
+     * R/R⊙ = √(L/L⊙)/(T/T⊙)4
+     * @param {Number} absMag absolute magnitude
+     * @param {Number} temp temperature in Kelvins
+     */
+     PSpectrum.prototype.computeRadius = function (absmag, temp) {
+        return Math.pow(parseFloat(this.SOL.temp)/temp, 2) * Math.sqrt(Math.pow(2.51188643150958, (this.SOL.absmag - absmag)));
+     };
+
+    /**
+     * rough calculation using mass-luminosity relationship
+     * @param {Number} luminosity, multiples of the sun
+     */
+    PSpectrum.prototype.computeMass = function (luminosity) {
+        return Math.pow(luminosity, 1/3.5);
+    };
+
+    /**
+     * Compute stellar lifetime on main sequence, assuming the Sun lasts 10 billion years
+     * @param {Number} massRatio ratio of star mass relative to Sol
+     */
+    PSpectrum.prototype.computeLifetime = function (massRatio) {
+        return 1E+10 * Math.pow(massRatio, 2.5);
     };
 
     /*
@@ -817,9 +896,20 @@ var PSpectrum = (function () {
      */
 
     /**
-     * load a spectral type by SIMBAD query. The XML results will have 
+     * load a spectral type by SESAME query. The XML results will have 
      * the 'best' values for composite spectra
-     * url: http://vizier.u-strasbg.fr/viz-bin/nph-sesame/-ox/?HD60753
+     * http://vizier.u-strasbg.fr/doc/sesame.htx
+     * - output basic:
+     * http://vizier.u-strasbg.fr/viz-bin/nph-sesame/-ox/?HD60753
+     * - output fluxes (magnitudes):
+     * http://vizier.u-strasbg.fr/viz-bin/nph-sesame/-oxpF/?HD60753
+     * use "v" magnitude for apparent visual magnitude
+     * - get all the aliases
+     * http://cdsweb.u-strasbg.fr/cgi-bin/nph-sesame/-oxI?HIP123
+     * - gets everything
+     * http://cdsweb.u-strasbg.fr/cgi-bin/nph-sesame/-oIfx?HIP123 
+     * - exampe for Sirius
+     * http://cdsweb.u-strasbg.fr/cgi-bin/nph-sesame/-oIfx?HD48915
      * more complex and slow: http://archive.stsci.edu/spec_class/search.php 
      */
     PSpectrum.prototype.loadSpectrumfromSIMBAD = function (id) {
@@ -827,6 +917,12 @@ var PSpectrum = (function () {
         //TODO: complete this!!!
 
         this.util.asyncXML(id, function (response) {
+
+            let parser = new DOMParser();
+            let xml = parser.parseFromString(response, 'text/xml');
+
+            let spect = xmlDoc.getElementsByTagName('spType')[0].childNodes[0].nodeValue;
+
         /*
             var text, parser, xmlDoc;
 
