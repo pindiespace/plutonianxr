@@ -1,9 +1,26 @@
 /**
- * Decode stellar spectra into Star properties
+ * Decode stellar spectra into Star properties, WITHOUT using regex, 
+ * which is slow on browsers which don't cache regex.
+ * 
+ * Parsed type has keys relating to descriptions of the properties, along with 
+ * computed properties
+ *
+ * Referencing (cross-reference)
+ * @link {https://www.pas.rochester.edu/~emamajek/EEM_dwarf_UBVIJHK_colors_Teff.txt}
+ * @link {http://www.vendian.org/mncharity/dir3/starcolor/details.html}
+ * @link {https://sites.uni.edu/morgans/astro/course/Notes/section2/spectraltemps.html}
+ * @link {https://en.wikipedia.org/wiki/List_of_star_systems_within_25%E2%80%9330_light-years}
+ * @link {http://www.livingfuture.cz/stars.php}
+ * @link {http://www.vendian.org/mncharity/dir3/blackbody/UnstableURLs/bbr_color.html}
  */
 var PSpectrum = (function () {
 
-    function PSpectrum () {
+    function PSpectrum (util, pdata) {
+
+        this.util = util;
+        this.pdata = pdata;
+
+        // TODO: load our stellar data types (e.g. spectrum_props.tdl here)
 
     };
 
@@ -27,6 +44,19 @@ var PSpectrum = (function () {
         'Y': {r:1, g:0.3, b:0.1}, // warm, brownish, gas giant able to fuse duterium
         'P': {r: 0.4034, g: 0.27153, b: 0.1235} //  brown, a gas giant
     };
+
+    /**
+     * replace some patterns in the spectrum string for easier parsing
+     */
+    PSpectrum.prototype.dSpectrumTrans = {
+        'Ia-0': 'Ia0',
+        'Ia-0/Ia': 'Ia0-Ia',
+        'Ia-ab': 'Ia/Iab',
+        'Ia/ab': 'Ia-Iab',
+        'IVb': 'Iva/V',
+        'Vb': 'V-VI',
+        'III/III-IV': 'III/IV' // small difference
+    }
 
     /**
      * Yerkes prefixes in front of primary letter type, translate to primary type
@@ -59,6 +89,7 @@ var PSpectrum = (function () {
         'C': 'Red giant, carbon star',
         'S': 'Red giant, asymptotic-giant-branch carbon star, zirconium oxide in spectrum',
         'SC': 'Red giant, older, asymptotic-giant branch carbon star, high carbon',
+        'SN': 'Supernova',
         'D': 'White dwarf', // needs sub-classification
         'L': 'Hot brown dwarf, lithium in atmosphere',
         'T': 'Cool brown dwarf, methane in atmosphere',
@@ -93,8 +124,9 @@ var PSpectrum = (function () {
         'WN11': ', strong Nitrogen lines, coolest'
     };
 
-    /*
+    /**
      * secondary classifications starting with 'D' (white dwarf), greater detail
+     * {@link https://en.wikipedia.org/wiki/Stellar_classification#Extended_spectral_types}
      * [letter code][temperature numeric code (0-9)][suffix]
      */
     PSpectrum.prototype.dStarWhiteDwarfDesc = {
@@ -121,7 +153,7 @@ var PSpectrum = (function () {
      * {@link https://github.com/codebox/stellar-classification-parser.git}
      */
     PSpectrum.prototype.dStarLumDesc = {
-        '0': ' Hypergiant',
+        'Ia0': ' Hypergiant',
         'Ia+': ' Hypergiant',
         'Ia': ' Highly Luminous Supergiant',
         'Iab': ' Intermediate size Luminous Supergiant',
@@ -145,6 +177,38 @@ var PSpectrum = (function () {
         'VII' : ' White-Dwarf',
         'VIIa' : 'Luminous White-Dwarf',
         'VIIb' : 'Less Luminous White-Dwarf'
+    };
+
+    /**
+     * if we don't have an absolute magnitude, estimate magnitude (multiple of Sun)
+     * from luminosity class - ROUGH
+     * http://spiff.rit.edu/classes/phys440/lectures/lumclass/lumclass.html
+     */
+    PSpectrum.prototype.dLumClassMagnitude = {
+        'Ia0': '-10',
+        'Ia+': '-6',
+        'Ia': '-6',
+        'Iab': '-6',
+        'Ib': '-5',
+        'I': '-6',
+        'II': '-3',
+        'IIa': '-3',
+        'IIb': '-4',
+        'III': '-3',
+        'IIIa': '-1',
+        'IIIb': '-5',
+        'IV': '3',
+        'IVa': '0',
+        'IVb': '3',
+        'V' : '4',
+        'Va' : '5',
+        'Vb' : '19',
+        'VI' : '7',
+        'VIa' : '6',
+        'VIb' : '10',
+        'VII' : '12',
+        'VIIa' : '10',
+        'VIIb' : '15'
     };
 
     // suffix for luminosity rather than general suffix
@@ -179,7 +243,7 @@ var PSpectrum = (function () {
      * [prefix][letter type][numeric code 0-9][luminosity][suffix]
      * delta-del suffix:
      */
-    PSpectrum.prototype.dGlobalSuffix = {
+    PSpectrum.prototype.dStarMods = {
         ':' : ', uncertain values',
         '...' : ', peculiar, truncated spectra',
         '!' : ', special peculiarities',
@@ -190,7 +254,6 @@ var PSpectrum = (function () {
         '(e)': ', forbidden emission lines present',
         '[e]': ', forbidden emission lines present',
         'er': ', emission lines reversed with center of emission lines weaker than edges',
-        'eq' : ', emission lines with P Cygni profile',
         'f' : ', N III and He II emission',
         'f*': ', N IV λ4058Å is stronger than the N III λ4634Å, λ4640Å, & λ4642Å line',
         'f+': ', Si IV λ4089Å & λ4116Å are emitted in addition to the N III line',
@@ -207,7 +270,7 @@ var PSpectrum = (function () {
         'neb': ', a nebula spectrum is mixed in',
         'p': ', chemically peculiar star',
         'pq': ', peculiar, similar to nova spectrum',
-        'q': ', P Cygni type, expanding gaseous envelope',
+        'q': ', P Cygni profile, expanding gaseous envelope',
         's': ', narrow absorption lines',
         'ss': ', very narrow absorption lines',
         'sh': ', shell star features',
@@ -227,27 +290,107 @@ var PSpectrum = (function () {
         'K': ', strong Potassium emission lines'
     };
 
-    //////////////////////////////////////////////////////////////////
+    // disambiguate, e.g. 'n' from 'nn' by disallowed left character
+    PSpectrum.prototype.dStarModAmbigStart = {
+        'p': '?',
+        'k': 'w'
+    };
+
+    // disambiguate, e.g. 'p' from 'pq' by disallowed right character
+    PSpectrum.prototype.dStarModAmbigEnd = {
+        'e': ')]r',
+        'f': '*+)?',
+        'h': 'a',
+        'n': 'en',
+        'p': 'q',
+        's': 'sh',
+        'v': 'a',
+        'w': 'lk'
+    };
+
+    /** 
+     * properties, based on [type][range][luminance] 
+     * e.g. 'O1Ia0'
+     * {@link http://www.isthe.com/chongo/tech/astro/HR-temp-mass-table-byhrclass.html}
+     */
+    PSpectrum.prototype.spectLookup = {};
+
+    // methods
+
+    /**
+     * blackbody temperature colors table (JSON)
+     * {@link http://www.vendian.org/mncharity/dir3/blackbody/UnstableURLs/bbr_color.html}
+     */
+    PSpectrum.prototype.bbColors = [];
+
+    // test array
+    PSpectrum.prototype.test = [];
+
+    /*
+     * ------------------------------------------------------
+     * PARSING
+     * ------------------------------------------------------
+     */
+
+
+    /**
+     * transform spectra tokens as defined as Simbad
+     * Ia-0 -> Ia0
+     * Ia-0/Ia -> Ia0-Ia
+     * Ia-ab -> Ia/Iab
+     * IVb -> Iva/V
+     * Vb -> V-VI
+     * Ia/ab -> Ia-Iab
+     * III/III-IV -> III/IV (small difference)
+     * {@link http://simbad.u-strasbg.fr/simbad/sim-display?data=sptypes}
+     */
+    PSpectrum.prototype.transformSpec = function (spect, flag) {
+
+        for (let i in this.dSpectrumTrans) {
+            if(spect.indexOf(i) != -1) {
+                if(flag) console.log('for spect:' + spect + ', replacing:' + i + ' with:' + this.dSpectrumTrans[i]);
+                spect.replace(i, this.dSpectrumTrans[i]);
+            }
+        }
+
+        return spect;
+
+    };
+
+    /**
+     * Convert the Yerkex prefix to a Harvard luminance value, and remove from spectrum.
+     * @param {String} spect the spectrum
+     * @param {Object} prop the properties output object, defined in PData
+     */
     PSpectrum.prototype.parseYerkesPrefix = function (spect, prop, flag) {
+        // todo: spect.length != 0
         for (let i in this.dLumPrefixTrans) {
             let l = spect.indexOf(i);
-            if(l == 0) {
-                if(flag) console.log('found Yerkes prefix for:' + spect + ', ' + i)
+            if (l == 0) {
+                if (flag) console.log('found Yerkes prefix for:' + spect + ': ' + i)
                 lum = this.dLumPrefixTrans[i];
                 prop.luminance.key = this.dLumPrefixTrans[i]; // use to get desc
                 return spect.substring(i.length); // swap luminace to end
 
-            } else if(l > 0 && flag) console.log('strange Yerkes...., l:' + l)
+            } else if (l > 0 && flag) console.log('strange Yerkes...., l:' + l)
             
         }
         return spect;
     };
 
-    PSpectrum.prototype.parseStellarSubType = function (spect, arr, pos, prop, flag) {
+    /**
+     * parse subtype (Wolf-Rayet, White dwarfs) after finding the single-letter stellar type
+     * @param {String} spect the current spectrum string (may be truncated)
+     * @param {Array} arr the lookup array table for the subtype
+     * @param {Number} pos check that type and subtype start at same point in spectrum string
+     * @param {Object} prop stellar property, defined in PData
+     */
+    PSpectrum.prototype.parseSpectrumSubType = function (spect, arr, pos, prop, flag) {
+        //todo: spect.length != 0
         for (let i in arr) {
             let l = spect.indexOf(i);
             if (l == pos) { // extended type starts in same place
-                if(flag) console.log('found stellar subtype for:' + spect + ', ' + i)
+                if (flag) console.log('found stellar subtype for:' + spect + ', ' + i)
                 prop.type.key2 = i; // use to get subtype desc on demand
                 //prop.type.desc = this.dStarWolfRayetDesc[j];
                 return spect.substring(i.length)
@@ -256,29 +399,35 @@ var PSpectrum = (function () {
         return spect;
     };
 
-    PSpectrum.prototype.parseStellarType = function (spect, prop, flag) {
-
+    /**
+     * parse the primary (single-letter) spectrum type, branching to subtype if necessary.
+     * @param {String} spect the current spectrum string (may be truncated)
+     * @param {Object} prop stellar property, defined in PData
+     */
+    PSpectrum.prototype.parseSpectrumType = function (spect, prop, flag) {
+        // TODO: spect.length != 0
+        // TODO: if one-letter, and a '-' or '/' try uppercasing
         for(let i in this.dStarDesc) {
             let l = spect.indexOf(i);
-            if(l == 0) {
-                if(flag) console.log('found stellar type for:' + spect + ', ' + i);
+            if (l == 0) {
+                if (flag) console.log('found stellar type for:' + spect + ': ' + i);
                     prop.type.key = i;   // type, key for description
                     prop.type.key2 = ''; // subtype, key for description
                     let arr;
                     switch(i) {
                         case 'W':
                             arr = this.dStarWolfRayetDesc;
-                            spect = this.parseStellarSubType(spect, arr, l, prop, flag);
+                            spect = this.parseSpectrumSubType(spect, arr, l, prop, flag);
                             return spect;
                             break;
                         case 'C':
                             arr = this.dStarCarbonDesc;
-                            spect = this.parseStellarSubType(spect, arr, l, prop, flag);
+                            spect = this.parseSpectrumSubType(spect, arr, l, prop, flag);
                             return spect;
                             break;
                         case 'D':
                             arr = this.dStarWhiteDwarfDesc;
-                            spect = this.parseStellarSubType(spect, arr, l, prop, flag);
+                            spect = this.parseSpectrumSubType(spect, arr, l, prop, flag);
                             return spect;
                             break;
                         default:
@@ -286,29 +435,153 @@ var PSpectrum = (function () {
                             break;
                     }
 
-            } else if(l != -1 && flag) console.log('strange Type position...., l:' + l)
+            } else if (l != -1 && flag) console.log('strange Type position...., l:' + l)
 
         }
         // this happens with stuff like DZ4/5
-        if(flag) console.warn('funky stellar type found for:' + spect)
+        if (flag) console.warn('no stellar type found for:' + spect)
 
         return spect;
     };
 
-    PSpectrum.prototype.parseStellarRange = function (spect, prop, flag) {
+    /**
+     * parse the spectrum range (0-9) between types
+     * @param {String} spect the current spectrum string (may be truncated)
+     * @param {Object} prop stellar property, defined in PData
+     */
+    PSpectrum.prototype.parseSpectrumRange = function (spect, prop, flag) {
+        // TODO: spect.length != 0 test
         let r = spect.parseNumeric();
-        if(r) {
+        if (r) {
+            if (flag) console.log('range start1:' + r.start1 + ' start2:' + r.start2 + ' r:' + r.num)
             prop.range.value = r.num;
             return spect.substring(r.start2);
+        } //else console.warn(spect + ':no range found')
+
+        return spect;
+    };
+
+    /**
+     * parse the luminance classification
+     * @param {String} spect the current spectrum string (may be truncated)
+     * @param {Object} prop stellar property, defined in PData
+     */
+    PSpectrum.prototype.parseSpectrumLuminance = function (spect, prop, flag) {
+        // TODO: spect.length != 0 test
+        // TODO: Ia0-a means Ia0 - Ia
+        let k = '', kl = 0;
+        for(let i in this.dStarLumDesc) {
+            let l = spect.indexOf(i);
+            if (l == 0) {
+                //if (flag) console.log('found luminance for:' + spect + ', ' + i);
+                // greedy, take the biggest match = "ibb" over "ib" or "i"
+                if (i.length > k) {
+                    k = i; kl = l;
+                }
+                //prop.luminance.key = i; // description in dStarLumDesc under key
+                //prop.luminance.value = this.dLumClassMagnitude[i]; // ROUGH
+                //return spect.substring(l);
+            } else if (l != -1 && flag) console.warn('strange Luminance position...., l:' + l + ' is:' + i)
+
+        }
+        if (flag) console.log('final luminance:' + k + ' new start:' + kl)
+        if (k.length) {
+            prop.luminance.key = k;
+            prop.luminance.value = this.dLumClassMagnitude[k];
+            return spect.substring(kl + k.length);
         }
 
         return spect;
     };
 
-    PSpectrum.prototype.parseStellarLuminance = function (spect, prop, flag) {
-        for(let i in this.dStarLumDesc) {
+    /**
+     * parse modifiers for the spectrum
+     * @param {String} spect the current spectrum string (may be truncated)
+     * @param {Object} prop stellar property, defined in PData
+     */
+    PSpectrum.prototype.parseSpectrumMods = function (spect, prop, flag) {
 
+        if (spect.length) {
+
+            let lok = true, rok = true;
+
+            // TODO: prop.mod is an array, must be cleared
+
+            for (let i in this.dStarMods) {
+                p1 = spect.indexOf(i); // get position of key in suffix
+
+                if (p1 != -1) {
+
+                    // lots of possibilities. Check the left and right char to know what to assign
+                    if (p1 > 0) p2 = spect[p1 - 1]; else p2 = ''; // left-side character
+                    if (p1 < spect.length - 1) p3 = spect[p1 + 1]; else p3 = ''; // right-side character
+                    if (flag) console.log('left:' + p2 + ' i:' + i + 'right:' + p3)
+                    switch(i) {
+                        case ':': 
+                        case '...': 
+                        case '!':
+                        case '+': 
+                        case 'k':
+                        case 'm':
+                        case 'q':
+                            prop.mods.push(i); //mutiple keys in array
+                            break;
+                        case 'e':
+                        case 'f':
+                        case 'h':
+                        case 'n':
+                        case 'p':
+                        case 's':
+                        case 'v':
+                        case 'w':
+                            if (this.dStarModAmbigEnd[i])
+                                if (this.dStarModAmbigEnd[i].indexOf(p3) != -1)
+                                    rok = false;
+                            if (this.dStarModAmbigStart[i])
+                                if (this.dStarModAmbigStart[i].indexOf(p2) != -1)
+                                    lok = false
+                            if (lok && rok) {
+                                prop.mods.push(i);
+                                lok = rok = true;
+                            }
+                        default:
+                            prop.mods.push(i);
+                            break;
+
+                    }
+
+                } //else if (flag) console.warn('suffix:' + i + ' found beyond zero');
+
+            }
+            if (flag) console.log('mods:' + prop.mods);
         }
+
+        return spect;
+
+    };
+
+    /**
+     * 
+     */
+    PSpectrum.prototype.getSpectrumProps = function (prop, flag) {
+        let util = this.util;
+        let t = prop.type.key,
+        r = prop.range.value,
+        l = prop.luminance.key;
+
+        if (flag) console.log("spectrumProps:" + t + r + l)
+
+        // TODO: NOT GETTING HITS
+
+        if(t.length && r > 0 && r < 10 && l.length) {
+            let lp = this.spectLookup[t + r + l];
+            if (lp) {
+                if(flag) console.log('spectrumProps HIT')
+            }
+        }
+
+        return prop;
+
     };
 
     /**
@@ -321,67 +594,75 @@ var PSpectrum = (function () {
      * - var - variable star
      * in plutonian fields
      * extended descriptions based on type and luminance
-     * @param {String} spec stellar spectrum
+     * @param {Object} star hyg3 (truncated) fields
+     * @param {Object} props stellar properties object, defined in PData
      */
-    PSpectrum.prototype.spectrumToStellarData = function (star, props) {
+    PSpectrum.prototype.spectrumToStellarData = function (star) {
 
         let util = this.util;
+        let pdata = this.pdata;
 
-        window.star = star;
+
+        // get the spectrum string
         let spect = star.spect;
 
-        let nm =  'spectrumToStellarData WARN:' + star.id + '(' + star.proper + ')' + ' spect:' + spect;
-
-        let end = 0; // pointer to position in string
-
-        let result = {
-            type: '', // type (O, A, B,...), key for description
-            range: -1, // range (0-9)
-            lum: '', // luminance (I, II, III,...), key for description
-            mods: [] // modifiers (ss, sh, p, Fe), series of keys for description
-        };
+        let nm = 'spectrumToStellarData WARN:' + star.id + '(' + star.proper + ')' + ' spect:' + spect;
 
         let flag = false;
-        // if(spect.indexOf('O') != -1) flag = true;
-        if(spect.indexOf('k-m') != -1) flag = true;
+        //////////////////////////////////////////////////////////
+        //if (spect.indexOf('O') != -1) flag = true;
+        if (spect.indexOf('Ia0') != -1) flag = true;
+        //if (spect.indexOf('-') != -1) flag = true;
+
+        if(flag) window.spectra = this;
+        /////////////////////////////////////////////////////////
 
         if (!spect || !star) return false;
 
         spect.stripWhitespace(); // remove all whitespace, augmented String prototype in util.js
 
-        if(flag) console.log('=====\nspect:' + spect)
+        if (flag) console.log('=====\nspect:' + spect)
+
+        // replace a few patterns for easier parsing
+        spect = this.transformSpec(spect);
 
         // split on - or /, save as one or two (more is probably an error)
-
-        //let spects = spect.split('-');
         let spects = spect.split(/\/|-/);
 
-        if(spects.length > 3) {
+        if (spects.length > 3) {
             console.warn('spectrumToStellarData WARN: separators >2:' + spects.length + ' spect:' + spect)
         }
 
         // spects[0], spects[1], spects[2], spects[3]
+        let s = {
+            spect: spect, // original spectra
+            props: []
+        };
+
+        let props = s.props;
 
         // find patterns and return substring missing pattern
         for(let i = 0; i < spects.length; i++) {
+            props.push(pdata.createPSpectrum());
+            ////props[i].spect = spect; // TODO: REMOVE
             spects[i] = this.parseYerkesPrefix(spects[i], props[i], flag);
-            if(flag) console.log('spects['+ i + '] Yerkes parsed:[' + spects[i] + ']');
-            spects[i] = this.parseStellarType(spects[i], props[i], flag);
-            if(flag) console.log('spects[' + i + ']type parsed:[' + spects[i] + ']');
-            spects[i] = this.parseStellarRange(spects[i], props[i], flag);
-            if(flag) console.log('spects[' + i + ']type parsed:[' + spects[i] + ']');
-            spects[i] = this.parseStellarLuminance(spects[i], props[i], flag);
+            if (flag) console.log('spects['+ i + '] Yerkes parsed:[' + spects[i] + ']');
+            spects[i] = this.parseSpectrumType(spects[i], props[i], flag);
+            if (flag) console.log('spects[' + i + '] type parsed:[' + spects[i] + ']');
+            spects[i] = this.parseSpectrumRange(spects[i], props[i], flag);
+            if (flag) console.log('spects[' + i + ']  range parsed:[' + spects[i] + ']');
+            spects[i] = this.parseSpectrumLuminance(spects[i], props[i], flag);
+            if (flag) console.log('spects[' + i + '] luminance parsed:[' + spects[i] + ']');
+
+            // if we have a type, range, and luminance, do a lookup for additional results
+
+            props[i] = this.getSpectrumProps(props[i], flag);
+
+            spects[i] = this.parseSpectrumMods(spects[i], props[i], flag);
+            if (flag) console.log('spects[' + i + '] mods parsed:[' + spects[i] + ']');
+            if(flag) console.log('-----')
+
         }
-
-        // scan for a numeric range
-        // if present, save range value
-        // advance pointer to the end of the type
-        // if not present, reset
-
-        // scan for luminance
-        // if present, save luminance key
-        // advance pointer to end of luminance
-        // if not present, reset
 
         // scan for multiple suffixes, using switch
         // to resolve ambiguities like 'ss' versus 's' versus 'sh'
@@ -389,6 +670,244 @@ var PSpectrum = (function () {
         // NOTE: for 'delta del' suffix, change type to a, add 'm' suffix
         // https://en.wikipedia.org/wiki/Chemically_peculiar_star
         // https://heasarc.gsfc.nasa.gov/W3Browse/all/cpstars.html
+
+        //////////////////////////////////////////////////
+        // save a copy for testing
+        if(flag) {
+            if(this.test.length < 10)
+                this.test.push(Object.assign({}, s));
+        }
+        //////////////////////////////////////////////////
+
+    };
+
+    /**
+     * log the properties
+     */
+    PSpectrum.prototype.propToDescription = function (s) {
+
+        console.log('Spectrum:' + s.spect) 
+        for (let i = 0; i < s.props.length; i++) {
+            let prop = s.props[i];
+            let t = this.dStarDesc[prop.type.key];
+            let l = this.dStarLumDesc[prop.luminance.key];
+            if (l) {
+                let idx = t.indexOf(' star');
+                t = t.substring(0, idx);
+                t += l;
+            }
+            console.log('type:' + prop.type.key + ' ('+ t +'),' + ' absolute magnitude:' + prop.luminance.value);
+            console.log('range:' + prop.range.value);
+
+        }
+
+    };
+
+    /*
+     * ------------------------------------------------------
+     * CONVERSION
+     * ------------------------------------------------------
+     */
+
+    /**
+     * look up a color from temperature, via blackbody estimation
+     * @param {Number} temp 
+     */
+    PSpectrum.prototype.tempToBlackbodyColor = function (temp) {
+        
+        let t = Math.floor(temp / 200);
+        t = t * 200;
+        if (t < 1000) {
+          t = 1000;
+        } else if (t > 29800) {
+          t = 29800;
+        }
+
+        const c = this.bbColors[t];
+
+    };
+
+    /**
+     * compute temperature from a blue-violet color index (B-V)
+     * {@link https://stackoverflow.com/questions/21977786/star-b-v-color-index-to-apparent-rgb-color}
+     * @param {Number} ci 
+     */
+    PSpectrum.prototype.bvToRGB = function (ci) {
+        let t1 = (4600 * (1 / (0.92 * ci + 1.7) + 1 / (0.92 * ci + 0.62)));
+        return this.tempToBlackbodyColor(t1);
+    };
+
+    /**
+     * Convert b-v (colorindex) values reported to stars to RGB color
+     * @param {Number} bv the b-v value for the star.s
+     * {@link https://stackoverflow.com/questions/21977786/star-b-v-color-index-to-apparent-rgb-color}
+     * {@link http://www.vendian.org/mncharity/dir3/blackbody/UnstableURLs/bbr_color.html}
+     * {@link https://www.pas.rochester.edu/~emamajek/EEM_dwarf_UBVIJHK_colors_Teff.txt}
+     * {@link https://en.wikipedia.org/wiki/Color_index}
+     */
+    PSpectrum.prototype.bvToRGB = function (bv) {
+
+        var r = 0, g = 0, b = 0, t = 0;
+
+        if (bv < -0.4) bv = -0.4
+        if (bv > 2.0) bv = 2.0
+
+        if (bv >= -0.40 && bv < 0.00) {
+            t = (bv + 0.40) / (0.00 + 0.40)
+            r = 0.61 + 0.11 * t + 0.1 * t * t
+            g = 0.70 + 0.07 * t + 0.1 * t * t
+            b = 1.0
+        }
+        else if (bv >= 0.00 && bv < 0.40) {
+            t = (bv - 0.00) / (0.40 - 0.00)
+            r = 0.83 + (0.17 * t)
+            g = 0.87 + (0.11 * t)
+            b = 1.0
+        }
+        else if (bv >= 0.40 && bv < 1.60) {
+            t = (bv - 0.40) / (1.60 - 0.40)
+            r = 1.0
+            g = 0.98 - 0.16 * t
+        }
+        else {
+            t = (bv - 1.60) / (2.00 - 1.60)
+            r = 1.0
+            g = 0.82 - 0.5 * t * t
+        }
+
+        if (bv >= 0.40 && bv < 1.50) {
+            t = (bv - 0.40) / (1.50 - 0.40)
+            b = 1.00 - 0.47 * t + 0.1 * t * t
+        }
+        else if (bv >= 1.50 && bv < 1.951) {
+            t = (bv - 1.50) / (1.94 - 1.50)
+            b = 0.63 - 0.6 * t * t
+        }
+        else {
+            b = 0.0
+        }
+
+        return {
+            r: r, 
+            g: g, 
+            b: b
+        };
+
+    };
+
+    /**
+     * magnitude to luminosity
+     * A change of 5 magnitudes is defined to be exactly a change of 100 in luminosity, 
+     * (i.e., energy output per unit time). This means that a change of 1 magnitudes is a 
+     * change in luminosity of 2.5118864 ... ≅ 2.512.
+     * {@link http://www.physics.unlv.edu/~jeffery//astro/star/star_hr_lum.html}
+     */
+    PSpectrum.prototype.magToLum = function (mag) {
+        // TODO:
+    };
+
+    PSpectrum.prototype.lumToMag = function (lum) {
+
+    };
+
+    /*
+     * ------------------------------------------------------
+     * DATA/FILE LOADING
+     * ------------------------------------------------------
+     */
+
+    /**
+     * load a spectral type by SIMBAD query. The XML results will have 
+     * the 'best' values for composite spectra
+     * url: http://vizier.u-strasbg.fr/viz-bin/nph-sesame/-ox/?HD60753
+     * more complex and slow: http://archive.stsci.edu/spec_class/search.php 
+     */
+    PSpectrum.prototype.loadSpectrumfromSIMBAD = function (id) {
+
+        //TODO: complete this!!!
+
+        this.util.asyncXML(id, function (response) {
+        /*
+            var text, parser, xmlDoc;
+
+            text = "<bookstore><book>" +
+            "<title>Everyday Italian</title>" +
+            "<author>Giada De Laurentiis</author>" +
+            "<year>2005</year>" +
+            "</book></bookstore>";
+
+            parser = new DOMParser();
+            xmlDoc = parser.parseFromString(text,"text/xml");
+
+            document.getElementById("demo").innerHTML =
+            xmlDoc.getElementsByTagName("title")[0].childNodes[0].nodeValue;
+        */
+
+        });
+
+    };
+
+    /**
+     * Load an rgb color versus temperature table based on blackbody calculations
+     * {@link http://www.vendian.org/mncharity/dir3/blackbody/UnstableURLs/bbr_color.html}
+     * @param {BABYLON.AssetsManager} assetManager 
+     * @param {String} dir loaction of file
+     */
+    PSpectrum.prototype.loadStarColorsByBlackbody = function (assetManager, dir) {
+
+        let spectrum = this;
+ 
+        console.log("------------------------------");
+        console.log('PSpectra: loading star colors by blackbody:' + dir);
+
+        const loadBlackbody = assetManager.addTextFileTask('blackbody', dir);
+
+        loadBlackbody.onSuccess = async function (bbColors) {
+            console.log('PSpectra: blackbody color table loaded, parsing data...')
+            try {
+                spectrum.bbColors =  JSON.parse(bbColors.text);
+            } catch (e) {
+                util.printError(e, false, 'Blackbody table load:');
+                spectrum.bbColors = [];
+            }
+
+        };
+
+        loadBlackbody.onTaskError = function (task) {
+            console.log('task failed', task.errorObject.message, task.errorObject.exception);
+        };
+
+    };
+
+    /**
+     * Load stellar colors for all stellar types from JSON data
+     * JSON file source
+     * @link {http://www.isthe.com/chongo/tech/astro/HR-temp-mass-table-byhrclass.html}
+     */
+    PSpectrum.prototype.loadStarPropsBySpectrum = function (assetManager, dir) {
+
+        let spectrum = this;
+        let util = this.util;
+
+        console.log("------------------------------");
+        console.log('PSpectra: loading colors for all stellar types:' + dir)
+
+        const loadColors = assetManager.addTextFileTask('starprops', dir);
+
+        loadColors.onSuccess = async function (colors) {
+            console.log('PSpectra: stellar properties loaded, parsing data...')
+            try {
+                spectrum.spectLookup =  JSON.parse(colors.text);
+            } catch (e) {
+                util.printError(e, false, 'Stellar properties by spectrum table:');
+                spectrum.spectLookup = [];
+            }
+
+        };
+
+        loadColors.onTaskError = function (task) {
+            console.log('PSpectrum task failed', task.errorObject.message, task.errorObject.exception);
+        };
 
     };
 

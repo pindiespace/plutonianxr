@@ -1,4 +1,4 @@
-(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);var f=new Error("Cannot find module '"+o+"'");throw f.code="MODULE_NOT_FOUND",f}var l=n[o]={exports:{}};t[o][0].call(l.exports,function(e){var n=t[o][1][e];return s(n?n:e)},l,l.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(require,module,exports){
+(function e(t,n,r){function s(o,u){if (!n[o]){if (!t[o]){var a=typeof require=="function"&&require;if (!u&&a)return a(o,!0);if (i)return i(o,!0);var f=new Error("Cannot find module '"+o+"'");throw f.code="MODULE_NOT_FOUND",f}var l=n[o]={exports:{}};t[o][0].call(l.exports,function(e){var n=t[o][1][e];return s(n?n:e)},l,l.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(require,module,exports){
 
 'use strict';
 var SolarSystem = require('./SolarSystem');
@@ -42,7 +42,7 @@ var CelestialBody = {
 
 	//if epoch start is not j2000, get epoch time from j2000 epoch time
 	getEpochTime : function(epochTime) {
-		if(this.epoch) {
+		if (this.epoch) {
 			epochTime = epochTime - ((this.epoch.getTime() - ns.J2000) / 1000);
 		}
 		return epochTime;
@@ -53,7 +53,7 @@ var CelestialBody = {
 		epochTime = this.getEpochTime(epochTime);
 		this.position = this.isCentral ? new THREE.Vector3() : this.orbitalElements.getPositionFromElements(this.orbitalElements.calculateElements(epochTime));
 		this.relativePosition = new THREE.Vector3();
-		if(calculateVelocity) {
+		if (calculateVelocity) {
 			this.velocity = this.isCentral ? new THREE.Vector3() : this.orbitalElements.calculateVelocity(epochTime, this.relativeTo, this.calculateFromElements);
 		}
 		this.positionRelativeTo();		
@@ -61,7 +61,7 @@ var CelestialBody = {
 	
 	getAngleTo : function(bodyName){
 		var ref = require('./SolarSystem').getBody(bodyName);
-		if(ref) {
+		if (ref) {
 			
 			var eclPos = this.position.clone().sub(ref.getPosition()).normalize();
 			eclPos.z = 0;
@@ -70,16 +70,16 @@ var CelestialBody = {
 			//console.log(angleX, angleY);
 			var angle = angleX;
 			var q = Math.PI / 2;
-			if(angleY > q) angle = -angleX;
+			if (angleY > q) angle = -angleX;
 			return angle;
 		}
 		return 0;
 	},
 
 	positionRelativeTo : function(){
-		if(this.relativeTo) {
+		if (this.relativeTo) {
 			var central = require('./SolarSystem').getBody(this.relativeTo);
-			if(central && central!==require('./SolarSystem').getBody()/**/) {
+			if (central && central!==require('./SolarSystem').getBody()/**/) {
 				this.position.add(central.position);
 				//console.log(this.name+' pos rel to ' + this.relativeTo);
 				this.velocity && central.velocity && this.velocity.add(central.velocity);
@@ -880,7 +880,7 @@ var solveKeplerLaguerreConwayHyp = function(e, M) {
 module.exports = {
 	setDefaultOrbit : function(orbitalElements, calculator) {
 		this.orbitalElements = orbitalElements;
-		if(orbitalElements && orbitalElements.epoch) {
+		if (orbitalElements && orbitalElements.epoch) {
 			this.epochCorrection = ns.getEpochTime(orbitalElements.epoch);
 		}
 		this.calculator = calculator;
@@ -891,7 +891,7 @@ module.exports = {
 	},
 
 	calculateVelocity : function(timeEpoch, relativeTo, isFromDelta) {
-		if(!this.orbitalElements) return new THREE.Vector3(0,0,0);
+		if (!this.orbitalElements) return new THREE.Vector3(0,0,0);
 
 		var eclipticVelocity;
 		
@@ -924,7 +924,7 @@ module.exports = {
 	},
 
 	calculatePosition : function(timeEpoch) {
-		if(!this.orbitalElements) return new THREE.Vector3(0,0,0);
+		if (!this.orbitalElements) return new THREE.Vector3(0,0,0);
 		var computed = this.calculateElements(timeEpoch);
 		var pos =  this.getPositionFromElements(computed);
 		return pos;
@@ -950,7 +950,7 @@ module.exports = {
 	},
 
 	calculateElements : function(timeEpoch, forcedOrbitalElements) {
-		if(!forcedOrbitalElements && !this.orbitalElements) return null;
+		if (!forcedOrbitalElements && !this.orbitalElements) return null;
 
 		var orbitalElements = forcedOrbitalElements || this.orbitalElements;
 
@@ -986,7 +986,7 @@ module.exports = {
 			t : timeEpoch
 		};
 
-		if(this.calculator && !forcedOrbitalElements) {
+		if (this.calculator && !forcedOrbitalElements) {
 			var realorbit = this.calculator(T);
 			Utils.extend(computed, realorbit);
 		} else {
@@ -1034,9 +1034,9 @@ module.exports = {
 
 		computed.r = computed.pos.length();
 		computed.v = Math.atan2(computed.pos.y, computed.pos.x);
-		if(orbitalElements.relativeTo) {
+		if (orbitalElements.relativeTo) {
 			var relativeTo = require('./SolarSystem').getBody(orbitalElements.relativeTo);
-			if(relativeTo.tilt) {
+			if (relativeTo.tilt) {
 				computed.tilt = -relativeTo.tilt * ns.DEG_TO_RAD;
 			}
 		};
@@ -1045,7 +1045,7 @@ module.exports = {
 
 	getPositionFromElements : function(computed) {
 
-		if(!computed) return new THREE.Vector3(0,0,0);
+		if (!computed) return new THREE.Vector3(0,0,0);
 
 		var a1 = new THREE.Euler(computed.tilt || 0, 0, computed.o, 'XYZ');
 		var q1 = new THREE.Quaternion().setFromEuler(a1);
@@ -1059,9 +1059,9 @@ module.exports = {
 
 	calculatePeriod : function(elements, relativeTo) {
 		var period;
-		if(this.orbitalElements && this.orbitalElements.day && this.orbitalElements.day.M) {
+		if (this.orbitalElements && this.orbitalElements.day && this.orbitalElements.day.M) {
 			period = 360 / this.orbitalElements.day.M ;
-		}else if(require('./SolarSystem').getBody(relativeTo) && require('./SolarSystem').getBody(relativeTo).k && elements) {
+		}else if (require('./SolarSystem').getBody(relativeTo) && require('./SolarSystem').getBody(relativeTo).k && elements) {
 			period = 2 * Math.PI * Math.sqrt(Math.pow(elements.a/(ns.AU*1000), 3)) / require('./SolarSystem').getBody(relativeTo).k;
 		}
 		period *= ns.DAY;//in seconds
@@ -1136,7 +1136,7 @@ module.exports = THREE;
 'use strict';
 
 var extend = function(){
-	if(arguments.length === 1) return arguments[0];
+	if (arguments.length === 1) return arguments[0];
 	var source = Array.prototype.splice.call(arguments, 1, 1)[0];
 	arguments[0] = Object.keys(source).reduce(function(carry, key){
 		carry[key] = source[key];

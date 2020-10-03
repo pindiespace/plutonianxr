@@ -56,12 +56,12 @@ var PUtil = (function () {
 
         let v = parseFloat(value);
 
-        if(isNaN(v)) {
-            if(this.isString(value)) {
-                if(value.indexOf('−') != -1) {
-                    if(!suppress) console.error('isNumber ERROR: number:' + value + ' is not using correct minus symbol');
+        if (isNaN(v)) {
+            if (this.isString(value)) {
+                if (value.indexOf('−') != -1) {
+                    if (!suppress) console.error('isNumber ERROR: number:' + value + ' is not using correct minus symbol');
                 } else {
-                    if(!suppress) console.error('isNumber ERROR: bad number:' + value);
+                    if (!suppress) console.error('isNumber ERROR: bad number:' + value);
                 }
             }
         }
@@ -117,9 +117,9 @@ var PUtil = (function () {
      */
     PUtil.prototype.isNumeric = function (ch) {
         let len = ch.length;
-        if(!len) return false;
+        if (!len) return false;
         let k = ch.charCodeAt(0);
-        if(ch.charCodeAt(0) < 48 || ch.charCodeAt(0) > 57) return false; // ',33'
+        if (ch.charCodeAt(0) < 48 || ch.charCodeAt(0) > 57) return false; // ',33'
         for(let i = 1; i < len; i++) {
             k = ch.charCodeAt(i);
             if ((k < 48 && k != 46 && k != 44) || k > 57) return false;
@@ -134,7 +134,7 @@ var PUtil = (function () {
      */
     PUtil.prototype.isUpperCase = function (ch) {
         let len = ch.length;
-        if(!len) return false;
+        if (!len) return false;
         let k = ch.charCodeAt(0);
         if (k < 65 || k > 90) return false;
         for(let i = 1; i < len; i++) {
@@ -150,7 +150,7 @@ var PUtil = (function () {
      */
     PUtil.prototype.isLowerCase = function (ch) {
         let len = ch.length;
-        if(!len) return false;
+        if (!len) return false;
         let k = ch.charCodeAt(0);
         if (k < 97 || k >= 122) return false;
         for(let i = 1; i < len; i++) {
@@ -176,9 +176,9 @@ var PUtil = (function () {
         let num = [];
         let n = 0;
 
-        if(this.isArray(color)) {
+        if (this.isArray(color)) {
             num = color;
-        } else if(this.isObject(color)) {
+        } else if (this.isObject(color)) {
             num[0] = color.r,
             num[1] = color.g,
             num[2] = color.b;
@@ -188,13 +188,13 @@ var PUtil = (function () {
         }
 
         for(var i = 0; i < num.length; i++) {
-            if(num[i] < 0 || num[i] > 1) {
+            if (num[i] < 0 || num[i] > 1) {
                 console.error('clampColor ERROR: color value out of range');
                 return null;
             }
         }
 
-        if(up) {
+        if (up) {
             n = Math.max.apply(null, num);
             let r = (1 - n);
             console.log('--clr n:' + n + ' r:' + r)
@@ -362,6 +362,14 @@ var PUtil = (function () {
         .then(data => responseFn(data));
     };
 
+    /**
+     * parse an XML string
+     */
+    PUtil.prototype.asyncXML = function (url, responseFn) {
+        fetch(url)
+        .then(response => responseFn(data));
+    }
+
     /** 
      * Async loop
      */
@@ -420,23 +428,22 @@ String.prototype.parseNumeric = function (start = 0) {
 
     let i = start, ii = 0; 
 
-    if(start > this.length) {
+    if (start > this.length) {
         console.error('parseNumeric ERROR: invalid start:' + start);
         return null;
     }
 
     for (; (this[i] < '0' || this[i] > '9') && this[i] != '.'; i++); // scan until first numeric character
 
-    if(i == this.length) {
+    if (i == this.length) {
         return null;
     } else {
         ii = i;
         for (; (this[ii] >= '0' && this[ii] <= '9') || this[ii] == '.' || this[ii] == ','; ii++);
-        if(this[ii - 1] == '.' || this[ii - 1] == ',') ii--;
+        if (this[ii - 1] == '.' || this[ii - 1] == ',') ii--;
     }
-
+    if (i == ii) return null;
     let s = this.substring(i, ii);
-    if(ii == this.length) ii = -1;  // number ended the string
     return {
         start1: i,
         start2: ii,

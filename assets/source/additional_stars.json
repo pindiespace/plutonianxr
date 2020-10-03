@@ -314,7 +314,7 @@ case t.FREE_PLANET:
                         //////////////mat.emissiveColor = clr.clone();
                         gll.addIncludedOnlyMesh(mesh);
 
-                    if(util.isNumber(model.specular)) {
+                    if (util.isNumber(model.specular)) {
                         mat.specularColor = new BABYLON.Color3(model.specular, model.specular, model.specular)
                     } else {
                         mat.specularColor = new BABYLON.Color3(0, 0, 0)

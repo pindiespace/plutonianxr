@@ -15,7 +15,7 @@ var POrrery = (function () {
      */
     POrrery.prototype.computeOrbit = function (pObj) {
         let planet = pObj.mesh;
-        if(pObj.dist != 0) {
+        if (pObj.dist != 0) {
 
             mesh.setPositionWithLocalVector(new BABYLON.Vector3(scaled.dist, 0, 0));
 

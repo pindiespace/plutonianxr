@@ -151,6 +151,7 @@
                         "mesh": null,
                         "references": [
                             "https://astronexus.com/hyg",
+                            "http://www.isthe.com/chongo/tech/astro/HR-temp-mass-table-byhrclass.html",
                             "https://en.wikipedia.org/wiki/Stellar_classification#Extended_spectral_types",
                             "https://github.com/astronexus/HYG-Database/blob/master/README.md",
                             "http://simbad.cfa.harvard.edu/simbad/sim-fid",

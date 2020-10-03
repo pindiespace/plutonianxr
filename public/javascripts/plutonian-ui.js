@@ -167,7 +167,7 @@ BABYLON.DefaultLoadingScreen.prototype.displayLoadingUI = function (msg = 'loadi
         //loaderMsg.innerHTML = msg;
         loaderStatus.innerHTML = msg;
         loaderMsg.addEventListener('animationend', (e) => {
-            if(e.srcElement.classList.contains('loader-text-fadein')) {
+            if (e.srcElement.classList.contains('loader-text-fadein')) {
                 e.srcElement.style.opacity = '1';
             }
         });
@@ -196,11 +196,11 @@ BABYLON.DefaultLoadingScreen.prototype.displayLoadingUI = function (msg = 'loadi
 BABYLON.DefaultLoadingScreen.prototype.hideLoadingUI = function(){
 
     let loader = document.getElementById('primary-scene-loader');
-    if(loader) {
+    if (loader) {
 
         loader.classList.add('loader-fadeout'); // must be done in this function
         loader.addEventListener('animationend', (e) => {
-            if(e.srcElement.classList.contains('loader-fadeout')) {
+            if (e.srcElement.classList.contains('loader-fadeout')) {
                 e.srcElement.style.display = 'none';
                 e.srcElement.classList.remove('loader-fadeout');
             }

@@ -26,7 +26,7 @@ var PSetup = (function() {
 
         let msg = '';
 
-        if(!fallbackMessage) {
+        if (!fallbackMessage) {
             msg = 'Failed to Initialize HTML5 Canvas. The program cannot run. You need a browser that supports HTML5 Canvas, WebGL, and WebXR';
         } else {
             msg = fallbackMessage;
@@ -66,20 +66,20 @@ var PSetup = (function() {
         let util = this.util;
 
         // check to see if canvas is already initialized
-        if(this.util.isObject(this.canvas)) {
-            if(this.canvas.nodeName === 'CANVAS') {
+        if (this.util.isObject(this.canvas)) {
+            if (this.canvas.nodeName === 'CANVAS') {
                 return this.canvas;
             }
         }
 
         // no object, so look for expected canvas class.
         let canvas = null;
-        if(!id) id = this.CANVAS_ID_DEFAULT;
+        if (!id) id = this.CANVAS_ID_DEFAULT;
 
         try {
 
             canvas = document.getElementById(id);
-            if(!canvas) throw new Error('Bad canvas:' + typeof canvas + ' using ID:' + id);
+            if (!canvas) throw new Error('Bad canvas:' + typeof canvas + ' using ID:' + id);
             this.canvas = canvas;
 
         } catch (e) {
@@ -91,10 +91,10 @@ var PSetup = (function() {
 
                 // create and attach an HTML5Canvas element
                 let b = document.getElementsByTagName('body')[0];
-                if(!b) throw new Error('HTML missing body element');
+                if (!b) throw new Error('HTML missing body element');
 
                 let s = document.createElement('section');
-                if(!s) throw new Error('cannot create HTML elements');
+                if (!s) throw new Error('cannot create HTML elements');
 
                 // define section wrapper for fullscreen
                 s.class = 'render-xr-canvas-wrapper',
@@ -138,7 +138,7 @@ var PSetup = (function() {
 
             // Init BabylonJS
             engine = new BABYLON.Engine(canvas, true, { preserveDrawingBuffer: true, stencil: true });
-            if(!engine) throw new ERROR('Bad engine:' + typeof engine);
+            if (!engine) throw new ERROR('Bad engine:' + typeof engine);
 
             // Resize
             window.addEventListener('resize', function () {

@@ -52,7 +52,7 @@ var PCelestial = (function () {
         this.camera = null;
 
         // stellar spectra
-        this.spectra = new PSpectrum();
+        this.spectra = new PSpectrum(util, pdata);
 
         // computations of planetary positions over time
         this.orrey = new POrrery();
@@ -176,101 +176,15 @@ var PCelestial = (function () {
      * Returns decimal degrees for degrees written as degrees, minutes, seconds
      */
     PCelestial.prototype.dmsToDecimal = function (d = 0, m = 0, s = 0) {
-		if(m < 0) m = -m;
-		if(s < 0) s = -s;
+		if (m < 0) m = -m;
+		if (s < 0) s = -s;
 		let m0 = m; 
         let s0 = s;
-		if(d < 0 || d =='-0') {
+		if (d < 0 || d =='-0') {
             m = -m;
             s = -s;
         }
 		return parseFloat(d)+parseFloat(m)/60+parseFloat(s)/3600;	
-    };
-
-    /**
-     * Convert b-v (colorindex) values reported to stars to RGB color
-     * @param {Number} bv the b-v value for the star.s
-     * {@link https://stackoverflow.com/questions/21977786/star-b-v-color-index-to-apparent-rgb-color}
-     * {@link http://www.vendian.org/mncharity/dir3/blackbody/UnstableURLs/bbr_color.html}
-     * {@link https://www.pas.rochester.edu/~emamajek/EEM_dwarf_UBVIJHK_colors_Teff.txt}
-     * {@link https://en.wikipedia.org/wiki/Color_index}
-     */
-    PCelestial.prototype.bvToRGB = function (bv) {
-
-        var r = 0, g = 0, b = 0, t = 0;
-
-        if(bv < -0.4) bv = -0.4
-        if(bv > 2.0) bv = 2.0
-
-        if(bv >= -0.40 && bv < 0.00) {
-            t = (bv + 0.40) / (0.00 + 0.40)
-            r = 0.61 + 0.11 * t + 0.1 * t * t
-            g = 0.70 + 0.07 * t + 0.1 * t * t
-            b = 1.0
-        }
-        else if(bv >= 0.00 && bv < 0.40) {
-            t = (bv - 0.00) / (0.40 - 0.00)
-            r = 0.83 + (0.17 * t)
-            g = 0.87 + (0.11 * t)
-            b = 1.0
-        }
-        else if(bv >= 0.40 && bv < 1.60) {
-            t = (bv - 0.40) / (1.60 - 0.40)
-            r = 1.0
-            g = 0.98 - 0.16 * t
-        }
-        else {
-            t = (bv - 1.60) / (2.00 - 1.60)
-            r = 1.0
-            g = 0.82 - 0.5 * t * t
-        }
-
-        if (bv >= 0.40 && bv < 1.50) {
-            t = (bv - 0.40) / (1.50 - 0.40)
-            b = 1.00 - 0.47 * t + 0.1 * t * t
-        }
-        else if(bv >= 1.50 && bv < 1.951) {
-            t = (bv - 1.50) / (1.94 - 1.50)
-            b = 0.63 - 0.6 * t * t
-        }
-        else {
-            b = 0.0
-        }
-
-        return {
-            r: r, 
-            g: g, 
-            b: b
-        };
-
-    };
-
-    /**
-     * convert a blue-violet color index (B-V) to a temperature, table lookup
-     * {@link https://stackoverflow.com/questions/21977786/star-b-v-color-index-to-apparent-rgb-color}
-     * @param {Number} ci 
-     */
-    PCelestial.prototype.bvTableToRGB = function (ci) {
-        let t1 = (4600 * (1 / (0.92 * ci + 1.7) + 1 / (0.92 * ci + 0.62)));
-        return this.tempToBlackbodyColor(t1);
-    };
-
-    /**
-     * compute stellar color from a temperature
-     * @param {Number} temp 
-     */
-    PCelestial.prototype.tempToBlackbodyColor = function (temp) {
-        
-        let t = Math.floor(temp / 200);
-        t = t * 200;
-        if (t < 1000) {
-          t = 1000;
-        } else if (t > 29800) {
-          t = 29800;
-        }
-
-        const c = this.hygBBColors[t];
-
     };
 
     /*
@@ -353,11 +267,11 @@ var PCelestial = (function () {
 
         // warnings for objects without data yet
 
-        if(scaled.diameter < 0.01) {
+        if (scaled.diameter < 0.01) {
             console.warn('.scale WARNNG: diameter very small (' + scaled.diameter + ' units for:' + data.type);
         }
 
-        if(scaled.dist < 0.01) {
+        if (scaled.dist < 0.01) {
             console.warn('.scale WARNING: distance very small (' + scaled.dist + ' units for:' + data.type)
         }
 
@@ -376,7 +290,7 @@ var PCelestial = (function () {
 
         let util = this.util;
 
-        if(!util.isObject(data)) {
+        if (!util.isObject(data)) {
             console.error('color ERROR: invalid data object passed:' + typeof data);
             return null;
         }
@@ -384,9 +298,9 @@ var PCelestial = (function () {
         let color = data.color;
         let c = null;
 
-        if(util.isString(data.spec)) {
+        if (util.isString(data.spec)) {
 
-            let cc = getHygColor(data);
+            let cc = this.getHygColor(data);
             c = new BABYLON.Color3(cc[0], cc[1], cc[2]);
 
 
@@ -398,13 +312,13 @@ var PCelestial = (function () {
         try {
 
             // handle web versus BabylonJS color units (fails for [1,1,1])
-            if(color[0] + color[1] + color[2] > 3.0) {
+            if (color[0] + color[1] + color[2] > 3.0) {
                 color[0] /= 255,
                 color[1] /= 255,
                 color[2] /= 255
             }
 
-            if(color.length === 3) {
+            if (color.length === 3) {
                 c = new BABYLON.Color3(color[0], color[1], color[2]);
             }
             else if (color.length === 4) {
@@ -438,12 +352,12 @@ var PCelestial = (function () {
         let util = this.util;
         let fn = 'checkHygColumns ';
 
-        if(!util.isArray(hygData)) {
+        if (!util.isArray(hygData)) {
             console.error(fn + 'ERROR: Hyg data not an array');
             return false;
         }
 
-        if(!hygData.length) {
+        if (!hygData.length) {
             console.error(fn + 'ERROR: no data in Hyg data');
             return false;
         }
@@ -451,17 +365,17 @@ var PCelestial = (function () {
         // look at the first Star in the array
         let star = hygData[0];
 
-        if(!util.isString(star.id)) {
+        if (!util.isString(star.id)) {
             console.error(fn + 'ERROR: no Star');
             return false;
         }
  
-        if(!util.isString(star.proper) && 
+        if (!util.isString(star.proper) && 
         (!util.isString(star.bf) || !util.isString(star.bayer) || !util.isString(star.con))) {
             console.error(fn + 'ERROR: no Star name possible');
         }
 
-        if(!util.isNumber(star.ra) || !util.isNumber(star.dec) || !util.isNumber(star.dist)) {
+        if (!util.isNumber(star.ra) || !util.isNumber(star.dec) || !util.isNumber(star.dist)) {
             console.error(fn + 'ERROR: no Star RA or Dec');
         }
 
@@ -475,8 +389,8 @@ var PCelestial = (function () {
      */
     PCelestial.prototype.getHygName = function (star) {
         let n = star.proper || star.bf;
-        if(n.length) return n;
-        else if(star.bayer.length && star.con.length) return star.bayer + star.con;
+        if (n.length) return n;
+        else if (star.bayer.length && star.con.length) return star.bayer + star.con;
         else return star.id;
     };
 
@@ -493,7 +407,7 @@ var PCelestial = (function () {
 
         // look for an exact match
         c = this.hygColors[s];
-        if(c) {
+        if (c) {
             return c;
         }
 
@@ -501,7 +415,7 @@ var PCelestial = (function () {
         for (i = s.length - 2; i > 1; i--) {
             let t = s.substring(0, i);
             c = this.hygColors[t];
-            if(c) {
+            if (c) {
                 return c;
             }
         }
@@ -511,8 +425,8 @@ var PCelestial = (function () {
         c = dsc[s.substring(0,1).toLowerCase()];
 
         // if everything fails, make it white, includes 'pec' for novas
-        if(!c) {
-            if(s == 'pec') {
+        if (!c) {
+            if (s == 'pec') {
                 c = dsc['a']; // probably a nova, use blue-white
             }
             else {
@@ -532,15 +446,15 @@ var PCelestial = (function () {
      */
     PCelestial.prototype.getHygSpriteIndex = function (star) {
         let s = star.spect;
-        if(s) {
+        if (s) {
             c = this.dSpriteIndex[s.substring(0,1).toLowerCase()];
-            if(this.util.isNumber(c)) {
+            if (this.util.isNumber(c)) {
                 return c;
             }
         }
 
         // novas
-        if(s == 'pec') return 4; // hot white-blue
+        if (s == 'pec') return 4; // hot white-blue
 
         // console.warn('no index for spectral type:' + s);
 
@@ -561,9 +475,9 @@ var PCelestial = (function () {
      * absolute magnitude is not available in Hyg3
      * @param {String} spect the stellar spectral type
      */
-    PCelestial.prototype.getHygAbsMag = function (spect) {
-        return this.dAbsMag[spect];
-    };
+    //PCelestial.prototype.getHygAbsMag = function (spect) {
+    //    return this.dAbsMag[spect];
+    //};
 
     /**
      * Set the Star position in 3D space
@@ -572,7 +486,7 @@ var PCelestial = (function () {
     PCelestial.prototype.getHygPosition = function (star) {
 
         //we rotate the coordinate system to BabylonJS coordinates by swapping z and y
-        if(star.x) {
+        if (star.x) {
             position.x = star.x * dParsecUnits;
             position.z = star.y * dParsecUnits; // was y
             position.y = star.z * dParsecUnits; // wax z
@@ -583,65 +497,6 @@ var PCelestial = (function () {
             position.z = Math.cos(B) * Math.sin(A) * star.dist * dParsecUnits; // was y
             position.y = Math.sin(B) * star.dist * dParsecUnits; // was z
         }
-
-    };
-
-    /**
-     * Load rgb color versus temperature table based on blackbody calculations
-     * {@link http://www.vendian.org/mncharity/dir3/blackbody/UnstableURLs/bbr_color.html}
-     * @param {BABYLON.AssetsManager} assetManager 
-     * @param {String} dir loaction of file
-     */
-    PCelestial.prototype.loadStarColorsByBlackbody = function (assetManager, dir) {
-
-        let celestial = this;
-
-        console.log("------------------------------");
-        console.log('loading star colors by blackbody:' + dir);
-
-        const loadBlackbody = assetManager.addTextFileTask('blackbody', dir);
-
-        loadBlackbody.onSuccess = async function (bbColors) {
-            console.log('PCELESTIAL Stellar Blackbody colors loaded, parsing data...')
-            celestial.hygBBColors =  JSON.parse(bbColors.text);
-        };
-
-        loadBlackbody.onTaskError = function (task) {
-            console.log('task failed', task.errorObject.message, task.errorObject.exception);
-        };
-
-    };
-
-    /**
-     * Load stellar colors for all stellar types from JSON data
-     * JSON file source
-     * @link {http://www.isthe.com/chongo/tech/astro/HR-temp-mass-table-byhrclass.html}
-     * Additional data (cross-reference)
-     * @link {https://www.pas.rochester.edu/~emamajek/EEM_dwarf_UBVIJHK_colors_Teff.txt}
-     * @link {http://www.vendian.org/mncharity/dir3/starcolor/details.html}
-     * @link {https://sites.uni.edu/morgans/astro/course/Notes/section2/spectraltemps.html}
-     * @link {https://en.wikipedia.org/wiki/List_of_star_systems_within_25%E2%80%9330_light-years}
-     * @link {http://www.livingfuture.cz/stars.php}
-     * @link {http://www.vendian.org/mncharity/dir3/blackbody/UnstableURLs/bbr_color.html}
-     */
-    PCelestial.prototype.loadStarColorsBySpectrum = function (assetManager, dir) {
-
-        let celestial = this;
-
-        console.log("------------------------------");
-        console.log('loading colors for all stellar types:' + dir)
-
-        const loadColors = assetManager.addTextFileTask('starcolors', dir);
-
-        loadColors.onSuccess = async function (colors) {
-            console.log('PCELESTIAL Stellar colors loaded, parsing data...')
-            celestial.hygColors =  JSON.parse(colors.text);
-    
-        };
-
-        loadColors.onTaskError = function (task) {
-            console.log('task failed', task.errorObject.message, task.errorObject.exception);
-        };
 
     };
 
@@ -677,34 +532,26 @@ var PCelestial = (function () {
      */
     PCelestial.prototype.loadHygData = function (model, dir, scene) {
 
-        let celestial = this; // references for callbacks
-        let util = this.util; // utilities
-
-        // NOTE: we replaced DG, DK, and DM with DZ.
-        // NOTE: https://en.wikipedia.org/wiki/Stellar_classification#Extended_spectral_types
-
-        // NOTE: use stellar classifications to change appearance of star types!!!
-        // https://www.enchantedlearning.com/subjects/astronomy/stars/startypes.shtml
-
-        // primary, 'G' then 1-10 subclasses
-        // the 'dXXX' indicates generate
-        // the 'XXXe' indicates emission lines in spectrum
-
+        let celestial = this;         // references for callbacks
+        let util = this.util;         // utilities
+        let spectra = this.spectra;   // parse stellar type string
 
         let assetManager = new BABYLON.AssetsManager(scene);
 
-        if(!model.hyg) {
+        if (!model.hyg) {
             console.error('loadHygData ERROR: invalid hyg data, dir:' + dir + ' file:' + model.hyg);
         }
 
         // if present, load stellar colors by stellar spectrum
-        if(util.isString(model.colors)) {
-            this.loadStarColorsBySpectrum(assetManager, dir + model.colors);
+        if (util.isString(model.colors)) {
+            //this.loadStarColorsBySpectrum(assetManager, dir + model.colors);
+            spectra.loadStarPropsBySpectrum(assetManager, dir + model.colors);
         }
 
         // if present, load stellar colors by ci index (temperature)
-        if(util.isString(model.blackbody)) {
-            this.loadStarColorsByBlackbody(assetManager, dir + model.blackbody);
+        if (util.isString(model.blackbody)) {
+            //this.loadStarColorsByBlackbody(assetManager, dir + model.blackbody);
+            spectra.loadStarColorsByBlackbody(assetManager, dir + model.blackbody);
         }
 
         // load stellar data
@@ -740,13 +587,14 @@ var PCelestial = (function () {
     PCelestial.prototype.computeHygSprite = async function (spriteSheetFile, size, scene) {
 
         let util = this.util;
+        let pdata = this.pdata;
 
         // The loader should already have assigned these when we enter this function.
 
         let hygColors = this.hygColors;
         let hygData = this.hygData;
 
-        if(! hygData || !util.isArray(hygData) || !hygData.length) {
+        if (! hygData || !util.isArray(hygData) || !hygData.length) {
             console.error('computeHygSprite ERROR: invalid Hyg data (not an array)');
             return false;
         }
@@ -766,17 +614,11 @@ var PCelestial = (function () {
         let spriteManagerStars = new BABYLON.SpriteManager('starsManager', spriteSheetFile, numStars, size, scene);
         spriteManagerStars.isPickable = true;
 
-        console.log("@@@@@COMPUTING HygSprite")
+        console.log("COMPUTING HygSprite")
 
         // create properties objects (up to four) for a Star. Multiple sources used to fill out
-        let props = new Array(4);
-        for (let i = 0; i < props.length; i++) {
-            props[i] = {
-                type: {key:'', key2:''},
-                range: {key:'', value:NaN},
-                luminance: {key:'', value:NaN}
-            }
-        }
+
+        // start the hyg3 loop
 
         for (let i = 0; i < hygData.length; i++) {
         //for (let i = 0; i < 10000; i++) {
@@ -784,17 +626,9 @@ var PCelestial = (function () {
             star = hygData[i];
             name = this.getHygName(star);
 
-            // initialize our temp props array
-            for (let i = 0; i < props.length; i++) {
-                props[i].type.key = '', 
-                props[i].type.key2 = '',
-                props[i].luminance.key ='',
-                props[i].luminance.value = NaN;
-            }
-
-            // additional data from spectrum
-            ////////spec = this.spectrumToStellarData(star, props);
-            spec = this.spectra.spectrumToStellarData(star, props);
+            // extract stellar properties from the spectrum
+            let props = this.spectra.spectrumToStellarData(star);
+            // TODO: use props to augment star data
 
             //console.log("name is:" + name)
             color = this.getHygColor(star);
@@ -808,7 +642,7 @@ var PCelestial = (function () {
 
         }
 
-        console.log("@@@@@@@@@@@@COMPUTED HygSprite")
+        console.log("@@@@@@@@COMPUTED HygSprite")
 
         ///////////////////////////////////
         ///////////////////////////////////
@@ -855,7 +689,7 @@ var dSpriteScreenSize =    1;
 var setHygPosition = function (star, position) {
 
     //we rotate the coordinate system to BabylonJS coordinates by swapping z and y
-    if(star.x) {
+    if (star.x) {
         position.x = star.x * dParsecUnits;
         position.z = star.y * dParsecUnits; // was y
         position.y = star.z * dParsecUnits; // wax z
@@ -894,10 +728,10 @@ var setHygMag = function (star) {
     sMag ['k'] = 0,
     sMag['m'] = 6;
 
-    if(!isNumber(aMag)) {
-        if(aMag == '') {
+    if (!isNumber(aMag)) {
+        if (aMag == '') {
             let s = star.spect.toLowerCase()[0];
-            if(s == '') aMag = 0;
+            if (s == '') aMag = 0;
             else aMag = sMag[s];
         } else aMag = 0;
     }
@@ -905,8 +739,8 @@ var setHygMag = function (star) {
     // empirical formula
     let mag = 1 - ((20 + (aMag^2))/200);
 
-    if(mag < 0) m = 0;
-    if(mag > 1) m = 1;
+    if (mag < 0) m = 0;
+    if (mag > 1) m = 1;
 
     return mag;
 };
@@ -917,8 +751,8 @@ var setHygMag = function (star) {
  */
 var setHygName = function (star) {
     let n = star.proper || star.bf;
-    if(n.length) return n;
-    else if(star.bayer.length && star.con.length) return star.bayer + star.con;
+    if (n.length) return n;
+    else if (star.bayer.length && star.con.length) return star.bayer + star.con;
     else return star.id;
 };
 
@@ -937,7 +771,7 @@ var setHygName = function (star) {
  */
 var computeHygSprite = async function (hygData, spriteFile, size, scene) {
 
-    if(Array.isArray(hygData)) {
+    if (Array.isArray(hygData)) {
 
         let numStars = hygData.length; // an array of objects
         let spriteSize = size || dSpriteSize;
@@ -985,7 +819,7 @@ var computeHygSprite = async function (hygData, spriteFile, size, scene) {
 
             // colors (accessed by shifting sprite texture)
             spect = star.spect.toLowerCase()[0];
-            if(spect == '') spriteIndex = 3; // no spectrum probably means distant and bright
+            if (spect == '') spriteIndex = 3; // no spectrum probably means distant and bright
             else spriteIndex = sIndex[spect];
 
             // create the Sprite
@@ -1001,7 +835,7 @@ var computeHygSprite = async function (hygData, spriteFile, size, scene) {
 
             // For stars at undetermined (maximum) distance, pre-compute once, size, etc
 
-            if(star.dist == maxHygDist) { // 100,000 parsecs, 1,000,000 units
+            if (star.dist == maxHygDist) { // 100,000 parsecs, 1,000,000 units
                 star.x /= dParsecUnits;   // galaxy (skybox) is 300,000 units
                 star.y /= dParsecUnits;   // dParsecUnits drop it to 100,000 units
                 star.z /= dParsecUnits;   // won't ever move
@@ -1030,7 +864,7 @@ var computeHygSprite = async function (hygData, spriteFile, size, scene) {
             let baseDist = 100; ///////////////////////////////////
             let baseScale = 0.2 ///////////////////////////////////
 
-            if(star.id == "11734") { // Polaris
+            if (star.id == "11734") { // Polaris
                 window.polaris = sprite;
                 sprite.size *= 100;
                 sprite.lookAt = function (camera) {camera.setTarget(this.position)}
@@ -1038,13 +872,13 @@ var computeHygSprite = async function (hygData, spriteFile, size, scene) {
                 //sprite.lookAt = function (camera) { camera.target = this.position}
             }
 
-            if(star.id == "7574") { // Achernar
+            if (star.id == "7574") { // Achernar
                 window.achernar = sprite;
                 sprite.size *= 3;
                 sprite.lookAt = function (camera) {camera.setTarget(this.position)}
             }
 
-            if(star.id == "25583") { // AB Doradus
+            if (star.id == "25583") { // AB Doradus
                 window.abdor = sprite;
                 sprite.size *= 10;
                 sprite.lookAt = function (camera) {
@@ -1053,67 +887,67 @@ var computeHygSprite = async function (hygData, spriteFile, size, scene) {
                     }
             }
 
-            if(star.id == "118441") { // star behind sirius
+            if (star.id == "118441") { // star behind sirius
                 sprite.size = 0.001
             }
 
-            if(star.id == "32263") { // Sirius
+            if (star.id == "32263") { // Sirius
                 window.sirius = sprite;
                 sprite.size /= 2;
                 sprite.lookAt = function (camera) {camera.setTarget(this.position)}
             }
 
-            if(star.id == "27919") {  // Betelgeuse
+            if (star.id == "27919") {  // Betelgeuse
                 window.betelgeuse = sprite;
                 sprite.size *= baseDist * 0.5 * baseScale;
                 sprite.lookAt = function (camera) {camera.setTarget(this.position)}
             }
 
-            if(star.id == "24378") { // Rigel
+            if (star.id == "24378") { // Rigel
                 window.rigel = sprite;
                 sprite.size *= baseDist * 0.75 * baseScale;
                 sprite.lookAt = function (camera) {camera.setTarget(this.position)}
             }
 
              // Bellatrix
-            if(star.id == "25273") { // Bellatrix
+            if (star.id == "25273") { // Bellatrix
                 window.bellatrix = sprite;
                 sprite.size *= baseDist * 0.2 * baseScale;
                 sprite.lookAt = function (camera) {camera.setTarget(this.position)}
             }
 
              // saiph
-            if(star.id == "27298") { // Saiph
+            if (star.id == "27298") { // Saiph
                 window.saiph = sprite;
                 sprite.size *= baseDist * 0.5 * baseScale;
                 sprite.lookAt = function (camera) {camera.setTarget(this.position)}
             }
 
-            if(star.id == "26662") { // Alnitak, orion belt, left
+            if (star.id == "26662") { // Alnitak, orion belt, left
                 window.alnitak = sprite;
                 sprite.size *= baseDist * 0.7 * baseScale;
                 sprite.lookAt = function (camera) {camera.setTarget(this.position)}
                 //camera.target = sprite.position;
             }
-            if(star.id == "26246") { // Alnilam, orion belt, middle
+            if (star.id == "26246") { // Alnilam, orion belt, middle
                 window.alnilam = sprite;
                 sprite.size *= baseDist * 1.6 * baseScale;
                 sprite.lookAt = function (camera) {camera.setTarget(this.position)}
 
             }
-            if(star.id == "25865") { // Mintaka, right
+            if (star.id == "25865") { // Mintaka, right
                 sprite.size *= baseDist * 0.7 * baseScale;
                 window.mintaka = sprite;
                 sprite.lookAt = function (camera) {camera.setTarget(this.position)}
             }
 
-            //if(star.id == "5154") { // very distant star, > 30,000 parsecs
+            //if (star.id == "5154") { // very distant star, > 30,000 parsecs
             //    sprite.size *= baseDist * 1;
             //    window.betphe = sprite;
             //    sprite.lookAt = function (camera) { camera.target = this.position}
             //}
 
-            //if(star.id == "71456") { // alpha centauri
+            //if (star.id == "71456") { // alpha centauri
             //    console.log("FOUND ALPHA CENTAURI SPRITE, x:"+ sprite.position.x + " y:" + sprite.position.y + " z:" + sprite.position.z)
             //    sprite.size *= 2;
             //    window.sprite =sprite
@@ -1152,8 +986,8 @@ var computeHygSprite = async function (hygData, spriteFile, size, scene) {
             // TODO: this may be screen resolution-dependent! done for 72dpi
             // TODO: dependent on size of star default versus pixels as well
 
-                //if(dist < 400) { // somewhere between 400 and 600
-                if(dist < 400) {
+                //if (dist < 400) { // somewhere between 400 and 600
+                if (dist < 400) {
                     ///////spriteManagerStars.disableDepthWrite = false;
                     sprite.width = sprite.height = dSpriteScreenSize;
                     sprite.color.a = 1;
@@ -1170,7 +1004,7 @@ var computeHygSprite = async function (hygData, spriteFile, size, scene) {
                     // empirical adjustment of magnitude for best '3D' effect
                     let a = 2 * sprite.aMag - (dist/1200);
                     if (a < 0.1) a = 0.1;
-                    if(a > 0.9) a = 1;
+                    if (a > 0.9) a = 1;
                     sprite.color.a = a;
                 }
 
@@ -1185,7 +1019,7 @@ var computeHygSprite = async function (hygData, spriteFile, size, scene) {
 
             // note preview verson has .children as an alias to .sprites
 
-            if((dx + dy + dz) != 0) {
+            if ((dx + dy + dz) != 0) {
                 for(let i = 0; i < hygData.length; i++) {
                     update(spriteManagerStars.sprites[i], camera);
                 }

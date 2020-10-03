@@ -278,7 +278,7 @@ var computeHygSPS = function (hygData, texturePath, scene) {
 
     console.log("^^^^^^^^^TEXURE PATH:" + texturePath)
 
-    if(Array.isArray(hygData)) {
+    if (Array.isArray(hygData)) {
 
         var numStars = hygData.length; // an array of objects
 
@@ -327,7 +327,7 @@ var computeHygSPS = function (hygData, texturePath, scene) {
                 let c = colors[spect];
 
                 // if color is defined, use it
-                if(c) {
+                if (c) {
                     particle.color = new BABYLON.Color4(c.r, c.g, c.b, c.a)
                 }
 
@@ -350,7 +350,7 @@ var computeHygSPS = function (hygData, texturePath, scene) {
 
             //dist = Math.sqrt(dx * dx + dy * dy + dz * dz);
             dist = dx + dy + dz / 3; //rough;
-            //if(dist > 100) particle.scale.x = 10;
+            //if (dist > 100) particle.scale.x = 10;
             //else particle.scale.x = 1;
 
         };
@@ -381,7 +381,7 @@ var computeHygSPS = function (hygData, texturePath, scene) {
 
 
    /*
-            if(star.x) {
+            if (star.x) {
                 sprite.position.x = star.x * dParsecUnits;
                 sprite.position.z = star.y * dParsecUnits; // was y
                 sprite.position.y = star.z * dParsecUnits; // wax z
@@ -409,7 +409,7 @@ var computeHygSPS = function (hygData, texturePath, scene) {
  */
 var computeHygSprite = function (hygData, spriteFile, size, scene) {
 
-    if(Array.isArray(hygData)) {
+    if (Array.isArray(hygData)) {
 
         let numStars = hygData.length; // an array of objects
         let spriteSize = size || dSpriteSize;
@@ -456,7 +456,7 @@ var computeHygSprite = function (hygData, spriteFile, size, scene) {
             // TODO: alternatively, set skybox 10x bigger than galaxy, universe even bigger
             // TODO: Andromena at 770,000 parsecs
             
-            if(star.Distance == 100000) { // 100,000 parsecs, 1,000,000 units
+            if (star.Distance == 100000) { // 100,000 parsecs, 1,000,000 units
                 star.x /= dParsecUnits; // galaxy is 300,000 units
                 star.y /= dParsecUnits;
                 star.z /= dParsecUnits;
@@ -469,7 +469,7 @@ var computeHygSprite = function (hygData, spriteFile, size, scene) {
             // set the star position
            setHygPosition(star, sprite.position);
 
-           //if(star.Distance * dParsecUnits < 500) sprite.isVisible = false;
+           //if (star.Distance * dParsecUnits < 500) sprite.isVisible = false;
 
             // make the sprite static
             sprite.stopAnimation();
@@ -486,81 +486,81 @@ var computeHygSprite = function (hygData, spriteFile, size, scene) {
             let baseDist = 100; ///////////////////////////////////
             let baseScale = 0.2 ///////////////////////////////////
 
-            if(star.StarID == "11734") { // Polaris
+            if (star.StarID == "11734") { // Polaris
                 window.polaris = sprite;
                 sprite.size *= 100;
                 sprite.lookAt = function (camera) { camera.target = this.position}
             }
 
-            if(star.StarID == "7574") { // Achernar
+            if (star.StarID == "7574") { // Achernar
                 window.achernar = sprite;
                 sprite.size *= 3;
                 sprite.lookAt = function (camera) { camera.target = this.position}
             }
 
-            if(star.StarID == "118441") { // star behind sirius
+            if (star.StarID == "118441") { // star behind sirius
                 sprite.size = 0.001
             }
 
-            if(star.StarID == "32263") { // Sirius
+            if (star.StarID == "32263") { // Sirius
                 window.sirius = sprite;
                 sprite.size /= 2;
                 sprite.lookAt = function (camera) {camera.target = this.position}
             }
 
-            if(star.StarID == "27919") {  // Betelgeuse
+            if (star.StarID == "27919") {  // Betelgeuse
                 window.betelgeuse = sprite;
                 sprite.size *= baseDist * 0.5 * baseScale;
                 sprite.lookAt = function (camera) { camera.target = this.position}
             }
 
-            if(star.StarID == "24378") { // Rigel
+            if (star.StarID == "24378") { // Rigel
                 window.rigel = sprite;
                 sprite.size *= baseDist * 0.75 * baseScale;
                 sprite.lookAt = function (camera) { camera.target = this.position}
             }
 
              // Bellatrix
-            if(star.StarID == "25273") { // Bellatrix
+            if (star.StarID == "25273") { // Bellatrix
                 window.bellatrix = sprite;
                 sprite.size *= baseDist * 0.2 * baseScale;
                 sprite.lookAt = function (camera) { camera.target = this.position}
             }
 
              // saiph
-            if(star.StarID == "27298") { // Saiph
+            if (star.StarID == "27298") { // Saiph
                 window.saiph = sprite;
                 sprite.size *= baseDist * 0.5 * baseScale;
                 sprite.lookAt = function (camera) { camera.target = this.position}
             }
 
-            if(star.StarID == "26662") { // Alnitak, orion belt, left
+            if (star.StarID == "26662") { // Alnitak, orion belt, left
                 window.alnitak = sprite;
                 sprite.size *= baseDist * 0.7 * baseScale;
                 sprite.lookAt = function (camera) { camera.target = this.position}
                 //camera.target = sprite.position;
             }
-            if(star.StarID == "26246") { // Alnilam, orion belt, middle
+            if (star.StarID == "26246") { // Alnilam, orion belt, middle
                 window.alnilam = sprite;
                 sprite.size *= baseDist * 1.6 * baseScale;
                 sprite.lookAt = function (camera) { camera.target = this.position}
 
             }
-            if(star.StarID == "25865") { // Mintaka, right
+            if (star.StarID == "25865") { // Mintaka, right
                 sprite.size *= baseDist * 0.7 * baseScale;
                 window.mintaka = sprite;
                 sprite.lookAt = function (camera) { camera.target = this.position}
             }
 
-            if(star.StarID == "5154") { // very distant star, > 30,000 parsecs
+            if (star.StarID == "5154") { // very distant star, > 30,000 parsecs
                 sprite.size *= baseDist * 1;
                 window.dc = sprite;
                 dc.lookAt = function (camera) { camera.target = this.position}
             }
 
-            //if(star.StarID == "71456") { // alpha centauri
-            //if(star.StarID == "57194") {
-            //if(star.StarID == '70666') {
+            //if (star.StarID == "71456") { // alpha centauri
+            //if (star.StarID == "57194") {
+            //if (star.StarID == '70666') {
             //    console.log("FOUND ALPHA CENTAURI SPRITE, x:"+ sprite.position.x + " y:" + sprite.position.y + " z:" + sprite.position.z)
             //    sprite.size *= 2;
             //    window.sprite =sprite
@@ -582,7 +582,7 @@ var computeHygSprite = function (hygData, spriteFile, size, scene) {
             // Shim Sprite size at long distances, reduce 1-pixel flickering
             // TODO: this may be screen resolution-dependent!
 
-            if(dist < 10) {
+            if (dist < 10) {
                 sprite.width = sprite.height = dSpriteScreenSize;
                 // TODO: alpha based on absolute magnitude
             } else {
@@ -597,7 +597,7 @@ var computeHygSprite = function (hygData, spriteFile, size, scene) {
             let dx = pos.x - oPos.x,
             dy = pos.y - oPos.y,
             dz = pos.z - oPos.z;
-            if((dx + dy + dz) != 0) {
+            if ((dx + dy + dz) != 0) {
                 for(let i = 0; i < 100000; i++) {
                     update(spriteManagerStars.children[i], camera);
                 }
@@ -618,7 +618,7 @@ var computeHygSprite = function (hygData, spriteFile, size, scene) {
  */
 var setPosition = function (data, position, units) {
 
-    if(isObject(data) && isObject(position) && isNumber(units)) {
+    if (isObject(data) && isObject(position) && isNumber(units)) {
 
         ////////////console.log(">>>>>>>>>>>POSITIONING.......")
         //mesh.setPositionWithLocalVector(
@@ -682,7 +682,7 @@ var setPosition = function (data, position, units) {
 
     var mesh = null;
 
-    if(isObject(obj.data)) {
+    if (isObject(obj.data)) {
 
         let data = obj.data;
 
@@ -698,7 +698,7 @@ var setPosition = function (data, position, units) {
         // there is only one model for spaceVolume - a translucent sphere, back culling off
 
         // position the space volume
-        if(isNumber(data.ra) && isNumber(data.dec)) {
+        if (isNumber(data.ra) && isNumber(data.dec)) {
 
             plutonianScene.setPosition(data, mesh.position, dParsecUnits); 
 
@@ -711,7 +711,7 @@ var setPosition = function (data, position, units) {
             // space volumes only have color, not a texture
             var color = plutonianScene.getColor(data.color);
 
-            if(color) {
+            if (color) {
                 mat.diffuseColor = color;
             } else {
                 mat.diffuseColor = BABYLON.Color3.Green();
@@ -723,9 +723,9 @@ var setPosition = function (data, position, units) {
             //NOTE: mat.alpha = 1; would work, but this function is mesh-level, not material-level
 
             // set visibility, with a default to translucent
-            if(isNumber(data.color[3])) {
+            if (isNumber(data.color[3])) {
                 let c = data.color[3];
-                if(c > 1 ) c /= 255;
+                if (c > 1 ) c /= 255;
                 mesh.visibility = c; 
             } else {
                 mesh.visibility = dAlpha; // default alpha value = 1
@@ -793,7 +793,7 @@ var setPosition = function (data, position, units) {
         let t = celestial.PCTYPES;
         let mesh = null;
 
-        if(!this.checkObject(pObj)) {
+        if (!this.checkObject(pObj)) {
             console.error('loadPlanetModel ERROR: invalid object passed');
             return mesh;
         }
@@ -803,7 +803,7 @@ var setPosition = function (data, position, units) {
         // get the active model
         let model = this.getActiveModel(data.models);
 
-        if(!util.isObject(model)) {
+        if (!util.isObject(model)) {
             console.error('loadPlanetModel ERROR: no active model found');
             return mesh;
         }
@@ -814,7 +814,7 @@ var setPosition = function (data, position, units) {
 
         // create 'surface' model = just a sphere with 1 texture
 
-        if(util.isString(model.surface)) {
+        if (util.isString(model.surface)) {
 
             let texDir = dir + '/textures/';
 
@@ -846,14 +846,14 @@ var setPosition = function (data, position, units) {
 
                 case t.STAR:
                 case t.BROWN_DWARF:
-                    //if(parent) data.dist = 0;
+                    //if (parent) data.dist = 0;
                     // TODO: USE BABYLON VECTOR RATHER THAN CUSTOM 'vec'
                     // TODO: objects should rotate around their barycenter, which is
                     // TODO: the center of the SpaceVolume for each StarSystem
                     //this.setPositionByRADec(data, mesh.position, dParsecUnits);
 
 
-                    if(pObj.key == 'luhman_16_b' || pObj.key == 'luhman_16_a') {
+                    if (pObj.key == 'luhman_16_b' || pObj.key == 'luhman_16_a') {
                         console.log("LUHMAN SCALED DISTANCE:" + pObj.name + scaled.dist)
                         mesh.bakeCurrentTransformIntoVertices();
                     }
@@ -862,11 +862,11 @@ var setPosition = function (data, position, units) {
                     mesh.freezeNormals();
 
                     // set lighting, texture, color
-                    if(model.emissive) {
+                    if (model.emissive) {
                         const light = new BABYLON.PointLight(pObj.name + 'Light', mesh.getAbsolutePosition(), scene);
                         light.position = new BABYLON.Vector3(0, 0, 0);
                         // light range, adjust to StarSystem SpaceVolume
-                        if(systemDiameter) {
+                        if (systemDiameter) {
                             console.log('+++++++have systemDiameter:' + systemDiameter)
                             light.range = (systemDiameter * dParsecUnits);
                         } else {
@@ -877,7 +877,7 @@ var setPosition = function (data, position, units) {
                         light.parent = mesh;
                         // properties for emissive texture
                         mat.emissiveTexture = new BABYLON.Texture(texDir + model.surface, scene, true, false);
-                        if(clr) {
+                        if (clr) {
                             mat.diffuseColor = clr.clone();
                         } else {
                             mat.diffuseColor = new BABYLON.Color3(1, 1, 1);
@@ -910,7 +910,7 @@ var setPosition = function (data, position, units) {
                     mat.diffuseTexture = new BABYLON.Texture(texDir + model.surface, scene);
                     mat.emissiveColor = new BABYLON.Color3(0.1, 0.1, 0.1);
 
-                    if(util.isNumber(model.specular)) {
+                    if (util.isNumber(model.specular)) {
                         mat.specularColor = new BABYLON.Color3(model.specular, model.specular, model.specular)
                     } else {
                         mat.specularColor = new BABYLON.Color3(0, 0, 0)
@@ -919,18 +919,18 @@ var setPosition = function (data, position, units) {
 
             }
 
-        } else if(model.gltf) {
+        } else if (model.gltf) {
             
             //load a gltf file
 
-        } else if(model.alias) {
+        } else if (model.alias) {
 
             // load an .alias wavefront file
 
         }
 
         // Runs every frame to rotate the sphere
-        if(mesh) {
+        if (mesh) {
 
             // BAKING
 
@@ -943,7 +943,7 @@ var setPosition = function (data, position, units) {
 
                 // update stars
                 // DOESN'T WORK, WHY? 
-                if(pObj.key == 'luhman_16_a' || pObj.key == 'luhman_16_b') {
+                if (pObj.key == 'luhman_16_a' || pObj.key == 'luhman_16_b') {
                     //this.celestial.orrey.computeOrbit(pObj);
                     // try making orbit manually here
                     // NOTE: scaled.dist is being SAVED from creation of these objects!
@@ -985,22 +985,22 @@ var setPosition = function (data, position, units) {
         let mesh = this.loadPlanetModel(pObj, dir + '/' + pObj.dname, scene, systemDiameter);
 
 ///////////////////////////////////////////////////////////////
-        if(pObj.key == 'luhman_16_a') {
+        if (pObj.key == 'luhman_16_a') {
                 window.luhman_a = mesh;
         }
-        if(pObj.key == 'luhman_16_b') {
+        if (pObj.key == 'luhman_16_b') {
                 window.luhman_b = mesh;
         }
 ///////////////////////////////////////////////////////////////
 
-        if(mesh) {
+        if (mesh) {
 
             //
             mesh.lookAt = function (camera) { camera.target = this.position}
 
             // Stars are children to their SpaceVolume
 
-            if(parent) {
+            if (parent) {
                 mesh.parent = parent;
             }
 
@@ -1012,7 +1012,7 @@ var setPosition = function (data, position, units) {
 
             // draw the planets, comets, asteroids
 
-            if(util.isArray(pObj.planets)) {
+            if (util.isArray(pObj.planets)) {
                 for(let i = 0; i< pObj.planets.length; i++) {
                     this.loadPlanet(pObj.planets[i], dir + '/' + pObj.dname +  '/planets', scene, mesh);
                 }

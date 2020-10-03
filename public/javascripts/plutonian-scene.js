@@ -14,7 +14,7 @@ var PWorld = (function () {
 
         // debugging layer TODO: remove later
         this.DEBUG = true; // for scene inspector
-        if(this.DEBUG) this.initDebug();
+        if (this.DEBUG) this.initDebug();
 
         // visual elements
         this.glow                      = null;        // glow layer
@@ -70,7 +70,7 @@ var PWorld = (function () {
         let util = this.util;
         let model = null;
 
-        if(!util.isObject(models)) {
+        if (!util.isObject(models)) {
             console.warn('getActiveModel WARNING: no model object');
             return model;
         }
@@ -79,14 +79,14 @@ var PWorld = (function () {
 
         for(var i in models) {
             model = models[i];
-            if(model.active) {
+            if (model.active) {
                 return model;
             } 
         }
 
         // no active model returned, look for default model
 
-        if(models.default) {
+        if (models.default) {
             return models.default;
         } else {
             console.error('checkModels ERROR: no default model found');
@@ -109,20 +109,20 @@ var PWorld = (function () {
         let a = []; // accumulate active galaxies
         let w = this.world; // world pObj tree
 
-        if(!util.isObject(w)) {
+        if (!util.isObject(w)) {
             console.error('getActiveSkybox ERROR: missing world');
             return null;
         }
 
         // the current galaxy will have an active SkyBox (cubemap) model
-        if(util.isArray(w.galaxies)) {
+        if (util.isArray(w.galaxies)) {
             for(let i = 0; i < w.galaxies.length; i++) {
                 let galaxy = w.galaxies[i];
-                if(util.isObject(galaxy.data) && util.isObject(galaxy.data.models)) {
+                if (util.isObject(galaxy.data) && util.isObject(galaxy.data.models)) {
                     let models = galaxy.data.models;
                     for(let j in models) {
                         let model = models[j];
-                        if(util.isBoolean(model.active) && model.active == true) {
+                        if (util.isBoolean(model.active) && model.active == true) {
                             a.push({galaxy:galaxy, skybox: model});
                         }
                     }
@@ -130,7 +130,7 @@ var PWorld = (function () {
             }
         }
 
-        if(a.length > 1) {
+        if (a.length > 1) {
             console.warn('getActiveSkybox WARNING: multiple active galaxies')
         }
 
@@ -158,13 +158,13 @@ var PWorld = (function () {
 
         console.log("galaxy is a:" + galaxies + " with length:" + galaxies.length)
 
-        if(galaxies.length > 0) {
+        if (galaxies.length > 0) {
 
             let g = galaxies[0].galaxy;
             //let d = g.data.diameter;
 
             // toggle large and small skybox based on supplied 'vr' variable
-            if(vr == true) {
+            if (vr == true) {
                 g.meshSkyVR.setEnabled(true);
                 g.meshSky.setEnabled(false);
             } else {
@@ -181,13 +181,13 @@ var PWorld = (function () {
      */
     PWorld.prototype.toggleMeshActivation = function (mesh) {
 
-        if(mesh) {
+        if (mesh) {
 
             // visibility only
-            //if(m.visibility == 1) m.visibility = 0.0;
+            //if (m.visibility == 1) m.visibility = 0.0;
             //else m.visibility = 1;
 
-            if(mesh.isEnabled()) {
+            if (mesh.isEnabled()) {
                 console.log('toggleMeshActivation: enabling mesh:' + mesh)
                 mesh.isVisible = false;
                 mesh.setEnabled(false);
@@ -209,12 +209,12 @@ var PWorld = (function () {
 
         let util = this.util;
 
-        if(!util.isObject(vec) || !util.isNumber(vec.x)) {
+        if (!util.isObject(vec) || !util.isNumber(vec.x)) {
             console.error('setPositionByXYZ ERROR: invalid vector passed:' + vec)
             return false;
         }
 
-        if(!util.isNumber(data.x) || !util.isNumber(data.y) || !util.isNumber(data.z)) {
+        if (!util.isNumber(data.x) || !util.isNumber(data.y) || !util.isNumber(data.z)) {
             console.error('setPositionByXYZ ERROR: invalid data passed');
             return false;
         }
@@ -236,7 +236,7 @@ var PWorld = (function () {
         let util = this.util;
         let celestial = this.celestial;
 
-        if(!util.isNumber(ra) || !util.isNumber(dec) || !util.isNumber(dist)) {
+        if (!util.isNumber(ra) || !util.isNumber(dec) || !util.isNumber(dist)) {
             console.error('setPositionByRADec ERROR: invalid ra:' + ra + ', dec:' + dec + ', dist:' + dist);
             return null;
         }
@@ -266,7 +266,7 @@ var PWorld = (function () {
         let util = this.util;
         let celestial = this.celestial;
 
-        if(!util.isNumber(data.ra) || !util.isNumber(data.dec)) {
+        if (!util.isNumber(data.ra) || !util.isNumber(data.dec)) {
             console.error('setRotationByRADec ERROR: invalid ra, dec, or distance');
             return false;
         }
@@ -301,7 +301,7 @@ var PWorld = (function () {
         let mesh = null;
 
         // we don't use a specified model object for SpaceVolumes
-        if(!pdata.checkPObj(pObj, true, false)) {
+        if (!pdata.checkPObj(pObj, true, false)) {
             console.error('loadSpaceVolume ERROR:' + pObj.name +' invalid object passed');
             return mesh;
         }
@@ -368,7 +368,7 @@ var PWorld = (function () {
         // space volumes only have color, no texture
         let clr = celestial.color(data);
 
-        if(clr) {
+        if (clr) {
             mat.diffuseColor = clr;
             // make the SpaceVolume bright, independent of dark objects
 
@@ -407,7 +407,7 @@ var PWorld = (function () {
         mat.specularColor = new BABYLON.Color3(0, 0, 0);
 
         // Load a cubemap. Files in each model directory
-        if(dir && loadTexture) {
+        if (dir && loadTexture) {
 
            mat.reflectionTexture = new BABYLON.CubeTexture(dir, 
                 scene, ['_px.png', '_py.png', '_pz.png', '_nx.png', '_ny.png', '_nz.png']);
@@ -457,7 +457,7 @@ var PWorld = (function () {
         let mesh = null;
 
         // we don't use a specified model object for SpaceVolumes
-        if(!pdata.checkPObj(pObj, true, true)) {
+        if (!pdata.checkPObj(pObj, true, true)) {
             console.error('loadSkybox ERROR: invalid object passed');
             return mesh;
         }
@@ -467,7 +467,7 @@ var PWorld = (function () {
         // get the active model
         let model = this.getActiveModel(data.models);
 
-        if(!util.isObject(model)) {
+        if (!util.isObject(model)) {
             console.error('loadSkybox ERROR: no active model found');
             return mesh;
         }
@@ -483,9 +483,9 @@ var PWorld = (function () {
          * NOTE: VR skybox must be < 1000 units, so we make a desktop AND VR skybox
          * NOTE: some stars in the Hyg database are further away than 10000!
          */
-        if(useVR) {
+        if (useVR) {
             bSize = this.VR_DEFAULT_SIZE;
-        } else if(util.isNumber(data.diameter) && data.diameter > 0) {
+        } else if (util.isNumber(data.diameter) && data.diameter > 0) {
             bSize = data.diameter * celestial.dParsecUnits;
             console.log('loadSkybox VR for:' + pObj.name + ' using bSize:' + bSize);
         }
@@ -516,7 +516,7 @@ var PWorld = (function () {
         //data.ra = 179.25; // TODO: side to side (almost 180)
         //data.dec = 60.749; //TODO: up and down (correct galactic degrees 60.2)
 
-        if(util.isNumber(model.ra) && util.isNumber(model.dec)) {
+        if (util.isNumber(model.ra) && util.isNumber(model.dec)) {
             data.ra = model.ra;
             data.dec = model.dec;
         }
@@ -549,7 +549,7 @@ var PWorld = (function () {
         */
 
         // if specified, load the cubemap material WITH the texture
-        if(loadMaterial) {
+        if (loadMaterial) {
             mesh.material = this.setCubeMapMaterial(pObj, dir + '/textures/' + model.cubemap + '/', scene, true);
         }
 
@@ -570,7 +570,7 @@ var PWorld = (function () {
         let mesh = null;
 
         // check data but NOT model
-        if(!pdata.checkPObj(pObj, true, false)) {
+        if (!pdata.checkPObj(pObj, true, false)) {
             console.error('loadStarDome ERROR: invalid object passed');
             return mesh;
         }
@@ -580,7 +580,7 @@ var PWorld = (function () {
         // get the active model
         let model = this.getActiveModel(data.models);
 
-        if(!util.isObject(model)) {
+        if (!util.isObject(model)) {
             console.error('loadStarDome ERROR: no active model found');
             return mesh;
         }
@@ -591,7 +591,7 @@ var PWorld = (function () {
         let assetManager = new BABYLON.AssetsManager(scene);
 
         // Specific to hyg3 stellar database models
-        if(model.hyg) {
+        if (model.hyg) {
 
             // TODO: GUI OR PERFORMANCE SELECT
             // mod = models.sprite120; ////////////////////////////////////////
@@ -651,7 +651,7 @@ var PWorld = (function () {
         let pdata = this.pdata;
         let mesh = null;
 
-        if(!pdata.checkPObj(pObj)) {
+        if (!pdata.checkPObj(pObj)) {
             console.error('loadCloudModel ERROR: invalid object passed');
         }
 
@@ -659,7 +659,7 @@ var PWorld = (function () {
 
         let model = this.getActiveModel(data.models) 
 
-        if(!util.isObject(model)) {
+        if (!util.isObject(model)) {
 
         }
 
@@ -695,7 +695,7 @@ var PWorld = (function () {
             case t.PLANET:
             case t.MOON:
             case t.EXOMOON:
-                if(pObj.mesh && parent) {
+                if (pObj.mesh && parent) {
                     //console.log("%%%%%%%% ready to set parent...")
                     //console.log('%%%%%%%%%%%Mesh   is:' + mesh)
                     //console.log('%%%%%%%%%%%Parent is:' + parent)
@@ -737,11 +737,11 @@ var PWorld = (function () {
 
         // TODO: explore emissive color for glow.
 
-        if(!mesh) {
+        if (!mesh) {
             console.error('setGlow ERROR:bad mesh');
         }
 
-        if(!this.glow) {
+        if (!this.glow) {
             console.error('setGlow ERROR: glow never initialized');
         }
 
@@ -762,7 +762,7 @@ var PWorld = (function () {
         //light.position = new BABYLON.Vector3(0, 0, 0);
 
         // light range, adjust to StarSystem SpaceVolume
-        if(range) {
+        if (range) {
             // TODO: RANGE FROM PARENT
             light.range = range;
         } else {
@@ -783,19 +783,19 @@ var PWorld = (function () {
         let texDir = dir + '/' + pObj.dname + '/textures/';
 
         // make sure we have a mesh
-        if(!mesh) {
+        if (!mesh) {
             console.error('setMaterial ERROR: no mesh for:' + pObj.name);
             return null;
         }
 
-        if(!model) {
+        if (!model) {
             console.error('setMaterial ERROR: no model for:' + pObj.name);
             return null;
         }
 
         // color (either an array, or from spectral type for Stars)
         let clr = celestial.color(pObj.data);
-        if(!clr) {
+        if (!clr) {
             console.error('setMaterial Warning: no pObj:' + pObj.name + ' color specified, setting GREY');
             clr = [0.5, 0.5, 0.5];
         }
@@ -805,11 +805,11 @@ var PWorld = (function () {
 
         const mat = mesh.material;
 
-        if(model.surface) {
+        if (model.surface) {
         
             //console.log('%%%%%%setting surface for:' + pObj.name)
 
-            if(model.emissive) {
+            if (model.emissive) {
                 mesh.freezeNormals();
                 //console.log('%%%%%%setting emissive for:' + pObj.name)
                 mat.specularColor = new BABYLON.Color3(0, 0, 0);
@@ -818,7 +818,7 @@ var PWorld = (function () {
                 mat.emissiveTexture = new BABYLON.Texture(texDir + model.surface, scene, true);
                 mat.emissiveColor = clr;
                 this.setEmissiveLight(pObj, 20, scene);
-                if(model.glow) {
+                if (model.glow) {
                     this.setGlow(mesh, scene);
                 }
 
@@ -829,14 +829,14 @@ var PWorld = (function () {
                 mat.diffuseTexture = new BABYLON.Texture(texDir + model.surface, scene, true);
                 // this create the equivalen of ambient light on the 'backside' of planets
                 mat.emissiveColor = new BABYLON.Color3(0.1, 0.1, 0.1);
-                if(util.isNumber(model.specular)) {
+                if (util.isNumber(model.specular)) {
                     mat.specularColor = new BABYLON.Color3(model.specular, model.specular, model.specular);
                 } else {
                     mat.specularColor = new BABYLON.Color3(0.1, 0.1, 0.1);
                 }
             }
 
-        } else if(model.cubemap) {
+        } else if (model.cubemap) {
             //mat.reflectionTexture = new BABYLON.CubeTexture(dir + '/textures/' + model.cubemap + '/', 
             //scene, ['_px.png', '_py.png', '_pz.png', '_nx.png', '_ny.png', '_nz.png']);
             // Skybox and similar is always drawn at infinity
@@ -861,13 +861,13 @@ var PWorld = (function () {
         let data = pObj.data;
         let mesh = pObj.mesh;
 
-        if(!mesh) {
+        if (!mesh) {
             console.error('setPos ERROR: no mesh');
             return false;
         }
         let parent = pObj.mesh.parent;
 
-        if(!parent) {
+        if (!parent) {
             console.error('setPosition ERROR: no parent');
             return false;
         }
@@ -916,7 +916,7 @@ var PWorld = (function () {
         scene.onBeforeRenderObservable.add(()=>{
                 // update stars
                 // DOESN'T WORK, WHY? 
-                if(pObj.key == 'luhman_16_a' || pObj.key == 'luhman_16_b') {
+                if (pObj.key == 'luhman_16_a' || pObj.key == 'luhman_16_b') {
                 //this.celestial.orrey.computeOrbit(pObj);
                 // try making orbit manually here
                 // NOTE: scaled.dist is being SAVED from creation of these objects!
@@ -1020,7 +1020,7 @@ var PWorld = (function () {
         console.log('loading star, planet, or moon:' + pObj.name)
 
         // check the data object for validity
-        if(!pdata.checkPObj(pObj)) {
+        if (!pdata.checkPObj(pObj)) {
             console.error('loadPlanetModel Error: invalid pObj for:' + pObj.name);
             return null;
         }
@@ -1040,7 +1040,7 @@ var PWorld = (function () {
                     segments: 32
                     }, scene);
 
-        if(!mesh) {
+        if (!mesh) {
             console.error('loadPlanet ERROR: failed to create mesh for:' + pObj.name);
             return null;
         }
@@ -1091,13 +1091,13 @@ var PWorld = (function () {
 
         let mesh = this.loadPlanetModel(pObj, dir + '/', scene, parent);
 
-        if(mesh) {
+        if (mesh) {
 
             ////////////////////////this.ui.createLabel(pObj, scene, true, true);
 
             // draw the moons
 
-            if(util.isArray(pObj.moons)) {
+            if (util.isArray(pObj.moons)) {
                 for(let i = 0; i< pObj.moons.length; i++) {
                     this.loadMoon(pObj.moons[i], dir + '/' + pObj.dname + '/moons', scene, mesh);
                 }
@@ -1120,13 +1120,13 @@ var PWorld = (function () {
 
         let mesh = this.loadPlanetModel(pObj, dir + '/', scene, parent);
 
-        if(mesh) {
+        if (mesh) {
 
             //////////////////////this.ui.createLabel(pObj, scene, true, true);
 
             // draw the moons
 
-            if(util.isArray(pObj.moons)) {
+            if (util.isArray(pObj.moons)) {
                 for(let i = 0; i< pObj.moons.length; i++) {
                     this.loadMoon(pObj.moons[i], dir + '/' + pObj.dname + '/moons', scene, mesh);
                 }
@@ -1153,7 +1153,7 @@ var PWorld = (function () {
             ///////////////////////this.ui.createLabel(pObj, scene);
 
             // Load planets
-            if(util.isArray(pObj.planets)) {
+            if (util.isArray(pObj.planets)) {
                 for(let i = 0; i< pObj.planets.length; i++) {
                     this.loadPlanet(pObj.planets[i], dir + '/' + pObj.dname +  '/planets', scene, mesh);
                 }
@@ -1176,7 +1176,7 @@ var PWorld = (function () {
 
         let mesh = this.loadSpaceVolume(pObj, dir, scene);
 
-        if(mesh) {
+        if (mesh) {
 
             // StarSystems are NOT children to their Galaxy - they would inherit
             // The Skybox 'infinite distance' properties. Rogue Planets don't 
@@ -1203,7 +1203,7 @@ var PWorld = (function () {
             //this.ui.createMeshLabel(pObj, scene);
             ////////////////////////////this.ui.createGUILabel(pObj, scene); // 2D ONLY
 
-            if(util.isArray(pObj.stars)) {
+            if (util.isArray(pObj.stars)) {
                 for(let i = 0; i < pObj.stars.length; i++) {
                     this.loadStar(pObj.stars[i], dir + '/' + pObj.dname + '/stars', scene, mesh);
                 }
@@ -1224,13 +1224,13 @@ var PWorld = (function () {
 
         let mesh = this.loadPlanetModel(pObj, dir + '/', scene, parent);
 
-        if(mesh) {
+        if (mesh) {
 
             // additional features
 
             this.ui.createLabel(pObj, scene);
 
-            if(util.isArray(pObj.moons)) {
+            if (util.isArray(pObj.moons)) {
                 for(let i = 0; i < pObj.moons.length; i++) {
                     this.loadMoon(pObj.moons[i], dir + '/' + pObj.dname + '/moons', scene, mesh);
                 }
@@ -1261,7 +1261,7 @@ var PWorld = (function () {
         // draw the star (apart from planets, etc)
         let mesh = this.loadCloudModel(pObj, dir + '/' + pObj.dname, scene);
 
-        if(mesh) {
+        if (mesh) {
 
         }
 
@@ -1291,7 +1291,7 @@ var PWorld = (function () {
          */
         let meshSky = this.loadSkybox(pObj, dir, scene, this.NO_VR, false);
 
-        if(meshSky) {
+        if (meshSky) {
             // nothing to do
         }
 
@@ -1300,7 +1300,7 @@ var PWorld = (function () {
         let meshSkyVR = this.loadSkybox(pObj, dir, scene, this.USE_VR, false);
 
         // disable VR on initial creation (defaults to 2D desktop view)
-        if(meshSkyVR) {
+        if (meshSkyVR) {
             meshSkyVR.setEnabled(false);
         }
 
@@ -1315,14 +1315,14 @@ var PWorld = (function () {
 
         // hide the SpaceVolume
 
-        if(mesh) {
+        if (mesh) {
 
             // spaceVolume should be invisible
             mesh.setEnabled(false);
             this.godLight.excludedMeshes.push(mesh);
 
             // attach to parent (universe)
-            if(parent) {
+            if (parent) {
                 mesh.parent = parent;
             }
 
@@ -1330,13 +1330,13 @@ var PWorld = (function () {
             pObj.mesh = mesh;
             mesh.pObj = pObj;
 
-            if(meshSky) {
+            if (meshSky) {
                 meshSky.name += '-skybox';
                 pObj.meshSky = meshSky;
                 meshSky.pObj = pObj;
             }
 
-            if(meshSkyVR) {
+            if (meshSkyVR) {
                 meshSkyVR.name += '-skybox-VR';
                 pObj.meshSkyVR = meshSkyVR;
                 meshSkyVR.pObj = pObj;
@@ -1376,39 +1376,39 @@ var PWorld = (function () {
 
             // create child objects
 
-            if(this.util.isArray(pObj.globular_clusters)) {
+            if (this.util.isArray(pObj.globular_clusters)) {
                 for(let i = 0; i< pObj.globular_clusters.length; i++) {
                     this.loadGlobularCluster(pObj.globular_clusters[i], dir + '/globular_clusters', scene, mesh);
                 }
             }
 
-            if(this.util.isArray(pObj.open_clusters)) {
+            if (this.util.isArray(pObj.open_clusters)) {
                 for(let i = 0; i< pObj.open_clusters.length; i++) {
                     this.loadOpenCluster(pObj.open_clusters[i], dir + '/open_clusters', scene, mesh);
                 }
             }
 
-            if(this.util.isArray(pObj.nebula)) {
+            if (this.util.isArray(pObj.nebula)) {
                 for(let i = 0; i< pObj.nebula.length; i++) {
                     this.loadNebula(pObj.nebula[i], dir + '/nebula', scene, mesh);
                 }
             }
 
             // this drops us to 30 FPS!!!!
-            if(this.util.isArray(pObj.stardomes)) {
+            if (this.util.isArray(pObj.stardomes)) {
                 for (let i = 0; i < pObj.stardomes.length; i++) {
                     this.loadStarDome(pObj.stardomes[i], dir + '/stardomes', scene, mesh);
                 }
             }
 
-            if(this.util.isArray(pObj.star_systems)) {
+            if (this.util.isArray(pObj.star_systems)) {
                 for(let i = 0; i< pObj.star_systems.length; i++) {
                     this.loadStarSystem(pObj.star_systems[i], dir + '/star_systems', scene);
                 }
             }
 
             // free-floating planets, not attached to any star
-            if(this.util.isArray(pObj.rogue_planets)) {
+            if (this.util.isArray(pObj.rogue_planets)) {
                 for(let i = 0; i< pObj.rogue_planets.length; i++) {
                     this.loadPlanetModel(pObj.rogue_planets[i], dir + '/rogue_planets', scene);
                 }
@@ -1447,7 +1447,7 @@ var PWorld = (function () {
 
         // create World elements
 
-        if(mesh) { // valid world
+        if (mesh) { // valid world
 
             this.world = pObj;
 
@@ -1456,13 +1456,13 @@ var PWorld = (function () {
             // hide the universe, we only view the world from inside a galaxy
             this.toggleMeshActivation(mesh);
 
-            if(Array.isArray(pObj.dark_matter)) {
+            if (Array.isArray(pObj.dark_matter)) {
                 for(let i = 0; i < pObj.dark_matter.length; i++) {
                     this.loadDarkMatter(pObj.dark_matter[i], dir + '/' + pObj.dname + '/' + pObj.dark_matter[i].dname, scene, mesh);
                 }
             }
 
-            if(Array.isArray(pObj.galaxies)) {
+            if (Array.isArray(pObj.galaxies)) {
                 for(let i = 0; i < pObj.galaxies.length; i++) { // loop through galaxy array
                     this.loadGalaxy(pObj.galaxies[i], dir + '/' + pObj.dname + '/' + pObj.galaxies[i].dname, scene, mesh);
                 } // loop through galaxies
@@ -1477,7 +1477,7 @@ var PWorld = (function () {
             let cam = this.activeCamera;
 
             // .activeCamera may not be defined during initial loading yet
-            if(!cam) {
+            if (!cam) {
                 return;
             }
 
@@ -1486,7 +1486,7 @@ var PWorld = (function () {
 
             if (pickResult.hit) {
 
-                if(pickResult.pickedSprite) {
+                if (pickResult.pickedSprite) {
                     let s = pickResult.pickedSprite;
                     console.log('^^^^^^^^^^^^^^^^^^^^^^');
                     console.log('Picked SPRITE is:' + s.name + ' hygid:' + s.hygid);
@@ -1502,9 +1502,9 @@ var PWorld = (function () {
             // Picker for non-Sprite meshes
             let pickMesh = this.pick(this.pointerX, this.pointerY);
 
-                if(pickMesh.hit) {
+                if (pickMesh.hit) {
 
-                    if(pickMesh.pickedMesh) {
+                    if (pickMesh.pickedMesh) {
                         let m = pickMesh.pickedMesh;
                         console.log('^^^^^^^^^^^^^^^^^^^^^^');
                         console.log('Picked MESH is:' + m.name + ' pObj:' + m.pObj.name);
@@ -1647,7 +1647,7 @@ var PWorld = (function () {
                 let w = JSON.parse(world.text);
 
                 // check the world, then begin loading assets
-                if(pdata.checkWorld(w)) {
+                if (pdata.checkWorld(w)) {
 
                     assets.world = w;
 
@@ -1831,7 +1831,7 @@ var PWorld = (function () {
 
         let engine = this.setup.createDefaultEngine();
 
-        if(engine && engine.getRenderingCanvas()) {
+        if (engine && engine.getRenderingCanvas()) {
 
             // DefaultLoadingScreen.prototype.displayLoadingUI in plutonian-ui.js
             engine.displayLoadingUI();

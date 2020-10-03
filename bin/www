@@ -55,7 +55,7 @@ server.on('listening', onListening);
  * https://stackoverflow.com/questions/8605720/how-to-force-ssl-https-in-express-js
  */
 
-if(config.useSSL) {
+if (config.useSSL) {
   var securePort = config.portSecure;
 
   //Read the certificate and key

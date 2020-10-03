@@ -43,7 +43,7 @@ app.use(express.urlencoded({ extended: false }));
  * https://www.geeksforgeeks.org/session-management-using-express-session-module-in-node-js/
 */
 
-if(config.useCookie) {
+if (config.useCookie) {
 
     let sessionConfig = {
       secret: '75FFzg!6WwwlivwV1B)cPY`~5p:_Kz8ugWz$-=JrD:o^rUs3S;d@R?A',
