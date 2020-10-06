@@ -21,25 +21,14 @@ var PUtil = (function () {
 	
    //functions
 
-   PUtil.prototype.isValidFile = function (url) {
-
-    if (url.length !== 0) { 
-
-            http.open('HEAD', url, false); 
-            http.send(); 
-
-            if (http.status === 200) { 
-                return true; 
-            } else { 
-                return false;
-            }
-
-        }
-
-   };
+    /*
+     * ------------------------------------------------------
+     * DATA TYPE VALIDATION
+     * ------------------------------------------------------
+     */
 
     PUtil.prototype.isString = function (value) {
-        return typeof value === 'string' || value instanceof String;
+        return (typeof value === 'string' || value instanceof String);
     };
 
     /**
@@ -47,9 +36,7 @@ var PUtil = (function () {
      * @param {String} str the test string
      */
     PUtil.prototype.isURL = function (str) {
-
         return ( /^[\w+:\/\/]/.exec( str ) != null );
-
     };
 
     PUtil.prototype.isNumber = function (value, suppress = false) {
@@ -69,30 +56,42 @@ var PUtil = (function () {
         return (typeof v === 'number' && isFinite(v));
     };
 
-    // NOTE: Array.isArray() is already defined in modern browsers
+    /**
+     * NOTE: Array.isArray() is already defined in modern browsers
+     */ 
     PUtil.prototype.isArray = function (value) {
         return Array.isArray(value);
     };
 
-    // NOTE: we don't count arrays as objects
+    /**
+     * NOTE: we don't count arrays as objects
+     */ 
     PUtil.prototype.isObject = function (value) {
         //return ((value && typeof value === 'object') && (value.constructor === Object));
         return (typeof value === 'object' && !Array.isArray(value) && value !== null);
     };
 
+    /**
+     * Boolean test
+     */
     PUtil.prototype.isBoolean = function (value) {
         return value === true || value === false || toString.call(value) === '[object Boolean]';
     };
 
+    /**
+     * NULL test
+     */
     PUtil.prototype.isNull = function (value) {
         return value === null;
     };
 
+    /**
+     * Undefined test
+     */
     PUtil.prototype.isUndefined = function (value) {
         return typeof value === 'undefined';
     };
 
-    
     /** 
      * Check if a number is even.
      * @param {Number} n the variable to be tested.
@@ -167,52 +166,11 @@ var PUtil = (function () {
         return (typeof(Worker) !== 'undefined');
     };
 
-    /** 
-     * Scale a color up to the top, or down to the bottom 
-     * of the 0-1 color channel range used by BabylonJS
+    /*
+     * ------------------------------------------------------
+     * OBJECT MANIPULATION
+     * ------------------------------------------------------
      */
-    PUtil.prototype.scaleColor = function (color, up = true) {
-
-        let num = [];
-        let n = 0;
-
-        if (this.isArray(color)) {
-            num = color;
-        } else if (this.isObject(color)) {
-            num[0] = color.r,
-            num[1] = color.g,
-            num[2] = color.b;
-        } else {
-            console.error('clampColor ERROR: invalid color');
-            return null;
-        }
-
-        for(var i = 0; i < num.length; i++) {
-            if (num[i] < 0 || num[i] > 1) {
-                console.error('clampColor ERROR: color value out of range');
-                return null;
-            }
-        }
-
-        if (up) {
-            n = Math.max.apply(null, num);
-            let r = (1 - n);
-            console.log('--clr n:' + n + ' r:' + r)
-            for(var i = 0; i < num.length; i++) {
-                num[i] += r;
-            }
-
-        } else {
-            n = Math.min.apply(null, num);
-            let r = (1 - n);
-            for(var i = 0; i < num.length; i++) {
-                num[i] -= r;
-            }
-        }
-        
-        return new BABYLON.Color3(num[0], num[1], num[2]);
-
-    };
 
     /** 
      * Number of keys in an associative array or object.
@@ -238,6 +196,12 @@ var PUtil = (function () {
         let keys = Object.keys(obj);
         return keys.sort(function(a, b) { return obj[b] - obj[a]});
     };
+
+    /*
+     * ------------------------------------------------------
+     * ASSET IDS
+     * ------------------------------------------------------
+     */
 
     /** 
      * Random seed.
@@ -293,6 +257,12 @@ var PUtil = (function () {
 
     };
 
+    /*
+     * ------------------------------------------------------
+     * TESTING BROWSER, WINDOW, CANVAS FEATURES
+     * ------------------------------------------------------
+     */
+
     /** 
      * Get the width of the entire screen (excluding OS taskbars)
      * @link http://ryanve.com/lab/dimensions/
@@ -323,15 +293,6 @@ var PUtil = (function () {
     };
 
     /**
-     * Error reporting
-     * @param {Error} error execution error
-     * @param {Boolean} verbose if true
-     */
-    PUtil.prototype.printError = function (error, explicit, str = 'printError:') {
-        console.log(`[${explicit ? str + ', Syntax Error (EXPLICIT)' : str + ', Error (INEXPLICIT)'}] ${error.name}: ${error.message}`);
-    };
-
-    /**
      Performance for a particular function
      * @link {https://developer.mozilla.org/en-US/docs/Web/API/Performance/now}
      * @link {https://www.digitalocean.com/community/tutorials/js-js-performance-api}
@@ -351,30 +312,73 @@ var PUtil = (function () {
         return new Promise(resolve => setTimeout(resolve, ms))
     };
 
+    /*
+     * ------------------------------------------------------
+     * ASYNC LOADING NETWORK RESOURCES
+     * ------------------------------------------------------
+     */
+
     /**
      * Make JSON loading and parsing async (by using the Fetch API)
      * @param {String} url the web address or file location of the JSON text
      * @param {Function} responseFn the function for processing the parsed JSON object
      */
-    PUtil.prototype.asyncJSON = function (url, responseFn) {
+    PUtil.prototype.asyncJSON = function (url, responseFn, debug = false) {
         fetch(url)
-        .then(response => response.json())
-        .then(data => responseFn(data));
+        .then((response) => { 
+            return response.json();
+        })
+        .then(data => responseFn(data))
+        .catch (e => {
+            console.warn('failed to get JSON for url:');
+            console.warn(url);
+        })
     };
 
     /**
-     * parse an XML string
+     * Load and parse XML async
      */
-    PUtil.prototype.asyncXML = function (url, responseFn) {
+    PUtil.prototype.asyncXML = function (url, responseFn, debug = false) {
         fetch(url)
-        .then(response => responseFn(data));
-    }
+        .then((res) => {
+            if (debug) {
+                console.log('asyncXML URL:' + res.url);
+                console.log('content-type:' + res.headers.get('content-type'));
+                console.log('type:' + res.type)
+                console.log('expires:' + res.headers.get('expires'));
+                console.log('status:' + res.ok);
+                console.log('statusText:' + res.statusText);
+            }
+            if(res.statusText == 'OK') {
+                let parser = new DOMParser();
+                let xmlDoc = parser.parseFromString(res.text(), 'text/xml');
+                responseFn(xmlDoc);
+            }
+
+        });
+
+    };
 
     /** 
      * Async loop
      */
     PUtil.prototype.asyncLoop = function (iterations, execFn, callbackFn, offset = 0) {
         return new BABYLON.AsyncLoop(iterations, execFn, callbackFn, offset); //offset
+    };
+
+    /*
+     * ------------------------------------------------------
+     * ERROR REPORTING
+     * ------------------------------------------------------
+     */
+
+    /**
+     * Error reporting
+     * @param {Error} error execution error
+     * @param {Boolean} verbose if true
+     */
+    PUtil.prototype.printError = function (error, explicit, str = 'printError:') {
+        console.log(`[${explicit ? str + ', Syntax Error (EXPLICIT)' : str + ', Error (INEXPLICIT)'}] ${error.name}: ${error.message}`);
     };
 
    return PUtil;

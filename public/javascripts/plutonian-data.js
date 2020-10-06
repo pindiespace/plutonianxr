@@ -42,8 +42,10 @@ var PData = (function () {
 
         this.pObj_ERROR   = -1;
         this.hygObj_ERROR = -1;
+
         this.EMPTY        = '';
         this.ZERO         =  0;
+        this.NULL         = null;
         this.FALSE        = false;
         this.TRUE         = true;
         this.NAN          = NaN;
@@ -66,6 +68,18 @@ var PData = (function () {
      */
 
     /**
+     * some PSpectrum constants, 
+     * indicating the type of spectrum or sub-spectrum
+     */
+    PData.prototype.SPECTROLES = {
+        PRIMARY: 'primary',
+        COMPOSITE: 'composite',
+        INTERMEDIATE: 'intermediate',
+        UNKNOWN: 'unknown'
+    };
+
+
+    /**
      * create a PSpectrum property object, also used by PCelestial 
      */
     PData.prototype.createPSpectrum = function (spect) {
@@ -74,15 +88,21 @@ var PData = (function () {
             type: { // type (O, A, B,...)
                 key: this.EMPTY, // key for description (values in PSpectrum)
                 key2: this.EMPTY, // subtype (white dwarf, wolf-rayet)
+                key3: this.EMPTY, // sub-sub type (white dwarf and wolf-rayet)
+                arr: this.NULL, // array with subtype description
+                role: this.SPECTROLES.UNKNOWN,
                 con: this.ZERO
             },
             range: { // range (0-9)
+                key: this.EMPTY,
                 value: this.NAN,  // value (in spectrum string)
+                role: this.SPECTROLES.UNKNOWN,
                 con: this.ZERO
             },
             luminosity: { // luminosity (I, II, III,...)
                 key: this.EMPTY,  // key for description (values in PSpectrum, star/Sun)
                 value: this.NAN,   // value (estimated from luminosity key)
+                role: this.SPECTROLES.UNKNOWN,
                 con: this.ZERO
             },
             mass: {
@@ -484,6 +504,35 @@ var PData = (function () {
         return true;
 
     };
+
+    /*
+     * ------------------------------------------------------
+     * FILE SAVING
+     * ------------------------------------------------------
+     */
+
+   PUtil.prototype.isValidFile = function (url) {
+
+    if (url.length !== 0) { 
+
+            http.open('HEAD', url, false); 
+            http.send(); 
+
+            if (http.status === 200) { 
+                return true; 
+            } else { 
+                return false;
+            }
+
+        }
+
+   };
+
+   /** 
+    * save a file 
+    * TODO: 
+    * https://github.com/eligrey/FileSaver.js
+    */
 
     return PData;
 

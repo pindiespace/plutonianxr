@@ -146,7 +146,6 @@ var PCelestial = (function () {
         return parseFloat(rad) * 180 / Math.PI;
     };
 
-    
     /**
     * Returns 0-360 degrees for a 24-hour clock, optionally
     * accurate for minutes and seconds.
@@ -178,11 +177,11 @@ var PCelestial = (function () {
      * Returns decimal degrees for degrees written as degrees, minutes, seconds
      */
     PCelestial.prototype.dmsToDecimal = function (d = 0, m = 0, s = 0) {
-		if (m < 0) m = -m;
-		if (s < 0) s = -s;
-		let m0 = m; 
+        if (m < 0) m = -m;
+        if (s < 0) s = -s;
+        let m0 = m; 
         let s0 = s;
-		if (d < 0 || d =='-0') {
+        if (d < 0 || d =='-0') {
             m = -m;
             s = -s;
         }

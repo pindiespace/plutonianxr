@@ -379,8 +379,8 @@
                             "artifacts": []
                         },
                         {
-                            "key": "proxima",
-                            "dname": "proxima",
+                            "key": "proxima_centauri",
+                            "dname": "proxima_centauri",
                             "name": "Proxima Centauri",
                             "description": "Small, 11th magnitude red dwarf, flare star.",
                             "data": {
@@ -400,14 +400,18 @@
                                     "key": "proxima_b",
                                     "dname": "proxima_b",
                                     "name": "Proxima Centauri B",
-                                    "description": "Rocky exoplanet orbiting in habitable zone.",
+                                    "description": "Rocky exoplanet (super-earth) orbiting in inner region of habitable zone.",
                                     "data": {
                                         "type": "exoplanet",
+                                        "diameter": "13756",
                                         "ra": 0,
                                         "dec": 0,
-                                        "dist":0,
+                                        "dist":"2000",
+                                        "tilt":0,
+                                        "rotation":0,
                                         "models": {},
                                         "references": [
+                                            "http://exoplanet.eu/catalog/",
                                             "https://en.wikipedia.org/wiki/Proxima_Centauri_b"
                                         ],
                                         "moons": [],

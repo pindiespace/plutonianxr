@@ -1,4 +1,148 @@
 
+===============================================================================
+var createScene = function () {
+    // This creates a basic Babylon Scene object (non-mesh)
+    var scene = new BABYLON.Scene(engine);
+
+    // This creates and positions a free camera (non-mesh)
+    var camera = new BABYLON.FreeCamera("camera1", new BABYLON.Vector3(0, 5, -24), scene);
+
+    // This targets the camera to scene origin
+    camera.setTarget(BABYLON.Vector3.Zero());
+
+    // This attaches the camera to the canvas
+    camera.attachControl(canvas, true);
+
+    // This creates a light, aiming 0,1,0 - to the sky (non-mesh)
+    var light = new BABYLON.HemisphericLight("light", new BABYLON.Vector3(0, 1, 0), scene);
+
+    // Default intensity is 1. Let's dim the light a small amount
+    light.intensity = 0.7;
+
+    var matSphere = new BABYLON.StandardMaterial('',scene)
+    matSphere.diffuseTexture = new BABYLON.Texture("textures/floor.png", scene);
+
+    // sphere.
+    var sphere = BABYLON.MeshBuilder.CreateSphere("sphere", {diameter: 3, segments: 32}, scene);
+    sphere.material = matSphere;
+
+    var addLabel = function(mesh, text) {
+   
+
+    // GUI
+    var advancedTexture = BABYLON.GUI.AdvancedDynamicTexture.CreateFullscreenUI("UI");
+
+    var rect1 = new BABYLON.GUI.Rectangle();
+    rect1.width = 0.2;
+    rect1.height = "200px";
+    rect1.cornerRadius = 20;
+    rect1.color = "Orange";
+    rect1.thickness = 4;
+    rect1.background = "green";
+    advancedTexture.addControl(rect1);
+    rect1.linkWithMesh(mesh);   
+    rect1.linkOffsetY = -200;
+
+ 
+
+    var label = new BABYLON.GUI.TextBlock();
+    label.text = text;
+    label.textVerticalAlignment = BABYLON.GUI.Control.VERTICAL_ALIGNMENT_BOTTOM;
+    rect1.addControl(label);
+
+    var logo_img = new BABYLON.GUI.Image("im1", "https://i.imgur.com/ZKetINc.png");
+    //var logo_img = new BABYLON.GUI.Image('bob', 'https://plyojump.com/assets/img/plyobot-menu-icon.png')
+
+    logo_img.width = 0.9;
+    logo_img.height = 0.9;
+    advancedTexture.addControl(logo_img); // add to dynamic texture
+
+    var target = new BABYLON.GUI.Ellipse();
+    target.width = "20px";
+    target.height = "20px";
+    target.color = "Orange";
+    target.thickness = 4;
+    target.background = "green";
+    advancedTexture.addControl(target);
+    target.linkWithMesh(mesh);   
+
+    var line = new BABYLON.GUI.Line();
+    line.lineWidth = 4;
+    line.color = "Orange";
+    line.y2 = 100;
+    line.linkOffsetY = -10;
+    advancedTexture.addControl(line);
+    line.linkWithMesh(mesh); 
+    line.connectedControl = rect1;   
+    }
+
+
+    var label = addLabel(sphere,"Lorem ipsum");
+
+
+    scene.beforeRender = function(){
+        //Rotate Sphere
+        sphere.rotate( new BABYLON.Vector3(0,0,0.1),0.01 )
+    }
+
+    return scene;
+
+};
+=================================================================================
+
+
+       /** 
+     * Scale a color up to the top, or down to the bottom 
+     * of the 0-1 color channel range used by BabylonJS
+     */
+    PUtil.prototype.scaleColor = function (color, up = true) {
+
+        let num = [];
+        let n = 0;
+
+        if (this.isArray(color)) {
+            num = color;
+        } else if (this.isObject(color)) {
+            num[0] = color.r,
+            num[1] = color.g,
+            num[2] = color.b;
+        } else {
+            console.error('clampColor ERROR: invalid color');
+            return null;
+        }
+
+        for(var i = 0; i < num.length; i++) {
+            if (num[i] < 0 || num[i] > 1) {
+                console.error('clampColor ERROR: color value out of range');
+                return null;
+            }
+        }
+
+        if (up) {
+            n = Math.max.apply(null, num);
+            let r = (1 - n);
+            console.log('--clr n:' + n + ' r:' + r)
+            for(var i = 0; i < num.length; i++) {
+                num[i] += r;
+            }
+
+        } else {
+            n = Math.min.apply(null, num);
+            let r = (1 - n);
+            for(var i = 0; i < num.length; i++) {
+                num[i] -= r;
+            }
+        }
+        
+        return new BABYLON.Color3(num[0], num[1], num[2]);
+
+    };
+       
+       
+       
+       
+      ///////////////////////////////////////////////////// 
+       
         let done = false; // flag for complete parsing
     
         let prefix = '', body = '', type = '', lum = '', suffix = '';
