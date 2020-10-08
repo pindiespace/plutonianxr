@@ -94,25 +94,6 @@ var PCelestial = (function () {
         {'p': 7}  // TODO: add
     ];
 
-    // default absolute magnitude table}, by one-letter stellar type
-    PCelestial.prototype.dAbsMag = [
-        {'w': -11}, 
-        {'o': -10}, // standard
-        {'a':   2},
-        {'b':  -2},
-        {'f':   3},
-        {'g':   0},
-        {'k':   0},
-        {'m':   6},
-        {'n':   0}, // less common
-        {'r':   1},
-        {'c':  -1},
-        {'s':   4},
-        {'d':  10},
-        {'y':  15},
-        {'p':  18}
-    ];
-
     // dynamically-filled prototype variables
 
     // holds data loaded from hyg3 (JSON)
@@ -402,42 +383,39 @@ var PCelestial = (function () {
      */
     PCelestial.prototype.getHygColor = function (star) {
 
-        let   c = null;
-        let   s = star.spect;
-        let dsc = this.spectra.dStarColors;
+        let spectra = this.spectra;
 
-        // look for an exact match
-        c = this.hygColors[s];
+        let c = null;
+        let s = star.spect; // complete spectrum
+        let slook = this.spectra.spectLookup;
+
+        // look for an exact match to the spectral type
+        c = slook[s];
         if (c) {
-            return c;
+            return [c.r, c.g, c.b];
         }
 
-        // if an exact match doesn't exist, truncate, e.g. 'M5Ve'...'M5V'...'M5'
+        /////////////////////////////////////
+        // TODO: THIS SHOULD RELY ON PROPS 
+        // TODO:
+        // TODO:
+        /////////////////////////////////////
+
+        // if an exact match doesn't exist, truncate, e.g. 'M5Ve'...'M5V'...'M5'...'M'
         for (i = s.length - 2; i > 1; i--) {
             let t = s.substring(0, i);
-            c = this.hygColors[t];
+            c = slook[t];
             if (c) {
-                return c;
+                return [c.r, c.g, c.b];
             }
         }
-
-        // one-letter average default, part of this class
-        //console.log('setting default:' + s.substring(0,1).toLowerCase() + ' for:' + s)
-        c = dsc[s.substring(0,1).toLowerCase()];
 
         // if everything fails, make it white, includes 'pec' for novas
         if (!c) {
-            if (s == 'pec') {
-                c = dsc['a']; // probably a nova, use blue-white
-            }
-            else {
-                //console.warn('no color for spect type:' + s)
-                c = dsc['f']; // whiteish
-            }
+
+            return [1, 1, 1];
 
         }
-
-        return c;
 
     };
 
@@ -578,6 +556,31 @@ var PCelestial = (function () {
 
     };
 
+    /**
+     * See if descriptive information has been associated with this hyg entry
+     * from PSpectrum, and return it for display
+     */
+    PCelestial.prototype.logHygData = function (hyg) {
+
+        let s = ''; //output string
+
+        if (hyg.desc) {
+
+            let d = hyg.desc;
+            let ss = d.type.arr[d.type.key];
+            if (ss) s += ss;
+            ss = d.luminosity.arr[d.luminosity.key];
+            if (ss) s += ss; ss = '';
+            for (let i = 0; i < d.mods.keys.length; i++) {
+                ss += d.mods.arr[d.mods.keys[i]];
+            }
+            if (ss) s += ss;
+        };
+
+        return s;
+
+    };
+
     /** 
      * use Hyg3 data to create a 3D galaxy of Star sprites.
      * @param {Object} hygData an array of objects with Hyg3 stellar data
@@ -628,13 +631,14 @@ var PCelestial = (function () {
             name = this.getHygName(star);
 
             // extract stellar properties from the spectrum
-            let props = this.spectra.spectrumToStellarData(star);
-            // TODO: use props to augment star data
+            let p = this.spectra.spectrumToStellarData(star);
 
             //console.log("name is:" + name)
-            color = this.getHygColor(star);
-
+            //color = this.getHygColor(star);
+            // TODO: this method should be DELETED
+            // TODO: color calcs are all in PSpectra
             // TODO: radius based on temperature (TODO: IN JSON)
+            
 
             //console.log("color is:" + color)
             spriteIndex = this.getHygSpriteIndex(star);
@@ -647,6 +651,7 @@ var PCelestial = (function () {
 
         ///////////////////////////////////
         ///////////////////////////////////
+        /*
         // async is better for updates
         let i = 0;
 
@@ -665,6 +670,7 @@ var PCelestial = (function () {
         //    asyncLoop.executeNext(i);
         //////////////////////////////////
         //////////////////////////////////
+        */
 
     };
 

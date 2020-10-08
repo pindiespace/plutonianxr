@@ -22,18 +22,20 @@ var PSpectrum = (function () {
 
         // TODO: remove
         this.counter1 = 0;
-        this.counter2 = 0; // FOR DEBUGGING
+        this.counter2 = 0; // FOR DEBUGGING TODO: REMOVE
+        this.test = [];
+        window.test = this.test; // TODO: REMOVE
 
     };
 
     /**
-     * many properties are expressed as multiples of the Sun
+     * many properties are expressed as multiples of Solar properties
      */
     PSpectrum.prototype.SOL = {
         mass: 1,
         radius: 1,
         radiusKm: 695700,
-        lumWatts: 3.828E26,
+        lumWatts: 3.828E+26,
         absmag: 4.83,
         temp: 5778, // kelvins
         metallicity: 1.0
@@ -46,29 +48,28 @@ var PSpectrum = (function () {
         mEarth: 317.646185839028
     };
 
-    // default star colors, if we can't load the JSON file, by one-letter stellar type
-    PSpectrum.prototype.dStarColors = {
-        'W': {r:0.598529412, g: 0.683578431, b: 1},
-        'O': {r:0.598529412, g: 0.683578431, b: 1},
-        'A': {r:0.790196078, g: 0.839607843, b: 1},
-        'B': {r:0.680490196, g: 0.759068627, b: 1},
-        'F': {r:0.933382353, g: 0.930392157, b: 0.991470588},
-        'G': {r:1, g: 0.925686274, b: 0.830882353},
-        'K': {r:1, g: 0.836421569, b: 0.629656863},
-        'M': {r:1, g: 0.755686275, b: 0.421764706},
-        'N': {r:0.987654321, g: 0.746356814, b: 0.416557734},
-        'R': {r:1, g: 0.868921569, b: 0.705735294},
-        'C': {r:1, g: 0.828186274, b: 0.576078431},
-        'S': {r:1, g: 0.755686275, b: 0.421764706},
-        'D': {r:0.798823529, g: 0.834901961, b: 0.984313726},
-        'L': {r:1, g:0.4235294, b:0}, // red, hot brown dwarf, lithium
-        'T': {r:1, g:0.219607843, b:0}, // very red, hot brown dwarf, methane
-        'Y': {r:1, g:0.3, b:0.1}, // warm, brownish, gas giant able to fuse duterium
-        'P': {r: 0.4034, g: 0.27153, b: 0.1235} //  brown, a gas giant
-    };
+    PSpectrum.prototype.dStarProps = {
+        'W': {mass: 0, luminosity: 0, radius: 0, temp: 0, ci: 0, absmag: -11, bolo: 0, r:0.598529412, g: 0.683578431, b: 1},
+        'O': {mass: 150, luminosity: 2.59E+06, radius: 2.21E+01, temp: 50000, ci: -0.35, absmag: -6.7, bolo: -4.58, r:0.598529412, g: 0.683578431, b: 1},
+        'A': {absmag: 2, r:0.790196078, g: 0.839607843, b: 1},
+        'B': {absmag: -2, r:0.680490196, g: 0.759068627, b: 1},
+        'F': {absmag: 3, r:0.933382353, g: 0.930392157, b: 0.991470588},
+        'G': {absmag: 0, r:1, g: 0.925686274, b: 0.830882353},
+        'K': {absmag: 0, r:1, g: 0.836421569, b: 0.629656863},
+        'M': {absmag: 6, r:1, g: 0.755686275, b: 0.421764706},
+        'N': {absmag: 0, r:0.987654321, g: 0.746356814, b: 0.416557734},
+        'R': {absmag: 1, r:1, g: 0.868921569, b: 0.705735294},
+        'C': {absmag: -1, r:1, g: 0.828186274, b: 0.576078431},
+        'S': {absmag: 4, r:1, g: 0.755686275, b: 0.421764706},
+        'D': {absmag: 10, r:0.798823529, g: 0.834901961, b: 0.984313726},
+        'L': {absmag: 15, r:1, g:0.4235294, b:0}, // red, hot brown dwarf, lithium
+        'T': {absmag: 15, r:1, g:0.219607843, b:0}, // very red, hot brown dwarf, methane
+        'Y': {absmag: 17, r:1, g:0.3, b:0.1}, // warm, brownish, gas giant able to fuse duterium
+        'P': {absmag: 18, r: 0.4034, g: 0.27153, b: 0.1235} //  brown, a gas giant
+    }
 
     /**
-     * replace some patterns in the spectrum string for easier parsing
+     * replace some luminosity patterns in the spectrum string for easier parsing
      */
     PSpectrum.prototype.dSpectrumTrans = {
         'Ia-0': 'Ia0',
@@ -81,7 +82,7 @@ var PSpectrum = (function () {
     }
 
     /**
-     * Yerkes prefixes in front of primary letter type, translate to primary type
+     * Yerkes prefixes in front of primary letter type, translate to standard luminosity
      * EXAMPLE: sdB5 -> B5VI 
      */
     PSpectrum.prototype.dLumPrefixTrans = {
@@ -116,6 +117,29 @@ var PSpectrum = (function () {
         'P': 'Gas giant, cold, Jupiter-like'
     };
 
+    /**
+     * sub-types for 'W' (Wolf-Rayett), greater detail
+     * {@link https://en.wikipedia.org/wiki/Wolf%E2%80%93Rayet_star}
+     * Note: for WR stars, higher numbers mean lower temperatures
+     */
+    PSpectrum.prototype.dStarWolfRayetDesc = {
+        'WR': 'Wolf-Rayet star, young, helium-fusing, stellar wind mass loss, expanding atmospheric envelope',
+        'WC': 'Wolf-Rayet star, helium-fusing, stellar wind mass loss, producing dust, strong Carbon and Helium lines, Helium absent',
+        'WN': 'Wolf-Rayet star, helium-fusing, stellar wind mass loss, CNO cycle burn, strong Helium and Nitrogen lines',
+        'WO': 'Wolf-Rayet star, helium-fusing, stellar wind mass loss, strong Oxygen lines, weak Carbon lines',
+    };
+
+    /**
+     * sub-sub types for 'W' (Wolf-Rayett), carbon lines
+     */
+    PSpectrum.prototype.dStarWolfRayetCNDesc = {
+        'WC10': 'Wolf-Rayet star, helium-fusing, cooler, stellar wind mass loss, strong Carbon lines',
+        'WC11': 'Wolf-Rayet star, helium-fusing, coolest, stellar wind mass loss, strong Carbon lines',
+        'WNh' : 'Wolf-Rayet star, young and massive, helium and hydrogen fusion, stellar wind mass loss',
+        'WN10': 'Wolf-Rayet star, helium-fusing, cooler, stellar wind mass loss, strong Nitrogen lines',
+        'WN11': 'Wolf-Rayet star, helium-fusing, coolest, stellar wind mass loss, strong Nitrogen lines'
+    };
+
     PSpectrum.prototype.dRGAysmpYoungDesc = {
         'MS': 'Red giant, asymptotic-giant branch carbon star, younger'
     };
@@ -137,35 +161,6 @@ var PSpectrum = (function () {
         'C-J': 'Red giant, cool carbon star with a high content of carbon-13',
         'C-H': 'Red giant, Population II equivalent of the C-R red giants',
         'C-Hd': 'Red giant, Hydrogen-deficient, similar to late G supergiants with CH and C2 bands added'
-    };
-
-    /**
-     * sub-types for 'W' (Wolf-Rayett), greater detail
-     * {@link https://en.wikipedia.org/wiki/Wolf%E2%80%93Rayet_star}
-     * Note: for WR stars, higher numbers mean lower temperatures
-     */
-    PSpectrum.prototype.dStarWolfRayetDesc = {
-        'WR': 'Wolf-Rayet star, young, helium-fusing, stellar wind mass loss, expanding atmospheric envelope',
-        'WC': 'Wolf-Rayet star, helium-fusing, stellar wind mass loss, producing dust, strong Carbon and Helium lines, Helium absent',
-        'WN': 'Wolf-Rayet star, helium-fusing, stellar wind mass loss, CNO cycle burn, strong Helium and Nitrogen lines',
-        'WO': 'Wolf-Rayet star, helium-fusing, stellar wind mass loss, strong Oxygen lines, weak Carbon lines',
-    };
-
-    /**
-     * sub-sub types for 'W' (Wolf-Rayett), carbon lines
-     */
-    PSpectrum.prototype.dStarWolfRayetCDesc = {
-        'WC10': 'Wolf-Rayet star, helium-fusing, cooler, stellar wind mass loss, strong Carbon lines',
-        'WC11': 'Wolf-Rayet star, helium-fusing, coolest, stellar wind mass loss, strong Carbon lines'
-    };
-
-    /**
-     * sub-sub types for 'W' (Wolf-Ryett), Nitrogen lines
-     */
-    PSpectrum.prototype.dStarWolfRayetNDesc = {
-        'WNh' : 'Wolf-Rayet star, young and massive, helium and hydrogen fusion, stellar wind mass loss',
-        'WN10': 'Wolf-Rayet star, helium-fusing, cooler, stellar wind mass loss, strong Nitrogen lines',
-        'WN11': 'Wolf-Rayet star, helium-fusing, coolest, stellar wind mass loss, strong Nitrogen lines'
     };
 
     /**
@@ -191,13 +186,7 @@ var PSpectrum = (function () {
     PSpectrum.prototype.dStarWhiteDwarfHDesc = {
         'DAB':'White Dwarf, hot, hydrogen and helium-rich atmosphere, neutral helium lines, 30,000K',
         'DAO':'White Dwarf, very hot, hydrogen and helium-rich atmosphere, ionized helium lines, >30,000K',
-        'DAZ':'White Dwarf, hot, hydrogen-rich atmosphere, metallic spectral lines'
-    };
-
-    /**
-     * sub-sub type of helium-rich white dwarf
-     */
-    PSpectrum.prototype.dStarWhiteDwarfHeDesc = {
+        'DAZ':'White Dwarf, hot, hydrogen-rich atmosphere, metallic spectral lines',
         'DBZ':'White Dwarf, cool, 15-30,000K, neutral helium, He I, spectral lines, metallic spectral lines'
     };
 
@@ -223,7 +212,7 @@ var PSpectrum = (function () {
         'IV': ' Sub-Giant',
         'IVa': ' Luminous Sub-Giant',
         'IVb': ' Less Luminous Sub-Giant',
-        'VIab': '  Luminous dwarf',
+        'VIab': ' Luminous dwarf',
         'V' : ' Dwarf (Main Sequence)',
         'Va' : ' Luminous Dwarf (Main Sequence)',
         'Vb' : ' Regular Dwarf (Main Sequence)',
@@ -236,81 +225,31 @@ var PSpectrum = (function () {
         'VIIb' : 'Less Luminous White-Dwarf'
     };
 
-    /**
-     * if we don't have an absolute magnitude, estimate magnitude (multiple of Sun)
-     * from luminosity class - ROUGH
-     * http://spiff.rit.edu/classes/phys440/lectures/lumclass/lumclass.html
-     */
-    PSpectrum.prototype.dLumClassMagnitude = {
-        'Ia0': '-10',
-        'Ia+': '-6',
-        'Ia': '-6',
-        'Iab': '-6',
-        'Ib': '-5',
-        'I': '-6',
-        'II': '-3',
-        'IIa': '-3',
-        'IIb': '-4',
-        'III': '-3',
-        'IIIa': '-1',
-        'IIIb': '-5',
-        'IV': '3',
-        'IVa': '0',
-        'IVb': '3',
-        'V' : '4',
-        'Va' : '5',
-        'Vb' : '19',
-        'VI' : '7',
-        'VIa' : '6',
-        'VIb' : '10',
-        'VII' : '12',
-        'VIIa' : '10',
-        'VIIb' : '15'
-    };
-
     // suffix for luminosity rather than general suffix
     PSpectrum.prototype.dLumSuffix = {
         ':' :  'Uncertain luminosity'
-    };
-
-    // suffixes associated with white dwarfs
-    PSpectrum.prototype.dWhiteDwarfSuffix = {
-        ':'  : 'Uncertain spectral class',
-        'P'  : 'Magnetic white dwarf with detectable polarization',
-        'E'  : 'White dwarf with emission lines present',
-        'H'  : 'Magnetic white dwarf without detectable polarization',
-        'V'  : 'Variable white dwarf',
-        'PEC': 'Peculiarities exist'
-    };
-
-    /**
-     * {@link https://en.wikipedia.org/wiki/Wolf%E2%80%93Rayet_star}
-     */
-    PSpectrum.prototype.dStarWolfRayetSuffix = {
-        'h': 'hydrogen emission',
-        'ha': 'hydrogen emission and absorption',
-        'w': 'weak lines',
-        's': 'strong lines',
-        'b': 'broad strong lines',
-        'd': 'dust (occasionally vd, pd, or ed for variable, periodic, or episodic dust'
     };
 
     /**
      * Suffix after prefix, letter type, luminosity
      * [prefix][letter type][numeric code 0-9][luminosity][suffix]
      * delta-del suffix:
+     * {@link https://en.wikipedia.org/wiki/Wolf%E2%80%93Rayet_star}
      */
     PSpectrum.prototype.dStarMods = {
-        ':' : ', uncertain values',
+        ':' : ', uncertain spectral values',
         '...' : ', peculiar, truncated spectra',
         '!' : ', special peculiarities',
+        '+': ', composite spectrum',
+        'b': 'broad strong lines',
         'delta del': ', chemically peculiar, hot main-sequence, sharp metallic absorption lines, contrasting broad (nebulous) neutral helium absorption lines.',
         'comp' : ', composite spectrum, unresolved multiple star',
-        '+': ', composite spectrum',
+        'd': ', dust (occasionally vd, pd, or ed for variable, periodic, or episodic dust',
         'e' : ', emission lines present',
         '(e)': ', forbidden emission lines present',
         '[e]': ', forbidden emission lines present',
         'er': ', emission lines reversed with center of emission lines weaker than edges',
+        'E'  : ', white dwarf with emission lines present',
         'f' : ', N III and He II emission',
         'f*': ', N IV λ4058Å is stronger than the N III λ4634Å, λ4640Å, & λ4642Å line',
         'f+': ', Si IV λ4089Å & λ4116Å are emitted in addition to the N III line',
@@ -320,19 +259,25 @@ var PSpectrum = (function () {
         'h': ', WR stars with hydrogen emission lines',
         'ha': ', WR stars with hydrogen seen in both absorption and emission.',
         'He wk': ', weak Helium lines',
+        'H'  : 'Magnetic white dwarf without detectable polarization',
         'k': ', spectra contains interstellar absorption features',
         'm' : ', enhanced metal features',
         'n' : ', broad ("nebulous") absorption due to spinning',
         'nn' : ', very broad absorption features (rotating fast)s',
         'neb': ', a nebula spectrum is mixed in',
+        'P'  : ', Magnetic white dwarf with detectable polarization',
+        'PEC': ', White dwarf, Peculiarities exist',
         'p': ', chemically peculiar star',
         'pq': ', peculiar, similar to nova spectrum',
         'q': ', P Cygni profile, expanding gaseous envelope',
         's': ', narrow absorption lines',
         'ss': ', very narrow absorption lines',
         'sh': ', shell star features',
+        '(SB2)': ', spectroscopic binary, both stars visible in spectrum',
+        '(SB1)': ', spectroscopic binary, only brighter star visible in spectrum',
         'v': ', variable spectral feature',
         'var': ', variable spectral features',
+        'V'  : ', Variable white dwarf',
         'w': ', weak spectral lines',
         'wl': ', weak spectral lines',
         'wk': ', weak spectral lines',
@@ -356,23 +301,24 @@ var PSpectrum = (function () {
     // disambiguate, e.g. 'p' from 'pq' by disallowed right character
     PSpectrum.prototype.dStarModAmbigEnd = {
         'e': ')]r',
+        'E': 'u',
         'f': '*+)?',
         'h': 'a',
+        'H': 'ae',
         'n': 'en',
         'p': 'q',
+        'P': 'E',
         's': 'sh',
         'v': 'a',
         'w': 'lk'
     };
 
     /** 
-     * properties, based on [type][range][luminosity]
+     * properties lookup, keys are [type] + [range] + [luminosity]
      * e.g. 'O1Ia0'
      * {@link http://www.isthe.com/chongo/tech/astro/HR-temp-mass-table-byhrclass.html}
      */
     PSpectrum.prototype.spectLookup = {};
-
-    // methods
 
     /**
      * blackbody temperature colors table (JSON)
@@ -383,11 +329,31 @@ var PSpectrum = (function () {
     // test array
     PSpectrum.prototype.test = [];
 
+    // methods
+
     /*
      * ------------------------------------------------------
      * PARSING
      * ------------------------------------------------------
      */
+
+    PSpectrum.prototype.classifySubSpectrum  = function (spect, orig, flag) {
+
+        let roles = this.pdata.SPECTROLES;
+
+        let pos = orig.indexOf(spect);
+        if (pos == 0) {
+            return roles.PRIMARY;
+        } else if (pos == -1) {
+            if(flag) console.error('classifySubSpectrum: failed to find:' + spect + ' in:' + orig);
+        } else {
+            c = orig[pos - 1];
+            if (c == '/') return roles.COMPOSITE;
+            else if (c == '-') return roles.INTERMEDIATE;
+            else if (flag) console.error('classifySubSpectrum: split incorrectly');
+        }
+
+    };
 
     /**
      * transform spectra tokens as defined as Simbad
@@ -439,40 +405,25 @@ var PSpectrum = (function () {
     };
 
     /**
-     * parse subtype (Wolf-Rayet, White dwarfs) after finding the single-letter stellar type
-     * @param {String} spect the current spectrum string (may be truncated)
-     * @param {Array} arr the lookup array table for the subtype
-     * @param {Number} pos check that type and subtype start at same point in spectrum string
-     * @param {Object} prop stellar property, defined in PData
-     */
-    //PSpectrum.prototype.parseSpectrumSubType = function (spect, arr, pos, prop, flag) {
-    PSpectrum.prototype.parseSpectrumSubType = function (spect, arr, pos, key, flag) {
-        //todo: spect.length != 0
-        for (let i in arr) {
-            let l = spect.indexOf(i);
-            if (l == pos) { // extended type starts in same place
-                if (flag) console.log('found stellar subtype for:' + spect + ', ' + i)
-                /////////////////////prop.type.key2 = i; // use to get subtype desc on demand
-                /////////////////////
-                key = i;
-                ////////////////////
-                //prop.type.desc = this.dStarWolfRayetDesc[j];
-                return spect.substring(i.length)
-            } else if (l != -1 && flag) console.warn('weird subtype match at:' + l + ' for ' + i)
-        }
-        return spect;
-    };
-
-    /**
      * Parse a subtype, storing both key and reference to array it is found in
+     * @param {String} spect the fragment of the spectral string (starting at position 0)
+     * @param {Object} objArr the associative array with key-values for the subtype
      */
-    PSpectrum.prototype.parseSubtype = function (spect, arr, prop, flag) {
-        if(arr[spect]) {
-            prop.type.key = spect;
-            prop.type.arr = arr;
-            return true;
+    PSpectrum.prototype.parseSubtype = function (spect, objArr, prop, flag) {
+        for (var i in objArr) {
+            let pos = spect.indexOf(i);
+            if (pos !== -1) {
+                prop.type.key = i;
+                prop.type.arr = objArr;
+                if (flag) console.log('switching type to subtype:' + i);
+                if (pos != 0) {
+                    if (flag) console.warn('parseSubtype: strange subtype match:' + i + ' to spect:' + spect + ' not at position zero!');
+                    return null; /////////////////////////////////////////////////
+                } else return spect.substring(i.length);
+            }
         }
-        return false;
+
+        return null; // control for multiple tests
     };
 
     /**
@@ -487,59 +438,48 @@ var PSpectrum = (function () {
             let l = spect.indexOf(i);
             if (l == 0) {
                 if (flag) console.log('found stellar type for:' + spect + ': ' + i);
-                    prop.type.key = i;   // type, key for description
-                    prop.type.arr = this.dStarDesc; /////////////////////////////////////
-                    prop.type.key2 = ''; // subtype, key for description TODO: REMOVE
-                    let arr;
-                    let len = spect.length; // length of original spectra
+                    let s = null;
                     switch(i) {
                         case 'W':
-
-                            //arr = this.dStarWolfRayetCDesc;
-                            //if(!this.parseSubtype(spect, arr, prop, flag)) {
-                            //    arr = this.dStarWolfRayetNDesc;
-                            //    this.parseSubtype(spect, arr, prop, flag)) {
-                            //}
-                            // TODO: replace multiple keys with a single key
-                            // TODO: scan specifically for 
-                            // TODO: sthis.dStarWolfRayetSuffix
-                            // TODO: when we scan for mods
-
-                            //spect = this.parseSpectrumSubType(spect, arr, l, prop, flag);
-                            // this.dStarWolfRayetSuffix
-                            arr = this.dStarWolfRayetDesc;
-                            spect = this.parseSpectrumSubType(spect, arr, l, prop.type.key2, flag);
-                            return spect;
+                            s = this.parseSubtype(spect, this.dStarWolfRayetCNDesc, prop, flag);
+                            if(s === null) s = this.parseSubtype(spect, this.dStarWolfRayetDesc, prop, flag);
+                            if (s !== null) return s;
+                            //else return spect.substring(i.length); // stay with our existing 'W'
                             break;
                         case 'C':
                             //spect = this.parseSpectrumSubType(spect, arr, l, prop, flag);
-                            arr = this.dStarCarbonDesc;
-                            spect = this.parseSpectrumSubType(spect, arr, l, prop.type.key2, flag);
-                            return spect;
+                            s = this.parseSubtype(spect, this.dStarCarbonDesc, prop, flag);
+                            if (s !== null) return s;
+                            //else return spect.substring(i.length); // stay with our existing 'W'
                             break;
                         case 'D':
-                            // key3
-                            // this.dWhiteDwarfSuffix
-                            //spect = this.parseSpectrumSubType(spect, arr, l, prop, flag);
-                            arr = this.dStarWhiteDwarfDesc;
-                            spect = this.parseSpectrumSubType(spect, arr, l, prop.type.key2, flag);
-                            return spect;
+                            s = this.parseSubtype(spect, this.dStarWhiteDwarfHDesc, prop, flag);
+                            if (s === null ) s = this.parseSubtype(spect, this.dStarWhiteDwarfDesc, prop, flag);
+                            if (s !== null) return s;
+                            //else return spect.substring(i.length); // stay with our existing 'W'
                             break;
                         case 'M':
-                            // key3
-                            //spect = this.parseSpectrumSubType(spect, arr, l, prop, flag);
-                            arr = this.dRGAysmpYoungDesc;
-                            spect = this.parseSpectrumSubType(spect, arr, l, prop.type.key2, flag);
+                            s = this.parseSubtype(spect, this.dRGAysmpYoungDesc, prop, flag);
+                            if (s !== null) return s;
+                            //else return spect.substring(i.length); // stay with our existing 'W'
                             break;
                         case 'S':
-                            // spect = this.parseSpectrumSubType(spect, arr, l, prop, flag);
-                            arr = this.dGAsympOldDesc;
-                            spect = this.parseSpectrumSubType(spect, arr, l, prop.type.key2, flag);
+                            s = this.parseSubtype(spect, this.dGAsympOldDesc, prop, flag);
+                            if (s !== null) return s;
+                            //else return spect.substring(i.length); // stay with our existing 'W'
+
                             break;
                         default:
-                            return spect.substring(i.length);
+                            //prop.type.key = i;   // type, key for description
+                            //prop.type.arr = this.dStarDesc;
+                            //return spect.substring(i.length);
                             break;
                     }
+
+                    // fallthrough, for single-letter, also cases where no sub-type was detected
+                    prop.type.key = i;   // type, key for description
+                    prop.type.arr = this.dStarDesc;
+                    return spect.substring(i.length);
 
             } else if (l != -1 && flag) console.log('strange Type position...., l:' + l)
 
@@ -559,7 +499,7 @@ var PSpectrum = (function () {
         // TODO: spect.length != 0 test
         let r = spect.parseNumeric();
         if (r) {
-            if (flag) console.log('range start1:' + r.start1 + ' start2:' + r.start2 + ' r:' + r.num)
+            if (flag) console.log('range start1:' + r.start1 + ' start2:' + r.start2 + ' range:' + r.num)
             prop.range.key = r.num + ''; // force key to string
             prop.range.value = r.num;
             return spect.substring(r.start2);
@@ -586,15 +526,6 @@ var PSpectrum = (function () {
                 }
                 // keep looking, looking for longer match...
             }
-            // if we get a match beyond zero, there's a suffix, remove it
-            if (l > 0) { // suffix between type and luminosity?
-                if (flag) console.warn('strange Luminosity position...., l:' + l + ' for:' + i)
-                    // if there was an intervening suffix before luminosity, parse it away
-                    let s = spect.substring(0, l);
-                    spect = spect.substring(l); // trim it off, luminosity = 0 in next loop
-                    if(flag) console.warn('trimming off:"' + s + '" spect:' + spect)
-                    this.parseSpectrumMods(s, prop, flag);
-            }
 
         }
         if (flag) console.log('final luminosity:' + k)
@@ -602,8 +533,7 @@ var PSpectrum = (function () {
         // get the luminosity key and magnitude
         if (k.length) {
             prop.luminosity.key = k;
-            prop.luminosity.value = this.dLumClassMagnitude[k];
-
+            // TODO: value needs to be computed (absmag and distance)
             return spect.substring(k.length);
         }
 
@@ -621,9 +551,7 @@ var PSpectrum = (function () {
 
             let lok = true, rok = true;
 
-            // TODO: of Wolf-Rayet, parse specifically for 'W' suffix
-            // TODO: for Whte Dwarf, parse specifically for 'D' suffix
-            // TODO: then scan for other suffixes
+            prop.mods.arr = this.dStarMods;
 
             for (let i in this.dStarMods) {
                 p1 = spect.indexOf(i); // get position of key in suffix
@@ -633,7 +561,8 @@ var PSpectrum = (function () {
                     // lots of possibilities. Check the left and right char to know what to assign
                     if (p1 > 0) p2 = spect[p1 - 1]; else p2 = ''; // left-side character
                     if (p1 < spect.length - 1) p3 = spect[p1 + 1]; else p3 = ''; // right-side character
-                    if (flag) console.log('left:' + p2 + ' i:' + i + 'right:' + p3)
+                    if (flag) console.log('left:' + p2 + ' i:(' + i + ') right:' + p3)
+
                     switch(i) {
                         case ':': 
                         case '...': 
@@ -642,13 +571,16 @@ var PSpectrum = (function () {
                         case 'k':
                         case 'm':
                         case 'q':
-                            prop.mods.push(i); //mutiple keys in array
+                            prop.mods.keys.push(i); //mutiple keys in array
                             break;
                         case 'e':
+                        case 'E':
                         case 'f':
                         case 'h':
+                        case 'H':
                         case 'n':
                         case 'p':
+                        case 'P':
                         case 's':
                         case 'v':
                         case 'w':
@@ -659,15 +591,15 @@ var PSpectrum = (function () {
                                 if (this.dStarModAmbigStart[i].indexOf(p2) != -1)
                                     lok = false
                             if (lok && rok) {
-                                if(flag) console.log('prop.mods indexOf(' + i + ') is:' + prop.mods.indexOf(i))
-                                if(prop.mods.indexOf(i) != -1) { // avoid duplicates
-                                    prop.mods.push(i);
+                                if(flag) console.log('prop.mods.keys.indexOf(' + i + ') is:' + prop.mods.keys.indexOf(i))
+                                if(prop.mods.keys.indexOf(i) != -1) { // avoid duplicates
+                                    prop.mods.keys.push(i);
                                 }
                                 lok = rok = true; // reset (may be redundant)
                             }
                         default:
-                            if (prop.mods.indexOf(i) != -1) { // avoid duplicates
-                                prop.mods.push(i);
+                            if (prop.mods.keys.indexOf(i) != -1) { // avoid duplicates
+                                prop.mods.keys.push(i);
                             }
                             break;
 
@@ -676,121 +608,10 @@ var PSpectrum = (function () {
                 } //else if (flag) console.warn('suffix:' + i + ' found beyond zero');
 
             }
-            if (flag) console.log('mods:"' + prop.mods + '"');
+            if (flag) console.log('mods:[' + prop.mods.keys + ']');
         }
 
         return spect;
-
-    };
-
-    /**
-     * Use the lookup table for the 1000 or so common stellar types, sans modifications
-     * @param {Object} prop
-     */
-    PSpectrum.prototype.getSpectrumProps = function (prop, flag) {
-        let util = this.util;
-        let t = prop.type.key,
-        r = prop.range.value,
-        l = prop.luminosity.key;
-
-        // generate the combined type - range - luminosity key
-        let lp = t;
-        if(util.isNumber(r, true)) { // suppress error messages
-            lp += r;
-            if(l.length) {
-                lp += l;
-            }
-        } else {
-            //console.error('getSpectrumProps: bad number:' + r + ' for:' + prop.spect);
-        }
-
-        if (flag) console.log("scan spectrumProps with:" + lp)
-
-        if(lp.length) {
-            lp = this.spectLookup[t + r + l];
-            if (lp) {
-                if(flag) console.log('spectrumProps (' + t + r + l + ') HIT')
-                // TODO: confidence interval
-                // TODO: approx radius
-                prop.mass.value = lp.mass,
-                prop.luminosity.value = lp.luminosity,
-                prop.radius.value = lp.radius,
-                prop.temp.value = lp.temp,
-                prop.ci.value = lp.ci,
-                prop.absmag.value = lp.absmag,
-                prop.bolo.value = lp.bolo,
-                prop.color.r = lp.r,
-                prop.color.g = lp.g,
-                prop.color.b = lp.b;
-                window.prop = prop; // TODO: REMOVE/////////////////////
-            }
-        }
-
-        return prop;
-
-    };
-
-    /**
-     * Determine if the prop is 
-     * 1. primary spectrum
-     * 2. part of a composite ('/') spectrum, e.g. (A0/D0)
-     *    most composites will actually be multiple stars
-     * 3. part of an in-between ('-'), e.g. "k-m"
-     * 
-     * We do this AFTER parsing out all the prop elements (type, range, luminance, mods) 
-     * by determining whether a '/' or '-' appears ahead of it in the original spectra
-     * 
-     * @param {String} spect the original spectra
-     * @param {Object} prop the resolved property set
-     */
-    PSpectrum.prototype.classifyProp = function (spect, prop, flag) {
-
-        let util = this.util;
-
-        // possible values for role
-        let spectRole = this.pdata.SPECTROLES;
-
-        let pos = -1; // position of spectrum element in original string
-        let key = ''; // default key
-
-        // prop.type
-        if (prop.type.key2.length > 0) key = prop.type.key2;
-        else key = prop.type.key;
-
-        // to improve recognition, convert 'A' to 'A[0-9]' if possible
-        if (prop.range.key) key += prop.range.key;
-        if(flag) console.log('GENERATED KEY:' + key + ' ORIGINAL:' + prop.spect);
-
-        // if there is a key...
-        if(key.length > 0) {
-            pos = spect.indexOf(key); // check in original spectra string
-            if (pos == 0) prop.type.role = spectRole.PRIMARY;
-            else if (pos > 0) {
-                let c = spect[pos - 1];
-                if (c == '-') prop.type.role = spectRole.INTERMEDIATE;
-                else if (c == '/') prop.type.role = spectRole.COMPOSITE;
-                else prop.type.role = spectRole.PRIMARY;
-            } else {
-                console.warn('classifyProp WARNING,  key:' + key + ' not found in:' + prop.spect + ' for:' + spect)
-            }
-
-        }
-
-        // for prop.range, if there is a range
-        key = prop.range.key;
-        if (key.length > 0) {
-
-        }
-
-        // for prop.luminosity, if there is a luminosity
-        key = prop.luminosity.key;
-        if(key.length > 0) {
-
-        }
-
-        // other properties either are derived, or apply to all sub-regions of spectrum
-
-        return prop;
 
     };
 
@@ -816,53 +637,52 @@ var PSpectrum = (function () {
         let flag = false;
         //////////////////////////////////////////////////////////
         //if (spect.indexOf('O') != -1) flag = true;
+        //if (spect.indexOf('W') != -1) flag = true;
+        //if (spect.indexOf('M') != -1) flag = true;
         //if (spect.indexOf('Ia0') != -1) flag = true;
         //if (spect.indexOf('-') != -1) flag = true;
         if (spect.indexOf('-') != -1 && spect.indexOf('/') != -1) flag = true;
-
-        if(flag) window.spectra = this;
         /////////////////////////////////////////////////////////
 
         if (!spect || !star) return false;
-
-        spect.stripWhitespace(); // remove all whitespace, augmented String prototype in util.js
-
+        
         if (flag) console.log('=====\nspect:' + spect + ' #' + this.counter1)
+
+        // get a whitespace-free copy
+        spect = spect.stripWhitespace();
+
+        if (flag) console.log('stripped spect:' + spect)
 
         // replace a few patterns for easier parsing
         spect = this.transformSpec(spect);
 
-        let s = {
-            spect: spect,
-            props: []
-        };
-        let props = s.props;
-
-        /*
-         * split on - or /, save the individual spectra and fragments
-         * a '/' means composite (possible multiple star)
-         * a '-' means between the two types
-         * TODO: need to know the separators!!!!
-         * TODO: figure out if we were split from a '/' or a '-'
-         * TODO: regex for simultaneous search: (?=.*\/)(?=.*-)
-         * TODO: spectra: "spect":"A2/3mA4-A7",
-         * TODO: have to compute similar to that for luminance
-         * A2  3mA4 - A7
-         */
+        // split now, determine if this is a single spectrum, composite or blended later
         let spects = spect.split(/\/|-/);
 
         if (spects.length > 3) {
             console.warn('spectrumToStellarData WARN: separators >2:' + spects.length + ' spect:' + spect)
         }
 
-        // TODO: split this into composite '/' and in-between
+        // store properties of primary and composite spectra
+        let props = [];
 
         // find patterns and return substring missing pattern
         for(let i = 0; i < spects.length; i++) {
+
+            // get the (sub)spectrum string
             let s = spects[i];
+
+            // create a default spectrum data object
             let p = pdata.createPSpectrum();
+
+            // classify the subspectrum as primary, composite, intermediate
+            p.role = this.classifySubSpectrum(s, spect, flag);
+            if (flag) console.log('spects['+ i + '] role:' + p.role);
+
             p.spect = s; // Partial spectra TODO: REMOVE
             props.push(p); // save our props object in an array
+
+            // begin parsing the spectrum
             s = this.parseYerkesPrefix(s, p, flag);
             if (flag) console.log('spects['+ i + '] Yerkes parsed:[' + s + '] remains');
             s = this.parseSpectrumType(s, p, flag);
@@ -872,52 +692,126 @@ var PSpectrum = (function () {
             s = this.parseSpectrumLuminosity(s, p, flag);
             if (flag) console.log('spects[' + i + '] luminosity parsed:[' + s + '] remains');
 
-            // if we have a type, range, and luminosity, do a lookup for additional results
-
-            props[i] = this.getSpectrumProps(p, flag);
-
+            // parse the spectrum suffixes for additional information
             s = this.parseSpectrumMods(s, p, flag);
             if (flag) console.log('spects[' + i + '] mods parsed:[' + s + ']');
-            this.classifyProp(spect, p, flag);
             if(flag) console.log('-----')
+
+            // do a lookup for additional results
+            p = this.getSpectrumProps(p, flag);
+
+            // add the descriptions to the hyg object
+            this.addDescriptionToHyg(star, p);
 
         }
 
         //////////////////////////////////////////////////
-        // save a copy for testing
-        if(flag) {
-            if(this.test.length < 10)
-                this.test.push(Object.assign({}, s));
-        }
+        // TODO: save a copy for testing
+        //if(flag) {
+        //    if(props[0].type.key == '') {
+        //        console.error('spect:' + spect + ' props[0] has NO KEY');
+        //        if(this.test.length < 10) this.test.push(Object.assign({}, s));
+        //    }
+        //}
         //////////////////////////////////////////////////
 
         // TODO: REMOVE
         this.counter1++;
 
+        return props;
+
     };
 
-    /**
-     * log the properties
+    /*
+     * ------------------------------------------------------
+     * ADJUST SPECTRUM PROPERTIES
+     * ------------------------------------------------------
      */
-    PSpectrum.prototype.propToDescription = function (s) {
 
-        console.log('Spectrum:' + s.spect) 
-        for (let i = 0; i < s.props.length; i++) {
-            let prop = s.props[i];
-            let t = this.dStarDesc[prop.type.key];
-            let l = this.dStarLumDesc[prop.luminosity.key];
-            if (l) {
-                let idx = t.indexOf(' star');
-                t = t.substring(0, idx);
-                t += l;
+    /**
+     * Use the lookup table for the 1000 or so common stellar types, sans modifications
+     * @param {Object} prop
+     */
+    PSpectrum.prototype.getSpectrumProps = function (prop, flag) {
+        let util = this.util;
+        let t = prop.type.key,
+        r = prop.range.value,
+        l = prop.luminosity.key;
+
+        // generate the combined type - range - luminosity key
+        let lp = t;
+        if(util.isNumber(r, true)) { // suppress error messages
+            lp += r;
+            if(l.length) {
+                lp += l;
             }
-            console.log('type:' + prop.type.key + ' ('+ t +'),' + ' absolute magnitude:' + prop.luminosity.value + '(' + prop.luminosity.key + ')');
-            console.log('range:' + prop.range.value);
-            console.log('mass:' + prop.mass.value + ' radius:' + prop.radius.value + ' temp:' + prop.temp.value);
+        } else {
+            //console.error('getSpectrumProps: bad number:' + r + ' for:' + prop.spect);
+        }
 
+        if (flag) console.log("scan spectrumProps with:" + lp)
+
+        // look up the combined key = [type + range + luminosity] in our lookup table
+        if(lp.length) {
+            lp = this.spectLookup[t + r + l];
+            if (lp) {
+                if(flag) console.log('spectrumProps (' + t + r + l + ') HIT')
+                prop.mass.value = lp.mass,
+                prop.luminosity.value = lp.luminosity, // replace default based on luminosity key
+                prop.radius.value = lp.radius,
+                prop.temp.value = lp.temp,
+                prop.ci.value = lp.ci,
+                prop.absmag.value = lp.absmag,
+                prop.bolo.value = lp.bolo,
+                prop.color.r = lp.r,
+                prop.color.g = lp.g,
+                prop.color.b = lp.b;
+            } else {
+
+            }
+
+            // derived numbers for all spect objects
 
         }
 
+        return prop;
+
+    };
+
+    /**
+     * using a spectra datatype, add information to the Hyg data used 
+     * to construct stellar sprites
+     * - connect hyg sprites to descriptions based on their stellar spectra
+     * - adjusting Sprite properties (e.g. size) based on spectral data
+     * - handle blended and composite spectra, possibly creating new sprites
+     * @param {Object} hyg the hyg object, fields from hyg3 database
+     * @param {Object:PSpectrum} prop a prop object as defined in PData
+     */
+    PSpectrum.prototype.addDescriptionToHyg = function (hyg, prop) {
+
+        let util = this.util;
+
+        if (!util.isObject(hyg)) {
+            console.error('addPropsToHyg ERROR: no hyg object');
+            return false;
+        }
+
+        if (!util.isObject(prop)) {
+            console.error('addPropsToHyg ERROR: no PSpectrum object');
+            return false;
+        }
+
+        // add descrptive string references to the Hyg object
+        hyg.description = {
+            type: prop.type,
+            luminosity: prop.luminosity,
+            mods: prop.mods
+        };
+
+        // TODO: add physical properties
+        // comp: prop.comp // spectroscopic double?
+
+        return true;
     };
 
     /*
@@ -927,31 +821,25 @@ var PSpectrum = (function () {
      */
 
     /**
-     * look up a color from temperature, via blackbody estimation
+     * look up a color from a blackbody to temperature lookup table
+     * {@link https://stackoverflow.com/questions/21977786/star-b-v-color-index-to-apparent-rgb-color}
      * @param {Number} temp 
      */
     PSpectrum.prototype.tempToBlackbodyColor = function (temp) {
-        
         let t = Math.floor(temp / 200);
         t = t * 200;
-        if (t < 1000) {
-          t = 1000;
-        } else if (t > 29800) {
-          t = 29800;
-        }
-
-        const c = this.bbColors[t];
-
+        if (t < 1000)  t = 1000;
+        else if (t > 29800) t = 29800;
+        if(this.bbColors.length) return this.bbColors[t];
+        else return null;
     };
 
     /**
-     * compute temperature from a blue-violet color index (B-V)
-     * {@link https://stackoverflow.com/questions/21977786/star-b-v-color-index-to-apparent-rgb-color}
-     * @param {Number} ci 
+     * Convert a b-v color index to the approx temperature
+     * @param {String} ci color index, blue-violet
      */
-    PSpectrum.prototype.bvToRGB = function (ci) {
-        let t1 = (4600 * (1 / (0.92 * ci + 1.7) + 1 / (0.92 * ci + 0.62)));
-        return this.tempToBlackbodyColor(t1);
+    PSpectrum.prototype.computeTemp = function (ci) {
+        return (4600 * (1 / (0.92 * ci + 1.7) + 1 / (0.92 * ci + 0.62)));
     };
 
     /**
@@ -962,13 +850,10 @@ var PSpectrum = (function () {
      * {@link https://www.pas.rochester.edu/~emamajek/EEM_dwarf_UBVIJHK_colors_Teff.txt}
      * {@link https://en.wikipedia.org/wiki/Color_index}
      */
-    PSpectrum.prototype.bvToRGB = function (bv) {
-
+    PSpectrum.prototype.computeColor = function (bv) {
         var r = 0, g = 0, b = 0, t = 0;
-
         if (bv < -0.4) bv = -0.4
         if (bv > 2.0) bv = 2.0
-
         if (bv >= -0.40 && bv < 0.00) {
             t = (bv + 0.40) / (0.00 + 0.40)
             r = 0.61 + 0.11 * t + 0.1 * t * t
@@ -1018,7 +903,7 @@ var PSpectrum = (function () {
      * @param {Number} dist distance in parsecs
      * {@link http://cas.sdss.org/dr3/en/proj/advanced/hr/radius1.asp}
      */
-    PSpectrum.prototype.computeAbsMag = function (mag, dist) {
+    PSpectrum.prototype.computeAbsmag = function (mag, dist) {
         return mag - (5 * (Math.log10(dist) - 1));
     };
 

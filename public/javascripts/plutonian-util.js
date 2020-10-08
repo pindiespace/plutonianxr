@@ -39,6 +39,9 @@ var PUtil = (function () {
         return ( /^[\w+:\/\/]/.exec( str ) != null );
     };
 
+    /** 
+     * check if string is a computable number
+     */
     PUtil.prototype.isNumber = function (value, suppress = false) {
 
         let v = parseFloat(value);
@@ -416,7 +419,7 @@ String.prototype.strip = function (charlist) {
  * remove all whitespace fro a string
  */
 String.prototype.stripWhitespace = function () {
-    this.replace(/\s+/g, '');
+    return this.replace(/\s+/g, '');
 };
 
 // These methods speed up the operation of non-regex string parsing
@@ -430,23 +433,31 @@ String.prototype.stripWhitespace = function () {
  */
 String.prototype.parseNumeric = function (start = 0) {
 
-    let i = start, ii = 0; 
+    let i = start, ii = 0, cc = 0, cd = 0; 
 
     if (start > this.length) {
         console.error('parseNumeric ERROR: invalid start:' + start);
         return null;
     }
 
-    for (; (this[i] < '0' || this[i] > '9') && this[i] != '.'; i++); // scan until first numeric character
+    // scan until first numeric character
+    for (; this[i] < '0' || this[i] > '9'; i++); 
+    if (i == this.length) return null;
 
-    if (i == this.length) {
-        return null;
-    } else {
-        ii = i;
-        for (; (this[ii] >= '0' && this[ii] <= '9') || this[ii] == '.' || this[ii] == ','; ii++);
-        if (this[ii - 1] == '.' || this[ii - 1] == ',') ii--;
+    // start grab at 1st numeric character
+    ii = i; let j = '';
+    // loop through 0-9, '.' and ','
+    for (; j=this[ii], (ii <= this.length) && ((j >= '0' && j <= '9') || j == '.' || j == ','); ii++) {
+        if(j == '.' && (this[ii - 1] < '0' || j > '9')) {ii--; break;}
+        if(j == ',' && (this[ii - 1] < '0' || j > '9')) {ii--; break;}
+        if(cd > 1) {break;}
+        if(cc > 1) {break;}
+        if(j == '.') cd++;
+        if(j == ',') cc++;
     }
-    if (i == ii) return null;
+    // decrement to remove trailing decimals and commas
+    if(this[ii-1] == '.' || this[ii-1] == ',') ii--;
+
     let s = this.substring(i, ii);
     return {
         start1: i,

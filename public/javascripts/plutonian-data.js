@@ -78,53 +78,47 @@ var PData = (function () {
         UNKNOWN: 'unknown'
     };
 
-
     /**
      * create a PSpectrum property object, also used by PCelestial 
      */
     PData.prototype.createPSpectrum = function (spect) {
         return {
-            spect: '', // spectra string
+            spect: '', // spectra (sub)string
+            role: this.SPECTROLES.UNKNOWN,
+            comp: false,  // composite (spectroscopic double)
+            con: this.ZERO,
             type: { // type (O, A, B,...)
                 key: this.EMPTY, // key for description (values in PSpectrum)
-                key2: this.EMPTY, // subtype (white dwarf, wolf-rayet)
-                key3: this.EMPTY, // sub-sub type (white dwarf and wolf-rayet)
-                arr: this.NULL, // array with subtype description
-                role: this.SPECTROLES.UNKNOWN,
-                con: this.ZERO
+                arr: this.NULL  // array with type or subtype description
             },
             range: { // range (0-9)
                 key: this.EMPTY,
-                value: this.NAN,  // value (in spectrum string)
-                role: this.SPECTROLES.UNKNOWN,
-                con: this.ZERO
+                value: this.NAN  // value (in spectrum string)
             },
             luminosity: { // luminosity (I, II, III,...)
                 key: this.EMPTY,  // key for description (values in PSpectrum, star/Sun)
-                value: this.NAN,   // value (estimated from luminosity key)
-                role: this.SPECTROLES.UNKNOWN,
-                con: this.ZERO
+                arr: this.NULL,
+                value: this.NAN   // value (estimated from luminosity key) or computed
+            },
+            mods: {
+                keys: [],          // modifiers (ss, sh, p, Fe), series of keys (values in PSpectrum)
+                arr: this.NULL
             },
             mass: {
-                value: this.NAN,
-                con: this.ZERO
-            },   // mass ratio, to the Sun
+                value: this.NAN
+            },   // mass ratio, relative to the Sun
             radius: {
                 value: this.NaN,
-                flatten: this.NAN,
-                con: this.ZERO
-            }, // radius ratio, to the Sun
+                flatten: this.NAN
+            }, // radius ratio, relativity to the Sun
             rotation: {
-                value: this.NAN,
-                con: this.ZERO
+                value: this.NAN
             },
             temp: {
-                value: this.NAN,
-                con: this.ZERO
+                value: this.NAN
             },   // temperature (kelvin)
             ci: {
-                value: this.EMPTY,
-                con: this.ZERO
+                value: this.EMPTY
             },     // color index b-v
             color: {
                 r:0,
@@ -132,26 +126,22 @@ var PData = (function () {
                 b:0
             },     // color
             absmag: {
-                value: this.NAN,
-                con: this.ZERO
-            }, //absolute magnitude
+                value: this.NAN
+            }, // absolute magnitude, given or estimated
             bolo: {
-                value: this.NAN,
-                con: this.ZERO
-            },
+                value: this.NAN
+            }, // bolometric correction
             var: {
                 lum1: this.NAN,
                 lum2: this.NAN,
-                period: this.NAN,
-                con: this.ZERO
-            },
+                period: this.NAN
+            }, // variable star information
             age: {
-                value: this.NAN,
-                con: this.ZERO
-            },
-            //TODO: rotation: this.NAN 
-            mods: []          // modifiers (ss, sh, p, Fe), series of keys (values in PSpectrum)
+                value: this.NAN
+            }
+
         };
+
     };
 
     PData.prototype.checkPSpectrum = function (pSpect) {
