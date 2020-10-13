@@ -141,6 +141,14 @@
                                 "blackbody": "blackbody.json",
                                 "active":true
                             },
+                            "sprite120e": {
+                                "hyg": "hyg_120.json",
+                                "spritesheet": "star_sprite_extended256.png",
+                                "size": 256,
+                                "colors": "spectrum_props.json",
+                                "blackbody": "blackbody.json",
+                                "active":true
+                            },
                             "point20": {
                                 "hyg": "hyg_20.json",
                                 "colors": "spectrum_props.json",

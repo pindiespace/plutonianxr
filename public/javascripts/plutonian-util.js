@@ -18,8 +18,15 @@ var PUtil = (function () {
             }
         };
    };
-	
-   //functions
+
+    /**
+     * return the engine
+     */
+    PUtil.prototype.getEngine = function () {
+       return this.engine;
+    };
+
+    //functions
 
     /*
      * ------------------------------------------------------
@@ -296,6 +303,21 @@ var PUtil = (function () {
     };
 
     /**
+     * get the maximum texture dimension for WebGL on this system
+     * @param {BABYLON.Scene} scene
+     */
+    PUtil.prototype.getMaxTextureSize = function (scene) {    
+        // check texture sizes to figure out what sprites are safe to load
+        if (scene) {
+            let gl = scene.getEngine()._gl;
+            if (gl) {
+                return gl.getParameter(gl.MAX_TEXTURE_SIZE);
+            }
+        }
+        return 2048; // lowest value for modern videocards
+    };
+
+    /**
      Performance for a particular function
      * @link {https://developer.mozilla.org/en-US/docs/Web/API/Performance/now}
      * @link {https://www.digitalocean.com/community/tutorials/js-js-performance-api}
@@ -463,6 +485,6 @@ String.prototype.parseNumeric = function (start = 0) {
         start1: i,
         start2: ii,
         num: s
-    }
+    };
 
 };

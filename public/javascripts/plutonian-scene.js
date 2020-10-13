@@ -49,8 +49,6 @@ var PWorld = (function () {
         this.JSONManager = null;
         this.cubeMapManager = null;
 
-        window.assets = this.cubeMaps; // TODO: ////////////////////////////////////////////
-
         // user interface
         this.ui = new PUI(this.util);
 
@@ -611,7 +609,7 @@ var PWorld = (function () {
 
                 }); // TODO: attach elsewhere, or delete!
 
-            }
+            };
 
             assetManager.onProgress = function(remainingCount, totalCount, lastFinishedTask) {
                 console.log('Loading GLOBAL Hyg database files. ' + remainingCount + ' out of ' + totalCount + ' items still need to be loaded.');
@@ -620,7 +618,6 @@ var PWorld = (function () {
             assetManager.onFinish = function(tasks) {
                 console.log('All done with loading GLOBAL Hyg database');
             };
-
 
             // Load Hyg and color data
             console.log('loading PCelestial Hyg data...')

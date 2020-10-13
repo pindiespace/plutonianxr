@@ -43,13 +43,15 @@ var PData = (function () {
         this.pObj_ERROR   = -1;
         this.hygObj_ERROR = -1;
 
-        this.EMPTY        = '';
-        this.ZERO         =  0;
-        this.NULL         = null;
-        this.FALSE        = false;
-        this.TRUE         = true;
-        this.NAN          = NaN;
-        this.UNKNOWN      = 'unknown';
+        this.EMPTY        = '',
+        this.ZERO         =  0,
+        this.ONE          = 1,
+        this.NULL         = null,
+        this.FALSE        = false,
+        this.TRUE         = true,
+        this.NAN          = NaN,
+        this.UNKNOWN      = 'unknown',
+        this.NOT_FOUND    = -1;
 
         // initialize PCTYPECHECK array for fast type checking
 
@@ -83,7 +85,7 @@ var PData = (function () {
      */
     PData.prototype.createPSpectrum = function (spect) {
         return {
-            spect: '', // spectra (sub)string
+            spect: this.EMPTY, // spectra (sub)string
             role: this.SPECTROLES.UNKNOWN,
             comp: false,  // composite (spectroscopic double)
             con: this.ZERO,
@@ -96,9 +98,9 @@ var PData = (function () {
                 value: this.NAN  // value (in spectrum string)
             },
             luminosity: { // luminosity (I, II, III,...)
-                key: this.EMPTY,  // key for description (values in PSpectrum, star/Sun)
+                key: this.EMPTY,  // Morgan-Keenan luminosity key for description
                 arr: this.NULL,
-                value: this.NAN   // value (estimated from luminosity key) or computed
+                value: this.NAN   // numeric luminosity value (Star/Sun)
             },
             mods: {
                 keys: [],          // modifiers (ss, sh, p, Fe), series of keys (values in PSpectrum)
@@ -106,11 +108,11 @@ var PData = (function () {
             },
             mass: {
                 value: this.NAN
-            },   // mass ratio, relative to the Sun
+            },   // mass ratio, (Star/Sun)
             radius: {
                 value: this.NaN,
                 flatten: this.NAN
-            }, // radius ratio, relativity to the Sun
+            }, // radius ratio, (Star/Sun)
             rotation: {
                 value: this.NAN
             },
@@ -132,11 +134,10 @@ var PData = (function () {
                 value: this.NAN
             }, // bolometric correction
             var: {
-                lum1: this.NAN,
-                lum2: this.NAN,
-                period: this.NAN
-            }, // variable star information
-            age: {
+                var_min: this.NAN,
+                var_max: this.NAN
+            }, // variability in absolute magnitudes
+            age: { // TODO: should be lifetime
                 value: this.NAN
             }
 
@@ -155,6 +156,110 @@ var PData = (function () {
 
         return true;
     };
+
+
+    /*
+     * ------------------------------------------------------
+     * HYG3 database object ( used by PCelestial)
+     * extended with data extracted from spectrum
+     * ------------------------------------------------------
+     */
+
+    /**
+     * Create our internal Hyg object, using Hyg3 data, plus additional 
+     * fields that can be filled by examining the star's spectral type, 
+     * leaving out low-density or redundant fields in the actual hyg3 database
+     * {@link https://github.com/astronexus/HYG-Database}
+     */
+    PData.createHygObj = function () {
+        return {
+            id: this.ZERO,
+            hip: this.ZERO,
+            hd: this.ZERO,
+            hr: this.ZERO,
+            gl: this.EMPTY,
+            bf: this.EMPTY,
+            proper: this.EMPTY,
+            ra: this.ZERO,
+            dec: this.ZERO,
+            dist: this.ZERO,
+            //pmra, pmdec:, rv:
+            mag: this.ZERO,
+            absmag: this.ZERO,
+            spect: this.EMPTY,
+            ci: this.EMPTY,
+            x: this.ZERO,
+            y: this.ZERO,
+            z: this.ZERO,
+            //vx:, vy:, vz:, rarad:, decrad:, pmrarad:, pmdecrad:, bayer:, flam:
+            con: this.EMPTY,
+            lum: this.ONE,
+            var: false,
+            var_min: this.NOT_FOUND,
+            var_max: this.NOT_FOUND,
+            // additional, from spectrum parsing
+            intermediate: [], // list intermediate type to primary
+            //comp, comp_primary, base
+            composite: [], // list composite spectral types
+            temp: this.ZERO,
+            radius: this.ONE,
+            r: this.ZERO,
+            g: this.ZERO,
+            b: this.ZERO,
+            rot: this.ONE,
+            dust: false,
+            envelope: false,
+            description: this.EMPTY
+        };
+
+    };
+
+    PData.prototype.checkHygObj = function (hygObj) {
+        return true;
+    };
+
+    PData.prototype.cloneHygObj = function (hygObj = {}) {
+            if (!hygObj.id) hygObj.id = this.ZERO;
+            if (!hygObj.hip) hygObj.hip = this.ZERO;
+            if (!hygObj.hd) hygObj.hd = this.ZERO;
+            if (!hygObj.hr) hygObj.hr = this.ZERO;
+            if (!hygObj.gl) hygObj.gl = this.EMPTY;
+            if (!hygObj.bf) hygObj.bf = this.EMPTY;
+            if (!hygObj.proper) hygObj.proper = this.EMPTY;
+            if (!hygObj.ra) hygObj.ra = this.ZERO;
+            if (!hygObj.dec) hygObj.dec = this.ZERO;
+            if (!hygObj.dist) hygObj.dist = this.ZERO;
+            //pmra, pmdec:, rv:
+            if (!hygObj.mag) hygObj.mag = this.ZERO;
+            if (!hygObj.absmag) hygObj.absmag = this.ZERO;
+            if (!hygObj.spect) hygObj.spect = this.EMPTY;
+            if (!hygObj.ci) hygObj.ci = this.EMPTY;
+            if (!hygObj.x) hygObj.x = this.ZERO;
+            if (!hygObj.y) hygObj.y = this.ZERO;
+            if (!hygObj.z) hygObj.z = this.ZERO;
+            //vx:, vy:, vz:, rarad:, decrad:, pmrarad:, pmdecrad:, bayer:, flam:
+            if (!hygObj.con) hygObj.con = this.EMPTY;
+            if (!hygObj.lum) hygObj.lum = this.ZERO;
+            if (!hygObj.var) hygObj.var = false;
+            if (!hygObj.var_min) hygObj.var_min = this.NOT_FOUND;
+            if (!hygObj.var_max) hygObj.var_max = this.NOT_FOUND;
+            // additional, from spectrum parsing
+            if (!hygObj.intermediate) hygObj.intermediate = []; // list intermediate type to primary
+            //comp, comp_primary, base
+            if (!hygObj.composite) hygObj.composite = []; // list composite spectral types
+            if (!hygObj.temp) hygObj.temp = this.ZERO;
+            if (!hygObj.radius) hygObj.radius = this.ONE;
+            if (!hygObj.r) hygObj.r = this.ZERO;
+            if (!hygObj.g) hygObj.g = this.ZERO;
+            if (!hygObj.b) hygObj.b = this.ZERO;
+            if (!hygObj.rot) hygObj.rot = this.ONE;
+            if (!hygObj.dust) hygObj.dust = false;
+            if (!hygObj.envelope) hygObj.envelope = false;
+            if (!hygObj.description) hygObj.description = this.EMPTY;
+
+            return hygObj;
+    };
+
 
     /*
      * ------------------------------------------------------
@@ -387,56 +492,6 @@ var PData = (function () {
 
         return true;
 
-    };
-
-    /*
-     * ------------------------------------------------------
-     * HYG3 database object ( used by PCelestial)
-     * ------------------------------------------------------
-     */
-
-    PData.prototype.checkHygObj = function(hygObj) {
-        return true;
-    };
-
-    /** 
-     * Build a HygObj based on Hyg3 database fields. 
-     * - If nothing is passed, build an empty object.
-     * - Otherwise, add any needed fields
-     */
-    PData.prototype.cloneHygObj = function (hygObj = {}) {
-
-    // required fields
-    if (!hygObj.id) hygObj.id = this.hygObj_ERROR;
-    if (!hygObj.proper) hygObj.proper = this.EMPTY;
-    if (!hygObj.ra) hygObj.ra = 0;
-    if (!hygObj.dec) hygObj.dec = 0;
-    if (!hygObj.dist) hygObj.dist = 0;
-    if (!hygObj.mag) hygObj.mag = 0;
-    if (!hygObj.absmag) hygObj.absmag = 0;
-    if (!hygObj.spect) hygObj.spect = this.EMPTYs;
-    if (!hygObj.x) hygObj.x = 0;
-    if (!hygObj.y) hygObj.y = 0;
-    if (!hygObj.z) hygObj.z = 0;
-    if (!hygObj.con) hygObj.con = this.EMPTY;
-
-    // multiple star
-    if (!hygObj.comp) hygObj.comp = this.EMPTY;
-    if (!hygObj.comp_primary) hygObj.comp_primary = this.EMPTY;
-    if (!hygObj.base) hygObj.base = this.EMPTY;
-
-    //if (!hygObj.lum) hygObj.lum = 1;
-    //if (!hygObj.var) hygObj.var = this.EMPTY;
-    //if (!hygObj.var_min) = 1;
-    //if (!hygObj.var_max) = 1;
-
-    };
-
-    /**
-     * Given a hyg data-like object, convert to a pObj
-     */
-    PData.prototype.hygToPObj = function () {
-        
     };
 
     /*

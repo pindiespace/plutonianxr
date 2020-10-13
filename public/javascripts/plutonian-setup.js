@@ -140,6 +140,13 @@ var PSetup = (function() {
             engine = new BABYLON.Engine(canvas, true, { preserveDrawingBuffer: true, stencil: true });
             if (!engine) throw new ERROR('Bad engine:' + typeof engine);
 
+            // save a reference
+            this.engine = engine;
+
+            // get default information.
+            // NOTE: don't call WebGL context under render loop is set up
+            //this.engine.getGlInfo();
+
             // Resize
             window.addEventListener('resize', function () {
                 engine.resize();

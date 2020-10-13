@@ -37,15 +37,19 @@ var PCelestial = (function () {
 
         this.parsec = 3.26156; // light years in a parset
 
-        this.dParsecUnits      =     10; // scale parsec distances to the simulation
-        this.dKmUnits          =   2370; // 1 unit = 2370km, Pluto = 2370/2370 = 1.0
-        this.dMUnits           =   1000; // 1 unit = 1000 meters, Voyager 1000/1000 = 1.0
-        this.dSpriteSize       =    128; // default size of sprite panel
-        this.dSpriteScreenSize =      1; // default size of Star sprites
-        this.dMaxHygDist       = 100000;
+        this.dParsecUnits       =     10; // scale parsec distances to the simulation
+        this.dKmUnits           =   2370; // 1 unit = 2370km, Pluto = 2370/2370 = 1.0
+        this.dMUnits            =   1000; // 1 unit = 1000 meters, Voyager 1000/1000 = 1.0
+        this.dSpriteSize        =    128; // default size of sprite panel
+        this.dSpriteScreenSize  =      1; // default size of Star sprites
+        this.dSpriteScreenIndex =      4;
+        this.dMaxHygDist        = 100000;
 
         // SpriteManager for Hyg3 data
-        this.spriteManager     =   null;
+        this.spriteManager      =   null;
+
+        // WebGL
+        this.maxTexSize = 2048;         // minimum default for any modern videocard
 
         // SpriteManager and scene
         this.assetManager = null;
@@ -70,29 +74,30 @@ var PCelestial = (function () {
     // prototype class variables
 
     /*
+     * extended sprite index
      * since we only create one pObject, we make the following arrays, some 
      * in the class, some loaded from JSON files
      * dynamically - 2x faster access than if declared as out function (static class)
      */
-
-    // default Sprite index table for star quad image
-    PCelestial.prototype.dSpriteIndex = [
-        {'w': 6},
-        {'o': 6}, //standard
-        {'b': 5},
-        {'a': 4},
-        {'f': 3},
-        {'g': 2},
-        {'k': 1},
-        {'m': 0},
-        {'n': 0}, //less common
-        {'r': 1},
-        {'c': 1},
-        {'s': 0},
-        {'d': 4},
-        {'y': 6}, // TODO: add
-        {'p': 7}  // TODO: add
-    ];
+    PCelestial.prototype.dSpriteIndex = {
+        'W': 0,
+        'O': 1,
+        'A': 2,
+        'B': 3,
+        'F': 4,
+        'G': 5,
+        'K': 6,
+        'M': 7,
+        'N': 8,
+        'R': 9,
+        'C': 10,
+        'S': 11,
+        'D': 12, 
+        'L': 13,
+        'T': 14,
+        'Y': 15,
+        'P': 16
+    };
 
     // dynamically-filled prototype variables
 
@@ -184,7 +189,9 @@ var PCelestial = (function () {
      */
 
     /** 
-     * Given a pObj, return the correct scaling
+     * Given a pObj, return the correct scaling. 
+     * Some Objects (e.g Stars) can be 3D shapes, or 2D billboarded Sprites
+     * @param {Object} data a data object, as defined by PData.PObj
      */
     PCelestial.prototype.scale = function (data) {
 
@@ -216,13 +223,17 @@ var PCelestial = (function () {
                 console.log('planet scaled dist:' + scaled.dist)
                 break;
 
-            case t.ROGUE_PLANET:
+            case t.ROGUE_PLANET: // like a Star, NOT a Planet!
                 scaled.diameter /= this.dKmUnits, // planetary dimensions
                 scaled.dist *= this.dParsecUnits; // stellar distances
                 break;
 
             case t.BROWN_DWARF:
             case t.STAR:
+                scaled.diameter /= this.dKmUnits,
+                scaled.dist *= this.dParsecUnits;
+                break;
+
             case t.STARDOME:
             case t.STAR_SYSTEM:
                 // 1 unit = 1/10 parsec
@@ -423,58 +434,93 @@ var PCelestial = (function () {
      * 
      * get the sprite index to display for this type
      */
-    PCelestial.prototype.getHygSpriteIndex = function (star) {
-        let s = star.spect;
+    PCelestial.prototype.getHygSpriteIndex = function (star, sprite) {
+        let s = star.spect[0];
         if (s) {
-            c = this.dSpriteIndex[s.substring(0,1).toLowerCase()];
-            if (this.util.isNumber(c)) {
-                return c;
-            }
+            // TODO: adjust base on prop values.
+            sprite.spriteIndex.cellIndex =this.dSpriteIndex[s.toUpperCase()];
+        } else {
+            spriteIndex.spriteIndex.cellIndex = this.dSpriteScreenIndex; // G
         }
 
-        // novas
-        if (s == 'pec') return 4; // hot white-blue
-
-        // console.warn('no index for spectral type:' + s);
-
-        return 2; // whitish
     };
 
     /**
      * Get the estimated size of the star (dwarf, giant, supergiant) from 
-     * the spectrum.
+     * the spectrum. Secondary scaling based on stellar type.
+     * 1. If the star is bigger than the Sun, add the log of increased size to default, so 
+     *    100x = 1 + 2 = 3 units
+     * 2. If the star is smaller than the Sun, use the absolute value of the inverse of the log
+     *    10E-3 = 1 / 3;
      */
-    PCelestial.prototype.getHygSize = function (spect) {
+    PCelestial.prototype.getHygSpriteSize = function (star, sprite) {
+        let w = this.dSpriteScreenSize, h = this.dSpriteScreenSize;
 
-        return 1;
+        // TODO: incorporate sprite scaling (size)
+        // sprite.size
+        // TODO:
+        // TODO:
+        // TODO:
+
+        // scale the overall size
+        let s = Math.log10(star.radius);
+        if (s < 0) w = Math.abs(1/s);
+        else w  += s;
+
+        w = h;
+
+        // flatten the star if rotating quickly
+        let r = star.rot;
+        if (r > 20) w *= 1.5;
+        else if (r > 10) w *= 1.2;
+
+        sprite.width = w,
+        sprite.height = h;
+
     };
 
-    /** 
-     * Get an absolute magnitude for stars by stellar type, when 
-     * absolute magnitude is not available in Hyg3
-     * @param {String} spect the stellar spectral type
+    /**
+     * Get the overall color, based on spectral type
      */
-    //PCelestial.prototype.getHygAbsMag = function (spect) {
-    //    return this.dAbsMag[spect];
-    //};
+    PCelestial.prototype.getHygSpriteColor = function (star) {
+
+        // compute the brightness
+        // TODO:
+
+        // compute the color
+        // TODO:
+
+        return {
+            r: star.r,
+            g: star.g, 
+            b: star.b
+        };
+    };
 
     /**
      * Set the Star position in 3D space
      * @param {ObjectJSON} star Hyg3 data for a particular star
      */
-    PCelestial.prototype.getHygPosition = function (star) {
+    PCelestial.prototype.getHygSpritePosition = function (star, position) {
+        // dParsed units = 10, 10 units per parsec
+
+        let maxHygDist = 100000;
+        let scale = dParsecUnits;
+
+        // the furthest stars have their position adjusted to just inside the current Skybox
+        if (star.dist == maxHygDist) scale = maxHygDist / dParsecUnits;
 
         //we rotate the coordinate system to BabylonJS coordinates by swapping z and y
         if (star.x) {
-            position.x = star.x * dParsecUnits;
-            position.z = star.y * dParsecUnits; // was y
-            position.y = star.z * dParsecUnits; // wax z
+            position.x = star.x * scale;
+            position.z = star.y * scale; // was y
+            position.y = star.z * scale; // wax z
         } else {
             let A = degToRad(parseFloat(star.ra) * 15);
             let B = degToRad(parseFloat(star.dec));
-            position.x = Math.cos(B) * Math.cos(A) * star.dist * dParsecUnits;
-            position.z = Math.cos(B) * Math.sin(A) * star.dist * dParsecUnits; // was y
-            position.y = Math.sin(B) * star.dist * dParsecUnits; // was z
+            position.x = Math.cos(B) * Math.cos(A) * scale;
+            position.z = Math.cos(B) * Math.sin(A) * scale; // was y
+            position.y = Math.sin(B) * scale; // was z
         }
 
     };
@@ -515,6 +561,7 @@ var PCelestial = (function () {
         let util = this.util;         // utilities
         let spectra = this.spectra;   // parse stellar type string
 
+        // create a asset manager
         let assetManager = new BABYLON.AssetsManager(scene);
 
         if (!model.hyg) {
@@ -523,13 +570,11 @@ var PCelestial = (function () {
 
         // if present, load stellar colors by stellar spectrum
         if (util.isString(model.colors)) {
-            //this.loadStarColorsBySpectrum(assetManager, dir + model.colors);
             spectra.loadStarPropsBySpectrum(assetManager, dir + model.colors);
         }
 
         // if present, load stellar colors by ci index (temperature)
         if (util.isString(model.blackbody)) {
-            //this.loadStarColorsByBlackbody(assetManager, dir + model.blackbody);
             spectra.loadStarColorsByBlackbody(assetManager, dir + model.blackbody);
         }
 
@@ -544,7 +589,7 @@ var PCelestial = (function () {
             console.log('beginning compute Hyg')
             // TODO: attach to object, look for when computing, assume loads have finished
             // TODO: could put an 'await' here for JSON parsing for both...
-            let mgr = await celestial.computeHygSprite(dir + 'sprite/textures/' + model.spritesheet, model.size, scene)
+            let mgr = await celestial.computeHygSprite(dir + 'sprite/textures/', model, scene)
             .then((spriteManagerStars) => {
                 console.log('Finished computing Hyg database')
             });
@@ -556,62 +601,37 @@ var PCelestial = (function () {
 
     };
 
-    /**
-     * See if descriptive information has been associated with this hyg entry
-     * from PSpectrum, and return it for display
-     */
-    PCelestial.prototype.logHygData = function (hyg) {
-
-        let s = ''; //output string
-
-        if (hyg.desc) {
-
-            let d = hyg.desc;
-            let ss = d.type.arr[d.type.key];
-            if (ss) s += ss;
-            ss = d.luminosity.arr[d.luminosity.key];
-            if (ss) s += ss; ss = '';
-            for (let i = 0; i < d.mods.keys.length; i++) {
-                ss += d.mods.arr[d.mods.keys[i]];
-            }
-            if (ss) s += ss;
-        };
-
-        return s;
-
-    };
+    this.propList = []; ///////////////////////////
 
     /** 
      * use Hyg3 data to create a 3D galaxy of Star sprites.
-     * @param {Object} hygData an array of objects with Hyg3 stellar data
-     * @param {String} spriteSheetFile the image file to use for Sprite images
-     * @param {Number} size the height in pixels of the spriteSheet image. Generally several images horizontally
+     * optimizations:
+     * sprite.cullingStrategy = BABYLON.AbstractMesh.CULLINGSTRATEGY_BOUNDINGSPHERE_ONLY;
+     * sprite.freezeNormals(); // NOT IN SPRITE
+     * sprite.convertToUnIndexedMesh(); // NOT IN SPRITE too few vertices to need indexing
+     * @param {Object} dir location of spritesheet
+     * @param {Object} model the model we are using
      * @param {BABYLON.Scene} scene
      */
-    PCelestial.prototype.computeHygSprite = async function (spriteSheetFile, size, scene) {
+    PCelestial.prototype.computeHygSprite = async function (dir, model, scene) {
 
         let util = this.util;
         let pdata = this.pdata;
+        let hygData = this.hygData;
+        let numStars    = hygData.length; // an array of star data objects
 
         // The loader should already have assigned these when we enter this function.
-
-        let hygColors = this.hygColors;
-        let hygData = this.hygData;
-
-        if (! hygData || !util.isArray(hygData) || !hygData.length) {
+        if (!hygData || !util.isArray(hygData) || !hygData.length) {
             console.error('computeHygSprite ERROR: invalid Hyg data (not an array)');
             return false;
         }
 
-        let numStars    = hygData.length; // an array of star data objects
-        let spriteSize  = size || this.dSpriteScreenSize; // set for existing scene, environment
+        let spriteSheetFile = dir + model.spritesheet;
+        let size = model.size;
+
         let maxDist     = this.dMaxHygDist / this.dParsecUnits;
         let oDist       = maxDist / 2; // cutoff for very distant stars in Hyg
         let star        = null;
-        let name        = '';
-        let color       = {};
-        let spect       = null;
-        let spriteIndex = 0;
 
         // load a SpriteManager for the Stars
 
@@ -628,22 +648,30 @@ var PCelestial = (function () {
         //for (let i = 0; i < 10000; i++) {
 
             star = hygData[i];
-            name = this.getHygName(star);
 
             // extract stellar properties from the spectrum
             let p = this.spectra.spectrumToStellarData(star);
 
-            //console.log("name is:" + name)
-            //color = this.getHygColor(star);
-            // TODO: this method should be DELETED
-            // TODO: color calcs are all in PSpectra
-            // TODO: radius based on temperature (TODO: IN JSON)
-            
+            // create the Sprite
+            //let sprite = new BABYLON.Sprite(name, spriteManagerStars); 
 
-            //console.log("color is:" + color)
-            spriteIndex = this.getHygSpriteIndex(star);
+            // make the sprite static
+            //sprite.stopAnimation();
 
-            //console.log("index is:" + spriteIndex)
+            // set the star position
+            // this.getHygSpritePosition(star, sprite);
+            // this.getHygSpriteIndex(star, sprite);
+            // this.getHygSize(star, sprite);
+            // this.getHygSpriteBrightness(star, sprite);
+            // this.getHygSpriteColor(star, sprite);
+
+            // update function for Sprites
+            function update () {
+
+            };
+
+            //scene.registerBeforeRender(() => {
+            //});
 
         }
 
