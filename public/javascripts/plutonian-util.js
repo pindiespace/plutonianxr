@@ -136,7 +136,6 @@ var PUtil = (function () {
         return true;
     };
 
-
     /**
      * check if a character string is all lowercase
      * @param {String} ch 

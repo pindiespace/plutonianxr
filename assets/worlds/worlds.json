@@ -130,6 +130,7 @@
                                 "spritesheet": "star_sprite128.png",
                                 "colors": "spectrum_props.json",
                                 "blackbody": "blackbody.json",
+                                "lumlookup": "luminosity_lookup.json",
                                 "size": 128,
                                 "active":false
                             },
@@ -139,6 +140,7 @@
                                 "size": 256,
                                 "colors": "spectrum_props.json",
                                 "blackbody": "blackbody.json",
+                                "lumlookup": "luminosity_lookup.json",
                                 "active":true
                             },
                             "sprite120e": {
@@ -147,6 +149,7 @@
                                 "size": 256,
                                 "colors": "spectrum_props.json",
                                 "blackbody": "blackbody.json",
+                                "lumlookup": "luminosity_lookup.json",
                                 "active":true
                             },
                             "point20": {

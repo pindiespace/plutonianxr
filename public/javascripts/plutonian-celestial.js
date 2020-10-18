@@ -104,14 +104,9 @@ var PCelestial = (function () {
     // holds data loaded from hyg3 (JSON)
     PCelestial.prototype.hygData = [];
  
-    /**
-     * dynamically filled, blackbody colors table (JSON)
-     * {@link http://www.vendian.org/mncharity/dir3/blackbody/UnstableURLs/bbr_color.html}
-     */
-    PCelestial.prototype.hygBBColors = [];
 
     // Stellar colors based on spectrum (JSON)
-    PCelestial.prototype.hygColors = []; // full set, in JSON file
+    PCelestial.prototype.sprites = [];
 
     // functions
 
@@ -380,11 +375,11 @@ var PCelestial = (function () {
      * set a readable name for the star
      * @param {ObjectJSON} star Hyg3 data for a particular star
      */
-    PCelestial.prototype.getHygName = function (star) {
+    PCelestial.prototype.getHygSpriteName = function (star, sprite) {
         let n = star.proper || star.bf;
-        if (n.length) return n;
-        else if (star.bayer.length && star.con.length) return star.bayer + star.con;
-        else return star.id;
+        if (n.length) sprite.name = n;
+        else if (star.bayer.length && star.con.length) sprite.name = star.bayer + star.con;
+        else sprite.name = star.id;
     };
 
     /**
@@ -438,11 +433,10 @@ var PCelestial = (function () {
         let s = star.spect[0];
         if (s) {
             // TODO: adjust base on prop values.
-            sprite.spriteIndex.cellIndex =this.dSpriteIndex[s.toUpperCase()];
+            sprite.cellIndex = this.dSpriteIndex[s.toUpperCase()];
         } else {
-            spriteIndex.spriteIndex.cellIndex = this.dSpriteScreenIndex; // G
+            sprite.cellIndex = this.dSpriteScreenIndex; // G
         }
-
     };
 
     /**
@@ -456,56 +450,54 @@ var PCelestial = (function () {
     PCelestial.prototype.getHygSpriteSize = function (star, sprite) {
         let w = this.dSpriteScreenSize, h = this.dSpriteScreenSize;
 
-        // TODO: incorporate sprite scaling (size)
-        // sprite.size
-        // TODO:
-        // TODO:
-        // TODO:
-
-        // scale the overall size
-        let s = Math.log10(star.radius);
-        if (s < 0) w = Math.abs(1/s);
-        else w  += s;
-
-        w = h;
-
         // flatten the star if rotating quickly
-        let r = star.rot;
-        if (r > 20) w *= 1.5;
-        else if (r > 10) w *= 1.2;
+        let rot = star.rot;
+        if (rot > 20) h /= 1.5;
+        else if (rot > 10) h /= 1.2;
 
         sprite.width = w,
         sprite.height = h;
+
+        let rad = Math.log10(star.radius);
+        if (rad < 0) {
+            sprite.size = 1 - (1 - 1/rad);
+        } else if (rad >= 0) {
+            sprite.size = 1 + rad;
+        }
+
+        sprite.size = 1 + rad;
 
     };
 
     /**
      * Get the overall color, based on spectral type
      */
-    PCelestial.prototype.getHygSpriteColor = function (star) {
-
-        // compute the brightness
-        // TODO:
+    PCelestial.prototype.getHygSpriteColor = function (star, sprite) {
 
         // compute the color
-        // TODO:
+        sprite.color = new BABYLON.Color4(star.r, star.g, star.b, 1.0);
 
-        return {
-            r: star.r,
-            g: star.g, 
-            b: star.b
-        };
+        // scale brightness up or down a bit based on absolute magnitude
+        let s = 1;
+        if (star.absmag < 0) {
+            s = Math.log10(-star.absMag);
+        } else {
+            s = Math.log10(-star.absmag);
+        }
+        // TODO: clamp upwards to 1, 1, 1 or 0,0,0 based on absmag
+
     };
 
     /**
      * Set the Star position in 3D space
      * @param {ObjectJSON} star Hyg3 data for a particular star
      */
-    PCelestial.prototype.getHygSpritePosition = function (star, position) {
+    PCelestial.prototype.getHygSpritePosition = function (star, sprite) {
         // dParsed units = 10, 10 units per parsec
 
         let maxHygDist = 100000;
         let scale = dParsecUnits;
+        let position = sprite.position;
 
         // the furthest stars have their position adjusted to just inside the current Skybox
         if (star.dist == maxHygDist) scale = maxHygDist / dParsecUnits;
@@ -578,13 +570,19 @@ var PCelestial = (function () {
             spectra.loadStarColorsByBlackbody(assetManager, dir + model.blackbody);
         }
 
-        // load stellar data
+        // if present, load luminosity class lookup by range and absolute magnitude
+        if (util.isString(model.lumlookup)) {
+            spectra.loadStarLumByMagnitude(assetManager, dir + model.lumlookup);
+        }
+
+        // load hyg3 stellar data
         this.loadStarHygData(assetManager, dir + model.hyg);
 
         assetManager.onProgress = function(remainingCount, totalCount, lastFinishedTask) {
                 console.log('Loading Hyg database files. ' + remainingCount + ' out of ' + totalCount + ' items still need to be loaded.');
         };
 
+        // after all our lookup tables are loaded, parse the hyg3 database
         assetManager.onFinish = async function(tasks) {
             console.log('beginning compute Hyg')
             // TODO: attach to object, look for when computing, assume loads have finished
@@ -600,8 +598,6 @@ var PCelestial = (function () {
         assetManager.load();
 
     };
-
-    this.propList = []; ///////////////////////////
 
     /** 
      * use Hyg3 data to create a 3D galaxy of Star sprites.
@@ -631,7 +627,7 @@ var PCelestial = (function () {
 
         let maxDist     = this.dMaxHygDist / this.dParsecUnits;
         let oDist       = maxDist / 2; // cutoff for very distant stars in Hyg
-        let star        = null;
+        let star;
 
         // load a SpriteManager for the Stars
 
@@ -649,28 +645,47 @@ var PCelestial = (function () {
 
             star = hygData[i];
 
-            // extract stellar properties from the spectrum
+            // extract stellar properties from the spectrum, returns props
+            // NOTE: already merged props with hyg fields
             let p = this.spectra.spectrumToStellarData(star);
 
             // create the Sprite
             //let sprite = new BABYLON.Sprite(name, spriteManagerStars); 
 
+            let sprite = {};
+            sprite.position = {};
+
             // make the sprite static
-            //sprite.stopAnimation();
+            // sprite.stopAnimation();
+            // sprite.isVisible = true;
+            // sprite.isPickable = true;
+            // get the name
+            this.getHygSpriteName(star, sprite);
 
             // set the star position
-            // this.getHygSpritePosition(star, sprite);
-            // this.getHygSpriteIndex(star, sprite);
-            // this.getHygSize(star, sprite);
-            // this.getHygSpriteBrightness(star, sprite);
-            // this.getHygSpriteColor(star, sprite);
+            this.getHygSpritePosition(star, sprite);
+            this.getHygSpriteIndex(star, sprite);
+            this.getHygSpriteSize(star, sprite);
+            this.getHygSpriteColor(star, sprite);
+
+            if (sprite.size > 3) {
+                sprite.star = star;
+                this.sprites.push(sprite);
+            }
+
+            //if (!star.radius || star.radius <= 0) {
+            //if(star.computedRadius) {
+            //    sprite.star = star;
+            //    this.sprites.push(sprite);
+            //}
 
             // update function for Sprites
-            function update () {
-
-            };
+            //function update () {
+            //
+            //};
 
             //scene.registerBeforeRender(() => {
+            //    update();
             //});
 
         }

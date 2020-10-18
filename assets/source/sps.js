@@ -1,3 +1,294 @@
+PSpectrum.prototype.lookupLuminosity = function () {
+        let util = this.util;
+
+        for (let i in this.spectLookup) {
+            let pos = i.parseNumeric();
+
+            // split the combined type into type-range and luminosity
+            if (pos) {
+
+                let s = i.split(/\d/);
+
+                let t = s[0];
+                let r = pos.num;
+                let l = s[1];
+                let tr = t + r;
+
+                console.log('tr:' + tr + ' l:' + l)
+
+                if (!this.lumLookup[tr]) this.lumLookup[tr] = {}; // make the A0
+
+                // make A0: {{"iab": -3}, "I":: -4}}
+                this.lumLookup[tr][l] = this.spectLookup[i].absmag;
+
+            } else {
+                console.error('lookupLuminosity could not find range in:' + i);
+            }
+        }
+
+    };
+
+
+
+////////////////////////////////////////////////////////////////////////////
+// Spectral weighted averages
+////////////////////////////////////////////////////////////////////////////
+    PSpectrum.prototype.lumStats = {}; // frequency of luminosity classes
+    PSpectrum.prototype.lumVals = {};
+    PSpectrum.prototype.lumAvs = {};
+    PSpectrum.prototype.rangeStats = {};
+    PSpectrum.prototype.rangeVals = {};
+    PSpectrum.prototype.rangeAvs = {};
+
+      /**
+     * Reverse luminosity class lookup
+     * {@link https://www.handprint.com/ASTRO/specclass.html}
+     * 
+     */
+    PSpectrum.prototype.dLuminosityLookup = {
+
+       Spectral
+        type    temp	
+                          V        IV	    IIIb	    III/IIIab	    IIIa	   II	   Ib	   Iab	   Ia    Ia0
+        'O3':	44850	-5.6		                      -6.0		                                      -6.8   -9
+        'O4':	42860	-5.5		                      -6.4		                                      -7.0   -9
+        'O5':	40860	-5.5		                      -6.4		                                      -7.0   -9
+        'O6':	38870	-5.3		                      -5.6		                      -6.3		      -7.0  -8.9
+        'O7':	36870	-4.8		                      -5.6		              -5.9	  -6.3		      -7.0  -8.8
+        'O8':	34880	-4.4		                      -5.6		              -5.9	  -6.2	   -6.5	  -7.0  -8.7
+        'O9':	32880	-4.3	 -5.0		              -5.6		              -5.9	  -6.2	   -6.5	  -7.0  -8.6
+        'B0':	29000	-4.1	 -4.6		              -5.0		              -5.6	  -5.8		      -7.0  -8.5
+        'B1':	24500	-3.5	 -3.9		              -4.4		              -5.1	  -5.7		      -7.0  -8.5
+        'B2':	19500	-2.5	 -3.0		              -3.6		              -4.4	  -5.7		      -7.0  -8.4
+        'B3':	16500	-1.7	 -2.3		              -2.9		              -3.9	  -5.7		      -7.0  -8.4
+        'B4':	        -1.4	 -2.0		              -2.6		              -3.9	  -5.7		      -7.0  -8.4
+        'B5':	15000	-1.1	 -1.6		              -2.2		              -3.7	  -5.7		      -7.0  -8.3
+        'B6':		    -0.9	 -1.3		              -1.9		              -3.7	  -5.7		      -7.1  -8.3
+        'B7':	13000	-0.4	 -1.3		              -1.6		              -3.6	  -5.6		      -7.1  -8.2
+        'B8':	11500	0.0	     -1.0		              -1.4		              -3.4	  -5.6		      -7.1  -8.1
+        'B9':	10700	0.7	     -0.5		              -0.8		              -3.1	  -5.5		      -7.1  -8.1
+        'A0':	9800	1.4	      0.3		              -0.8		              -2.8	  -5.2		      -7.1  -8.0
+        'A1':	9500	1.6	      0.3		              -0.4		              -2.6	  -5.1		      -7.3  -8.1
+        'A2':	8900	1.9	      0.5		              -0.2		              -2.4	  -5.0		      -7.5  -8.2
+        'A3':	8520	2.0	      0.7		               0.0		              -2.3	  -4.8		      -7.6  -8.3
+        'A4':		    2.05	  0.95		              0.15		              -2.2	  -4.8		     -7.65  -8.4
+        'A5':	8150	2.1   	  1.2		               0.3		              -2.1	  -4.8		      -7.7  -8.5
+        'A6':	     	2.2   	  1.35		               0.4		             -2.05	    -4.8		-7.75   -8.6
+        'A7':	7830	2.3	      1.5		               0.5		              -2.0	    -4.8		-8.0    -8.6
+        'A8':		    2.4	      1.55		              0.55	                -2.0   	    -4.8		-8.15   -8.6
+        'A9':	7380	2.5	      1.6		               0.6		            -2.0	    -4.8		-8.3    -8.7
+        'F0':	7250	2.6	      1.7		               0.6		            -2.0	    -4.7		-8.5    -8.7
+        'F1':	7120	2.8	      1.8		               0.6		            -2.0	    -4.7		-8.5    -8.8
+        'F2':	7000	3.0       1.9		               0.6		            -2.0	    -4.6		-8.4    -8.8
+        'F3':	6750	3.1	      1.9		               0.6		            -2.0	    -4.6		-8.3    -8.9
+        'F4':		    3.3	      2.0		               0.7		            -2.0	    -4.6		-8.3    -9
+        'F5':	6550	3.4	      2.1		               0.7		            -2.0	    -4.4		-8.2     -9.1
+        'F6':		    3.7	      2.2		               0.7		            -2.0	    -4.4		-8.1    -9.1
+        'F7':	6250	3.8	      2.3		               0.6		            -2.0	    -4.4		-8.1    -9.2
+        'F8':	6170	4.0	      2.4		               0.6		            -2.0	    -4.3		-8.0    -9.2
+        'F9':	6010	4.2	      2.6		               0.6		            -2.0	    -4.2		-8.0     -9.3
+        'G0':	5900	4.4	      2.8		               0.6		            -2.0	    -4.1		-8.0     -9.3
+        'G1':	5800	4.5	      2.9		               0.5		            -2.0	    -4.1		-8.0    -9.3
+        'G2':	5750	4.7	      3.0		               0.4		            -2.0	    -4.0		-8.0    
+        'G3':		    4.9	      3.0		               0.4		            -1.9	    -4.0		-8.0
+        'G4':		    5.0	      3.1		               0.4		            -1.9	    -3.9		-8.0
+        'G5':	5580	5.2	      3.2		               0.4		            -1.9	    -3.9		-8.0
+        'G6':		    5.3	      3.2		               0.4		            -1.9	    -3.8		-8.0
+        'G7':		    5.5	      3.2		               0.3		            -1.9 	    -3.8		-8.0
+        'G8':	5430	5.6	      3.2	    0.8	           0.3	        -0.4	-1.9	    -3.7		-8.0
+        'G9':	5350	5.7	      3.2	    0.8	          0.25	        -0.4	-2.0	    -3.7		-8.0
+        'K0':	5280	5.9	      3.2	    0.7	           0.2	        -0.5	-2.0	    -3.6		-8.0
+        'K1':	5110	6.1		            0.6	           0.1	        -0.6	-2.1	    -3.6		-8.0
+        'K2':	4940	6.3		            0.6	           0.1	        -0.7	-2.1	    -3.6		-8.0
+        'K3':	4700	6.9		            0.4	          -0.1	        -0.8	-2.2	    -3.6		-8.0
+        'K4':		    7.4		            0.3	          -0.2	        -1.0	-2.3	    -3.7		-8.0
+        'K5':   4400	8.0		            0.1	          -0.4	        -1.1	-2.5	    -3.8		-8.0
+        'K6':		    8.2		            0.05	     -0.45	       -1.15	-2.5	    -3.8		-7.85
+        'K7':	4130	8.5		            0.0	          -0.5	        -1.2	-2.5	    -3.8		-7.7
+        'K8':		    8.7		           -0.07	     -0.57	       -1.23	-2.53	    -3.83		-7.6
+        'K9':		    9.0		          -0.14	         -0.64         -1.26	-2.56	    -3.86		-7.45
+        'M0':	3760	9.2		           -0.2	          -0.7	        -1.3	-2.6	    -3.9		-7.3
+        'M1':	3625	9.7		           -0.3	          -0.8	        -1.5	-2.7	    -4.1		-7.3
+        'M2':	3490	10.6		       -0.6	          -1.1	        -1.7	-2.9	    -4.2		-7.0
+        'M3':	3355	11.6		       -0.8	          -1.3	        -1.9	
+        'M4':	3220	12.9		       -1.1	          -1.6	        -2.2	
+        'M5':	3085	14.5	
+        'M6':	2950	16.1	
+	
+    };  
+////////////////////////////////////////
+////////////////////////////////////////
+                    let tl = t + '-' + l;
+                    if (!this.lumStats[lp]) {
+                        this.lumStats[lp] = 1;
+                        this.lumAvs[tl] = this.spectLookup['EMPTY']; //create a comparable object
+                        if(!this.lumVals[tl]) this.lumVals[tl] = 1;
+                        else this.lumVals[tl]++;
+                    }
+                    else {
+                        this.lumStats[lp]++;
+                        if(!this.lumVals[tl]) this.lumVals[tl] = 1;
+                        else this.lumVals[tl]++;
+                    }
+
+                    //************************************************* */
+                    // for DZ, DA...
+                    if (t[0] == 'D') {
+                        let tr = t + '-' + r;
+                        if (!this.rangeStats[tr]) {
+                            this.rangeStats[tr] = 1;
+                            this.rangeAvs[t] = this.spectLookup['EMPTY'];
+                            if(!this.rangeVals[t]) this.rangeVals[t] = 1;
+                            else this.rangeVals[t]++;
+                        } else {
+                            this.rangeStats[tr]++;
+                            if(!this.rangeVals[t]) this.rangeVals[t] = 1;
+                            else this.rangeVals[t]++;
+                        }
+                    }
+                    //*********************************************** */
+
+///////////////////////////////////////////
+///////////////////////////////////////////
+
+    //TEMPORARY
+    PSpectrum.prototype.computeAverages = function () {
+
+            // loop through lumstats that match lumVals type and range
+            let lumStatCopy =  Object.assign({}, this.spectLookup['EMPTY']); 
+
+        for (let i in this.lumAvs) { //lumAvs is type-lum
+            //we want to fill lumAvs, type-lum
+            //lumVals is the big one with total type-lum
+            //lumStats is a subset with all type-range-lum 
+            lumStatCopy =  Object.assign({}, this.spectLookup['EMPTY']);
+
+            let ratioSum = 0;
+
+            let keys = i.split('-');
+            for (let j in this.lumStats) {
+
+                if (j.indexOf(keys[0]) != -1 && j.indexOf(keys[1]) != -1) {
+
+                    // our lum matches to the end, avoids 'AI' matching 'AII' and 'AIII'
+                    if(j.indexOf(keys[1]) + keys[1].length == j.length) {
+                    
+                        let ratio = this.lumStats[j] / this.lumVals[i];
+
+                        console.log('ratio:' + this.lumStats[j]/this.lumVals[i] + '=lumStats['+j+'] / lumVals['+i+'] = (' + this.lumStats[j] + '/' + this.lumVals[i] + ')');
+
+                        ratioSum++;
+
+                        // make a blank copy and add ratio
+                        console.log('lumStatCopy for:' + lumStatCopy);
+                        for (let k in lumStatCopy) {
+                            if(lumStatCopy[k] === '') {
+                                lumStatCopy[k] = parseFloat(this.spectLookup[j][k]) * ratio;
+                            } else {
+                                lumStatCopy[k] += parseFloat(this.spectLookup[j][k]) * ratio;
+                            }
+
+                        }
+
+                    }
+
+                } // end of found the type-range
+            } // end of lumStats loop
+
+            // make a copy
+            this.lumAvs[i] = Object.assign({}, lumStatCopy);
+            console.log('ratioSum is:' + ratioSum)
+            ratioSum = 0;
+
+        } // end of lumAvs loop
+
+    };
+
+    /**
+     * Make a weighted average of white dwarfs, 'DX'
+     * Using the table with DZ1, DZ2, DZ3...
+     * Use their frequencies recorded as the hyg database was scanned to create a weighted average 
+     * put that into 'DZ' where the range was not specified in the spectra
+     */
+    PSpectrum.prototype.computeRangeAverages = function () {
+
+            // loop through rangeStats that match rangeVals type and range
+            let rangeStateCopy =  Object.assign({}, this.spectLookup['EMPTY']); 
+
+        for (let i in this.rangeAvs) { 
+            //rangeAvs is type-range, final weighted average. Key but not values present at start
+            //we want to fill rangeAvs, type-range
+            //rangeVals is total type-range, eg. all DZ = 100
+            //rangeStats is a subset with all type-range, e.g. DZ-1, DZ-2,... (sums  up to DZ rangeVals)
+
+            // initial blank copy for rangeAvs[i]
+            rangeStatCopy =  Object.assign({}, this.spectLookup['EMPTY']);
+
+            let ratioSum = 0;
+
+            let keys = i.split('-'); // split 'DZ-10' to 'DZ' and '10'
+
+            for (let j in this.rangeStats) {
+
+                    console.log('i is:' + i + ' and j is:' + j + ' and keys[0]:' + keys[0] + ' keys[1]:' + keys[1])
+
+                if (j.indexOf(keys[0]) != -1) {
+
+                    // our ranges matches to the end, avoids 'DZ1' matching 'DZ10'
+                    //if(j.indexOf(keys[0]) + 2 == j.length) { // specific to DZ0 - DZ9
+                    
+                        // this is the number of DZ5 versus number of all DZ
+                        let ratio = this.rangeStats[j] / this.rangeVals[i];
+
+                        console.log('ratio:' + this.rangeStats[j]/this.rangeVals[i] + '=rangeStats['+j+'] / rangeVals['+i+'] = (' + this.rangeStats[j] + '/' + this.rangeVals[i] + ')');
+
+                        // this should add up to 1
+                        ratioSum++;
+
+                        // make a blank copy and add ratio
+                        console.log('rangeStatCopy for:' + rangeStatCopy);
+                        let s = j.split('-');
+                        let jj = s[0] + s[1];
+                        console.log('looking up i:' + i + ' in spectLookup')
+                        // find the entry in spectrum_props
+                        let lookup = this.spectLookup[jj];
+                        // add individual properties, DZ: {mass:xxx, radius:xxx...}
+                        for (let k in rangeStatCopy) {
+
+                            if(rangeStatCopy[k] === '') { // empty object has a string not a number
+                                rangeStatCopy[k] = parseFloat(lookup[k]) * ratio;
+                            } else {
+                                rangeStatCopy[k] += parseFloat(lookup[k]) * ratio;
+                            }
+
+                        }
+
+                    //}
+
+                } // end of found the type-range
+            } // end of rangeStats loop
+
+            // make a copy
+            this.rangeAvs[i] = Object.assign({}, rangeStatCopy);
+            console.log('ratioSum is:' + ratioSum)
+            ratioSum = 0;
+
+        } // end of rangeAvs loop
+
+    };
+    ////////////////////////////////////////////////////////////////////////////
+
+
+
+
+
+
+
+
+
+
+
+
 ///////////////////////////////////////////////////////////////////////////
 // optimized and unoptimzed meshes
 
