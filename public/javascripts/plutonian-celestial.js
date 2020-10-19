@@ -668,9 +668,11 @@ var PCelestial = (function () {
             this.getHygSpriteSize(star, sprite);
             this.getHygSpriteColor(star, sprite);
 
-            if (sprite.size > 3) {
+            //if (star.absmag > 1 && star.spect[0] == 'A') {
+            if (star.spect[0] == 'D') {
                 sprite.star = star;
-                this.sprites.push(sprite);
+                this.sprites.push(sprite); // only has props[0] for now
+                // TODO: get the description right
             }
 
             //if (!star.radius || star.radius <= 0) {

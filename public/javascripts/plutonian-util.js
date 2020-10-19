@@ -206,6 +206,48 @@ var PUtil = (function () {
         return keys.sort(function(a, b) { return obj[b] - obj[a]});
     };
 
+    /**
+     * Given an object, loop through all the object's keys. Assume 
+     * they have numeric values. 
+     * { 'a': 5, 'b': 22, 'c': -60}
+     * If so, compare to num. Return the 
+     * key with the closest value, along with difference. Don't use
+     * for long lists (should use binary search instead)
+     */
+    PUtil.prototype.getKeyForClosestNumericValue = function (obj, num, diff = 1E+14) {
+        let oldDiff = diff, val = diff, max = -diff, min = diff, k;
+        for (var i in obj) {
+            let v = obj[i];
+            if (!this.isNumber(v)) {
+                console.error('getKeyForClosestNumericValue ERROR: non-numeric value passed');
+                return null;
+            }
+            // compute the difference between supplied num, table entry
+            diff = Math.abs(num - v);
+            if (diff < oldDiff) {
+                oldDiff = diff,
+                val = v,
+                k = i; // store the key
+            }
+
+            // store the max and min of the table when the closest match is outside the range
+            if (v > max) max = v;
+            if (v < min) min = v;
+
+        }
+
+        // TODO: integrate into luminosity lookup
+
+        return {
+            key: k,
+            num: num,
+            val: val,
+            diff: diff,
+            max: max,
+            min: min
+        }
+    };
+
     /*
      * ------------------------------------------------------
      * ASSET IDS

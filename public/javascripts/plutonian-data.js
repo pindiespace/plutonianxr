@@ -45,6 +45,7 @@ var PData = (function () {
 
         this.EMPTY        = '',
         this.ZERO         =  0,
+        this.MINUS_ONE    = -1,
         this.ONE          = 1,
         this.NULL         = null,
         this.FALSE        = false,
@@ -88,36 +89,42 @@ var PData = (function () {
             spect: this.EMPTY, // spectra (sub)string
             role: this.SPECTROLES.UNKNOWN,
             comp: false,  // composite (spectroscopic double)
-            con: this.ZERO,
+            con: this.ZERO, // confidence in results (reduced if values mismatch, or mostly computed)
+            flag: '', // verbal description of problems for debugging
             type: { // type (O, A, B,...)
                 key: this.EMPTY, // key for description (values in PSpectrum)
-                arr: this.NULL  // array with type or subtype description
             },
             range: { // range (0-9)
                 key: this.EMPTY,
                 value: this.NAN  // value (in spectrum string)
             },
             luminosity: { // luminosity (I, II, III,...)
-                key: this.EMPTY,  // Morgan-Keenan luminosity key for description
-                arr: this.NULL,
-                value: this.NAN   // numeric luminosity value (Star/Sun)
+                key: this.EMPTY,  // Morgan-Keenan luminosity key (I, II, III...) from spectrum
+                lkey: this.EMPTY, // LOOKUP key from a table
+                ckey: this.EMPTY, // COMPUTED luminosity key (if different, wrong distance?)
+                value: this.NAN,   // numeric luminosity value (Star/Sun), from lookup tables
+                lvalue: this.NAN,  // LOOKUP value from a table
+                cvalue: this.NAN,   // COMPUTED luminosity,
+                hvalue: this.NAN    // Hyg3 luminosity value
             },
             mods: {
-                keys: [],          // modifiers (ss, sh, p, Fe), series of keys (values in PSpectrum)
-                arr: this.NULL
+                keys: []         // modifiers (ss, sh, p, Fe), series of keys (values in PSpectrum)
             },
             mass: {
-                value: this.NAN
+                value: this.NAN,
+                cvalue: this.NAN  // COMPUTED mass
             },   // mass ratio, (Star/Sun)
             radius: {
-                value: this.NaN,
-                flatten: this.NAN
+                value: this.NAN,
+                cvalue: this.NAN // COMPUTED radius
             }, // radius ratio, (Star/Sun)
             rotation: {
                 value: this.NAN
             },
             temp: {
-                value: this.NAN
+                value: this.NAN,
+                lvalue: this.NAN, // lookup table value
+                cvalue: this.NAN, // COMPUTED temprature
             },   // temperature (kelvin)
             ci: {
                 value: this.EMPTY
@@ -128,7 +135,10 @@ var PData = (function () {
                 b:0
             },     // color
             absmag: {
-                value: this.NAN
+                value: this.NAN,
+                lvalue: this.NAN, // lookup table value
+                cvalue: this.NAN, // COMPUTED absolute magnitude
+                hvalue: this.NAN  // Hyg value
             }, // absolute magnitude, given or estimated
             bolo: {
                 value: this.NAN
@@ -136,10 +146,7 @@ var PData = (function () {
             var: {
                 var_min: this.NAN,
                 var_max: this.NAN
-            }, // variability in absolute magnitudes
-            age: { // TODO: should be lifetime
-                value: this.NAN
-            }
+            } // variability in absolute magnitudes
 
         };
 
@@ -173,10 +180,10 @@ var PData = (function () {
      */
     PData.createHygObj = function () {
         return {
-            id: this.ZERO,
-            hip: this.ZERO,
-            hd: this.ZERO,
-            hr: this.ZERO,
+            id: this.MINUS_ONE,
+            hip: this.MINUS_ONE,
+            hd: this.MINUS_ONE,
+            hr: this.MINUS_ONE,
             gl: this.EMPTY,
             bf: this.EMPTY,
             proper: this.EMPTY,
@@ -219,10 +226,10 @@ var PData = (function () {
     };
 
     PData.prototype.cloneHygObj = function (hygObj = {}) {
-            if (!hygObj.id) hygObj.id = this.ZERO;
-            if (!hygObj.hip) hygObj.hip = this.ZERO;
-            if (!hygObj.hd) hygObj.hd = this.ZERO;
-            if (!hygObj.hr) hygObj.hr = this.ZERO;
+            if (!hygObj.id) hygObj.id = this.MINUS_ONE;
+            if (!hygObj.hip) hygObj.hip = this.MINUS_ONE;
+            if (!hygObj.hd) hygObj.hd = this.MINUS_ONE;
+            if (!hygObj.hr) hygObj.hr = this.MINUS_ONE;
             if (!hygObj.gl) hygObj.gl = this.EMPTY;
             if (!hygObj.bf) hygObj.bf = this.EMPTY;
             if (!hygObj.proper) hygObj.proper = this.EMPTY;
