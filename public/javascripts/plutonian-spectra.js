@@ -226,7 +226,7 @@ var PSpectrum = (function () {
      * {@link https://en.wikipedia.org/wiki/Stellar_classification#Extended_spectral_types}
      */
     PSpectrum.prototype.dStarType = {
-
+        'LBV': 'Luminous blue variable, one of the brightest stars in the universe, unstable, irregular variable, nova-like outbursts',
         'W': 'Wolf-Rayet star, helium-fusing, mass loss through stellar wind, expanding atmospheric envelope',
         'WR': 'Wolf-Rayet star, young, helium-fusing, stellar wind mass loss, expanding atmospheric envelope',
         'WC': 'Wolf-Rayet star, helium-fusing, stellar wind mass loss, producing dust, strong Carbon and Helium lines, Helium absent',
@@ -414,22 +414,41 @@ var PSpectrum = (function () {
      * ------------------------------------------------------
      */
 
-    PSpectrum.prototype.classifySubSpectrum  = function (spect, orig, flag) {
+    /**
+     * reconstruct the position of '-' and '/' in the original spectrum string, 
+     * and assign the type of subspectrum. Compare by looping through the original 
+     * spectral string, and determing what symbol preceded the splits.
+     * @param {Array} spects the spectrum string, split by '/' and '-'
+     * @param {String} orig the original spectrum
+     * @param {Boolean} flag debugging flag
+     */
+    PSpectrum.prototype.getSubspectra = function (spects, orig, flag) {
+        let pdata = this.pdata,
+        role = pdata.SPECTROLES,
+        props = [],
+        sIndex = 0,
+        hit = 0,
+        r = 0,
+        sRole = role.PRIMARY;
 
-        let roles = this.pdata.SPECTROLES;
-
-        let pos = orig.indexOf(spect);
-        if (pos == 0) {
-            return roles.PRIMARY;
-        } else if (pos == -1) {
-            if(flag) console.error('classifySubSpectrum: failed to find:' + spect + ' in:' + orig);
-        } else {
-            c = orig[pos - 1];
-            if (c == '/') return roles.COMPOSITE;
-            else if (c == '-') return roles.INTERMEDIATE;
-            else if (flag) console.error('classifySubSpectrum: split incorrectly');
+        for (let i = 0; i < orig.length; i++) {
+            r = orig[i];
+            if (r == '/' || r == '-') {
+                ////////////////////////console.log(' orig split at orig:' + orig + ' i:' + i + ' spects[' + spects[sIndex] + '] r:(' + r +')');
+                props.push(pdata.createPSpectrum(spects[sIndex], sRole));
+                hit = i;
+                if (r == '/') sRole = role.COMPOSITE;
+                else if (r == '-') sRole = role.INTERMEDIATE;
+                sIndex++;
+            }
+        }
+        if (hit < orig.length) {
+            if (r == '/') sRole = role.COMPOSITE;
+            if (r == '-') sRole = role.INTERMEDIATE;
+            props.push(pdata.createPSpectrum(spects[sIndex], sRole));
         }
 
+        return props;
     };
 
     /**
@@ -443,7 +462,7 @@ var PSpectrum = (function () {
      * III/III-IV -> III/IV (small difference)
      * {@link http://simbad.u-strasbg.fr/simbad/sim-display?data=sptypes}
 
-        NOTE: for 'delta del' suffix, change type to a, add 'm' suffix
+        NOTE: for 'delta del' suffix, change type to A, add 'm' suffix
         https://en.wikipedia.org/wiki/Chemically_peculiar_star
         https://heasarc.gsfc.nasa.gov/W3Browse/all/cpstars.html
      */
@@ -475,7 +494,7 @@ var PSpectrum = (function () {
                         prop.luminosity.key = this.dLumPrefixTrans[i]; // use to get desc
                         return spect.substring(i.length); // swap luminace to end
                     }
-                } // else if (l > 0 && flag) console.log('strange Yerkes...., l:' + l)
+                }
             }
         }
         return spect;
@@ -581,10 +600,6 @@ var PSpectrum = (function () {
         let spect = star.spect;
         let flag = false;
 
-        //////////////////////////////////////////////////////////
-        //if (spect.indexOf('O') != -1) flag = true;
-        /////////////////////////////////////////////////////////
-
         if (!spect || !star) return false;
         
         if (flag) console.log('=====\nspect(raw):' + spect);
@@ -600,26 +615,15 @@ var PSpectrum = (function () {
         // split now, determine if this is a single spectrum, composite or blended later
         let spects = spect.split(/\/|-/);
 
-        // store properties of primary and composite spectra
-        let props = [];
+        let props = this.getSubspectra(spects, spect, flag);
 
         let pType = ''; // primary spectral type
 
         // find patterns and return substring missing pattern
-        for(let i = 0; i < spects.length; i++) {
+        for(let i = 0; i < props.length; i++) {
 
-            // get the (sub)spectrum string
-            let s = spects[i];
-
-            // create a default spectrum data object
-            let p = pdata.createPSpectrum();
-
-            // classify the subspectrum as primary, composite, intermediate
-            p.role = this.classifySubSpectrum(s, spect, flag);
-            if (flag) console.log('spects['+ i + '] role:' + p.role);
-
-            p.spect = s; // Partial spectra
-            props.push(p); // save our props object in an array
+            let p = props[i];
+            let s = p.spect;
 
             // begin parsing the spectrum
             s = this.parseYerkesPrefix(s, p, flag);
@@ -643,7 +647,7 @@ var PSpectrum = (function () {
             if(flag) console.log('-----')
 
             // lookup the [type][range][luminosity] for additional results
-            p = this.lookupSpectrumProps(p, pType, flag);
+            //p = this.lookupSpectrumProps(p, pType, flag);
 
         }
 
@@ -655,6 +659,9 @@ var PSpectrum = (function () {
                 console.warn('spectrumToStellarData WARN: no type for spectra:"' + spect);
             }
         }
+
+        // lookup the [type][range][luminosity] for additional results
+        p = this.lookupSpectrumProps(props);
 
         // add properties and descrptions to the hyg object
         this.mergeHygWithProps(star, props);
@@ -697,22 +704,22 @@ var PSpectrum = (function () {
 
             let lumMatch = util.getKeyForClosestNumericValue(lc, absmag);
 
+            // store hyg3 errors around Luminous Blue Variables
             if ((lumMatch.num < (lumMatch.min - 2)) || (lumMatch.num > lumMatch + 2)) {
-               console.log('luminosity does not match spectral class:' + lumMatch.key + ' for:' + prop.type.key, ' absmag:' + absmag);
+                prop.flag += 'luminosity does not match spectral class for absolute mag,';
             }
 
-            // if we don't have a lum class (from the spectra), use the lookup value.
+            // if we don't have a lum class (from the spectra), so use the lookup value.
             if(lumMatch.key) {
                 if (!prop.luminosity.key) {
-                    prop.luminosity.key = lumMatch.key; // from a lookup table
-                    prop.luminosity.lkey = lumMatch.key;  
+                    prop.luminosity.key = lumMatch.key;  // from lookup table
+                    prop.luminosity.lkey = lumMatch.key; // indicate we used the lookup
                 } 
                 // if we didn't have lum value, put in the lookup value
                 if (!prop.luminosity.value) {
                     prop.luminosity.value = lum;
                 }
-                // store the lookup value separately, compare to hyg later
-                prop.luminosity.hvalue = lum;
+                prop.luminosity.hvalue = lum; // also store the hyg3 value for comparison
             } else {
                 console.warn('lookupLuminosityClass: found type-key ('+tr+') but no luminosity class:')
             }
@@ -725,49 +732,60 @@ var PSpectrum = (function () {
      * @param {Object} prop stellar properties object
      * @param {String} pType the primary type, for spectra like 'M6/7'
      */
-    PSpectrum.prototype.lookupSpectrumProps = function (prop, pType, flag) {
+    PSpectrum.prototype.lookupSpectrumProps = function (props) {
         let util = this.util;
 
-        let pp,
-        t = prop.type.key,
-        r = prop.range.value,
-        l = prop.luminosity.key;
+        for (let i = 0; i < props.length; i++) {
+            let prop = props[i];
 
-        // TODO: for spectra like A5/6III, put the luminosity into the primary, A5III, A6III
-        // TODO: should we just use prop[0] and flag it here??????
-        // for secondary composites, e.g. M7V/6V, provide the primary type, M7V, M6V.
-        if (!t) t = pType;
-        let lp = t;
+            let pp, pType,
+            t = prop.type.key,
+            r = prop.range.value,
+            l = prop.luminosity.key;
 
-        // regenerate the combined type - range - luminosity key
-        if(util.isNumber(r, true)) { // suppress error messages
-            r = Math.round(r); //convert 'MV5.5' to 'MV5'
-            lp += r;
-            if(l.length) {
-                lp += l; // only add range if present
+            if (i == 0) pType = t;
+            if (!t) t = pType;
+            let lp = t;
+
+            // TODO: logic to handle COMPOSTITE and INTERMEDIAT types
+            // TODO: F7/8III -> F7III, F8III
+
+            // regenerate the combined type - range - luminosity key
+            if(util.isNumber(r, true)) { // suppress error messages
+                r = Math.round(r); //convert 'MV5.5' to 'MV5'
+                lp += r;
+                if(l.length) {
+                    lp += l; // only add range if present
+                }
             }
-        }
 
-        // lookup by [type + range + luminosity class], about 1100 possible types, incd white dwarfs
-        pp = this.spectLookup[lp];
+            // lookup by [type + range + luminosity class], about 1100 possible types, incd white dwarfs
+            pp = this.spectLookup[lp];
 
-        // lookup by type only (white dwarves)
-        if (!pp && lp[0] == 'D') {
-            pp = this.dWhiteDwarfWeightedProps[lp];
-            // catch old classifications of white dwarfs, the following were merged into DZ
-            if(!pp && t == 'DG' || t == 'DK' || t == 'DM' || t == 'DF') pp = this.dWhiteDwarfWeightedProps['DZ'];
-        }
+            if (lp && lp[0]) {
 
-        // lookup by weighted averages for [type-luminosity class]
-        if (!pp) pp = this.dStarWeightedProps[t + '-' + l];
+            // lookup by [type] only (white dwarves)
+            if (!pp && lp[0] == 'D') { // TODO: REMOVE lp[0] test!!!!!!
+                pp = this.dWhiteDwarfWeightedProps[lp];
+                // catch old classifications of white dwarfs, the following were merged into DZ
+                if(!pp && t == 'DG' || t == 'DK' || t == 'DM' || t == 'DF') pp = this.dWhiteDwarfWeightedProps['DZ'];
+            }
 
-        // no hits, default stellar type (inaccurate) 
-        if (!pp) pp = this.dStarProps[t];
+            }
+
+            // lookup by weighted averages for [type-luminosity + class]
+            if (!pp) {
+                pp = this.dStarWeightedProps[t + '-' + l];
+            }
+
+            // no lookup hits, assign default stellar type properties (inaccurate) 
+            if (!pp) {
+                pp = this.dStarProps[t];
+                prop.flag += 'used inaccurate default type properties,';
+            }
 
             if (pp) {
                 prop.mass.value = pp.mass;
-
-                // lookup a luminosity value
                 prop.luminosity.value = pp.luminosity;
                 prop.radius.value = pp.radius,
                 prop.temp.value = pp.temp,
@@ -778,11 +796,11 @@ var PSpectrum = (function () {
                 prop.color.g = pp.g,
                 prop.color.b = pp.b;
             } else {
-                console.warn('lookupSpectrumProps WARN: no matching spectral type:' + prop.type.key);
+                console.warn('lookupSpectrumProps WARN: no matching spectral type for:(' + prop.type.key + ')');
             }
 
-        return prop;
-
+        }
+        return props;
     };
 
     /** 

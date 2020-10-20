@@ -641,7 +641,7 @@ var PCelestial = (function () {
         // start the hyg3 loop
 
         for (let i = 0; i < hygData.length; i++) {
-        //for (let i = 0; i < 10000; i++) {
+        //for (let i = 0; i < 1000; i++) {
 
             star = hygData[i];
 
@@ -668,8 +668,7 @@ var PCelestial = (function () {
             this.getHygSpriteSize(star, sprite);
             this.getHygSpriteColor(star, sprite);
 
-            //if (star.absmag > 1 && star.spect[0] == 'A') {
-            if (star.spect[0] == 'D') {
+            if (star.absmag > 1 && star.spect[0] == 'A') {
                 sprite.star = star;
                 this.sprites.push(sprite); // only has props[0] for now
                 // TODO: get the description right

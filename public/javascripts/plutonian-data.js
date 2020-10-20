@@ -84,10 +84,10 @@ var PData = (function () {
     /**
      * create a PSpectrum property object, also used by PCelestial 
      */
-    PData.prototype.createPSpectrum = function (spect) {
+    PData.prototype.createPSpectrum = function (spect = '', role = '') {
         return {
-            spect: this.EMPTY, // spectra (sub)string
-            role: this.SPECTROLES.UNKNOWN,
+            spect: spect || this.EMPTY, // spectra (sub)string
+            role: role || this.SPECTROLES.UNKNOWN,
             comp: false,  // composite (spectroscopic double)
             con: this.ZERO, // confidence in results (reduced if values mismatch, or mostly computed)
             flag: '', // verbal description of problems for debugging

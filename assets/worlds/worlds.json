@@ -1,7 +1,7 @@
 {
     "key": "local_group",
     "dname": "local_group",
-    "name": "Local Group",
+    "name": "Local Group (Empyrean)",
     "description": "Milky Way and nearby galaxies",
     "data": {
         "type": "world",
