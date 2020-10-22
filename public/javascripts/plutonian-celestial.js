@@ -378,7 +378,7 @@ var PCelestial = (function () {
     PCelestial.prototype.getHygSpriteName = function (star, sprite) {
         let n = star.proper || star.bf;
         if (n.length) sprite.name = n;
-        else if (star.bayer.length && star.con.length) sprite.name = star.bayer + star.con;
+        else if (star.bayer && star.con) sprite.name = star.bayer + star.con;
         else sprite.name = star.id;
     };
 
@@ -647,6 +647,8 @@ var PCelestial = (function () {
 
             // extract stellar properties from the spectrum, returns props
             // NOTE: already merged props with hyg fields
+            // NOTE: 'p' are the extracted properties
+            // NOTE: 'star' is the hyg object with properties augmented by spectrum data
             let p = this.spectra.spectrumToStellarData(star);
 
             // create the Sprite
@@ -668,7 +670,9 @@ var PCelestial = (function () {
             this.getHygSpriteSize(star, sprite);
             this.getHygSpriteColor(star, sprite);
 
-            if (star.absmag > 1 && star.spect[0] == 'A') {
+            // see if spectrum calculations and Hyg3 data don't match
+            if (!star.flags) {
+            //if (star.type == 'O') {
                 sprite.star = star;
                 this.sprites.push(sprite); // only has props[0] for now
                 // TODO: get the description right
@@ -803,10 +807,9 @@ var setHygMag = function (star) {
 var setHygName = function (star) {
     let n = star.proper || star.bf;
     if (n.length) return n;
-    else if (star.bayer.length && star.con.length) return star.bayer + star.con;
+    else if (star.bayer && star.con) return star.bayer + star.con;
     else return star.id;
 };
-
 
 /**
  * Load star information from a Hyg file in JSON format parsed to a JS object.

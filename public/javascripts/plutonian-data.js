@@ -84,13 +84,12 @@ var PData = (function () {
     /**
      * create a PSpectrum property object, also used by PCelestial 
      */
-    PData.prototype.createPSpectrum = function (spect = '', role = '') {
+    PData.prototype.createPSpectrum = function (spect = '', role = '', confidence = 0, flag = '') {
         return {
             spect: spect || this.EMPTY, // spectra (sub)string
             role: role || this.SPECTROLES.UNKNOWN,
-            comp: false,  // composite (spectroscopic double)
-            con: this.ZERO, // confidence in results (reduced if values mismatch, or mostly computed)
-            flag: '', // verbal description of problems for debugging
+            confidence: confidence || this.ZERO, // confidence in results (reduced if values mismatch, or mostly computed)
+            flag: flag || '', // verbal description of problems for debugging
             type: { // type (O, A, B,...)
                 key: this.EMPTY, // key for description (values in PSpectrum)
             },
@@ -99,13 +98,8 @@ var PData = (function () {
                 value: this.NAN  // value (in spectrum string)
             },
             luminosity: { // luminosity (I, II, III,...)
-                key: this.EMPTY,  // Morgan-Keenan luminosity key (I, II, III...) from spectrum
-                lkey: this.EMPTY, // LOOKUP key from a table
-                ckey: this.EMPTY, // COMPUTED luminosity key (if different, wrong distance?)
-                value: this.NAN,   // numeric luminosity value (Star/Sun), from lookup tables
-                lvalue: this.NAN,  // LOOKUP value from a table
-                cvalue: this.NAN,   // COMPUTED luminosity,
-                hvalue: this.NAN    // Hyg3 luminosity value
+                key: this.EMPTY,    // Morgan-Keenan luminosity key (I, II, III...) from spectrum
+                value: this.NAN,    // numeric luminosity value (Star/Sun), from lookup tables
             },
             mods: {
                 keys: []         // modifiers (ss, sh, p, Fe), series of keys (values in PSpectrum)
@@ -171,6 +165,11 @@ var PData = (function () {
      * extended with data extracted from spectrum
      * ------------------------------------------------------
      */
+
+    // constants related to hyg data
+    PData.prototype.hygConstants = {
+        max_dist: 100000
+    };
 
     /**
      * Create our internal Hyg object, using Hyg3 data, plus additional 

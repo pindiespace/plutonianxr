@@ -56,9 +56,9 @@ var PUtil = (function () {
         if (isNaN(v)) {
             if (this.isString(value)) {
                 if (value.indexOf('−') != -1) {
-                    if (!suppress) console.error('isNumber ERROR: number:' + value + ' is not using correct minus symbol');
+                    if (!suppress) console.error('isNumber ERROR: number:(' + value + ') is not using correct minus symbol');
                 } else {
-                    if (!suppress) console.error('isNumber ERROR: bad number:' + value);
+                    if (!suppress) console.error('isNumber ERROR: bad number:(' + value + ')');
                 }
             }
         }
@@ -206,17 +206,37 @@ var PUtil = (function () {
         return keys.sort(function(a, b) { return obj[b] - obj[a]});
     };
 
+    PUtil.prototype.getMaxValueOfArray = function (numArray) {
+        return Math.max.apply(null, numArray);
+    };
+
+    PUtil.prototype.getMinValueOfArray = function (numArray) {
+        return Math.min.apply(null, numArray);
+    };
+
+    PUtil.prototype.getIndexOfMaxValueOfArray = function (numArray) {
+        return numArray.reduce((iMax, x, i, arr) => x > arr[iMax] ? i : iMax, 0);
+    };
+
+    PUtil.prototype.getIndexOfMinValueOfArray = function (numArray) {
+        return numArray.reduce((iMax, x, i, arr) => x < arr[iMax] ? i : iMax, 0);
+    };
+
     /**
      * Given an object, loop through all the object's keys. Assume 
      * they have numeric values. 
      * { 'a': 5, 'b': 22, 'c': -60}
-     * If so, compare to num. Return the 
-     * key with the closest value, along with difference. Don't use
-     * for long lists (should use binary search instead)
+     * If so, compare to num. 
+     * Return the key with the closest value, along with difference. 
+     * Don't use for long lists (should use binary search instead)
+     * @param {Object} obj object with key:numeric value list
+     * @param {Number} num the number to be matched
+     * @param {Number} diff the starting difference, set very large by default
      */
     PUtil.prototype.getKeyForClosestNumericValue = function (obj, num, diff = 1E+14) {
         let oldDiff = diff, val = diff, max = -diff, min = diff, k;
         for (var i in obj) {
+
             let v = obj[i];
             if (!this.isNumber(v)) {
                 console.error('getKeyForClosestNumericValue ERROR: non-numeric value passed');

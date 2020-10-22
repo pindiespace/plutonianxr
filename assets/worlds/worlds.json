@@ -150,7 +150,7 @@
                                 "colors": "spectrum_props.json",
                                 "blackbody": "blackbody.json",
                                 "lumlookup": "luminosity_lookup.json",
-                                "active":true
+                                "active":false
                             },
                             "point20": {
                                 "hyg": "hyg_20.json",
