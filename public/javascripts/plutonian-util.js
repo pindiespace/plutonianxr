@@ -7,10 +7,7 @@ var PUtil = (function () {
 
    //constructor
 
-   function PUtil (engine) {
-
-        this.engine = engine;       // assign class variables
-
+   function PUtil () {
         // isArray polyfill
         if (typeof Array.isArray === 'undefined') {
             Array.isArray = function(obj) {
@@ -18,13 +15,6 @@ var PUtil = (function () {
             }
         };
    };
-
-    /**
-     * return the engine
-     */
-    PUtil.prototype.getEngine = function () {
-       return this.engine;
-    };
 
     //functions
 

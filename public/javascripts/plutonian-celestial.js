@@ -330,15 +330,15 @@ var PCelestial = (function () {
     };
 
     /**
-     * Make sure the JSON file has the minimum number of columns needed 
-     * to create Star sprites or Points. Required:
-     * id, 
+     * Make sure the hyg3 JSON file looks correct.
+     * Check the first entry for the minimum values needed to create a Sprite
+     * Minimum fields:
+     * id - hyg3 ID value
      * @param {ObjectJSON} star Hyg3 data for a particular star
      */
     PCelestial.prototype.checkHygData = function (hygData) {
 
         let util = this.util;
-        let fn = 'checkHygColumns ';
 
         if (!util.isArray(hygData)) {
             console.error(fn + 'ERROR: Hyg data not an array');
@@ -357,12 +357,10 @@ var PCelestial = (function () {
             console.error(fn + 'ERROR: no Star');
             return false;
         }
- 
-        if (!util.isString(star.proper) && 
-        (!util.isString(star.bf) || !util.isString(star.bayer) || !util.isString(star.con))) {
-            console.error(fn + 'ERROR: no Star name possible');
-        }
 
+        // stellar type defined? (required for selecting Sprite frame)
+
+        // position in space defined?
         if (!util.isNumber(star.ra) || !util.isNumber(star.dec) || !util.isNumber(star.dist)) {
             console.error(fn + 'ERROR: no Star RA or Dec');
         }
@@ -423,6 +421,16 @@ var PCelestial = (function () {
 
         }
 
+    };
+
+    /**
+     * create links between Stars defined as double or multiple. Should 
+     * only run AFTER Hyg data is processed. 
+     * Source 1 - 'comp', 'comp_primary', 'base' fields in hyg3
+     * Source 2 - spectra is composite (spectroscopic double or multiple Star)
+     */
+    PCelestial.prototype.computeMultipleStars = function () {
+        // TODO: create links, zoom option to 'split' multiple stars
     };
 
     /**
@@ -590,6 +598,8 @@ var PCelestial = (function () {
             let mgr = await celestial.computeHygSprite(dir + 'sprite/textures/', model, scene)
             .then((spriteManagerStars) => {
                 console.log('Finished computing Hyg database')
+                // compute multiple Star links TODO:
+                celestial.computeMultipleStars();
             });
 
             console.log('LOADED Hyg database');
@@ -645,11 +655,17 @@ var PCelestial = (function () {
 
             star = hygData[i];
 
-            // extract stellar properties from the spectrum, returns props
-            // NOTE: already merged props with hyg fields
-            // NOTE: 'p' are the extracted properties
-            // NOTE: 'star' is the hyg object with properties augmented by spectrum data
+            /* 
+             * extract stellar properties from the spectrum, returns props
+             * NOTE: already merged props with hyg fields
+             * NOTE: 'p' are the extracted properties
+             * NOTE: 'star' is the hyg object with properties augmented by spectrum data
+             */
             let p = this.spectra.spectrumToStellarData(star);
+
+            if(star.spect == '') console.warn('star id:' + star.id + ' spect is EMPTY');
+            // TODO: If empty, we couldn't classify the star. So choose the .spriteIndex 
+            // TODO: based on distance and luminosity (W, WR, LBV)
 
             // create the Sprite
             //let sprite = new BABYLON.Sprite(name, spriteManagerStars); 

@@ -1,14 +1,15 @@
 /**
-  * Plutonian local assets, used since we often need two 
-  * materials sharing a common texture or cubeTexture for 
-  * VR and non-VR cases
+  * Data definitions for objects used in other parts of the program, used 
+  * since this is ES5 rather than ES6.
   */
 'use strict'
 
 /**
- * PObj data creation, cloning, validation
- * - defines PObj data structure, required fields
- * - defines data structure datatypes Hyg3 database entries
+ * Methods for Object structure, creation, cloning, validation
+ * - create: give a new Object with the defined fields
+ * - fix:    take an existing object, add missing fields, return
+ * - clone:  duplicate an existing object, add missing fields
+ * - check:  check object for valid datatypes
  */
 var PData = (function () {
 
@@ -40,9 +41,6 @@ var PData = (function () {
 
         this.util = util;
 
-        this.pObj_ERROR   = -1;
-        this.hygObj_ERROR = -1;
-
         this.EMPTY        = '',
         this.ZERO         =  0,
         this.MINUS_ONE    = -1,
@@ -54,7 +52,11 @@ var PData = (function () {
         this.UNKNOWN      = 'unknown',
         this.NOT_FOUND    = -1;
 
-        // initialize PCTYPECHECK array for fast type checking
+        this.pSpect_ERROR = -1;
+        this.hygObj_ERROR = -1;
+        this.pObj_ERROR   = -1;
+
+        // initialize the PCTYPECHECK array for fast (reverse) PData.PObj type checking
 
         this.PCTYPES = PData.PCTYPES;
 
@@ -71,8 +73,7 @@ var PData = (function () {
      */
 
     /**
-     * some PSpectrum constants, 
-     * indicating the type of spectrum or sub-spectrum
+     * some PSpectrum constants, indicating the type of spectrum or sub-spectrum
      */
     PData.prototype.SPECTROLES = {
         PRIMARY: 'primary',
@@ -82,75 +83,74 @@ var PData = (function () {
     };
 
     /**
-     * create a PSpectrum property object, also used by PCelestial 
+     * create a PSpectrum property object, storing values extract from the spectrum string.
+     * NOTE: does not contain the same fields as PHyg object.
+     * @param {String} spect a stellar spectral string, e.g. 'A5IIb'
+     * @param {Pdata.SPECTROLES} role the role of a sub-spectra, e.g. 'A7' in 'A6/7V'
+     * @param {Number} confidence a numerica score for correct spectral classification, defined in PSpectra
+     * @param {String} flag a string with additional information about confidence in classification
      */
     PData.prototype.createPSpectrum = function (spect = '', role = '', confidence = 0, flag = '') {
         return {
             spect: spect || this.EMPTY, // spectra (sub)string
-            role: role || this.SPECTROLES.UNKNOWN,
-            confidence: confidence || this.ZERO, // confidence in results (reduced if values mismatch, or mostly computed)
-            flag: flag || '', // verbal description of problems for debugging
-            type: { // type (O, A, B,...)
-                key: this.EMPTY, // key for description (values in PSpectrum)
+            role: role || this.SPECTROLES.UNKNOWN, // role of sub-spectra
+            confidence: confidence || this.ZERO, // confidence in results
+            flag: flag || '', // verbal description of confidence score
+            type: {
+                key: this.EMPTY, // stellar type (O, A, B,...), values defined in PSpectrum
             },
-            range: { // range (0-9)
-                key: this.EMPTY,
-                value: this.NAN  // value (in spectrum string)
+            range: { // stellar range on H-R main sequence (0-9)
+                key: this.EMPTY, // same as value
+                value: this.NAN  // value (0-9)
             },
             luminosity: { // luminosity (I, II, III,...)
-                key: this.EMPTY,    // Morgan-Keenan luminosity key (I, II, III...) from spectrum
-                value: this.NAN,    // numeric luminosity value (Star/Sun), from lookup tables
+                key: this.EMPTY, // Morgan-Keenan luminosity key (I, II, III...) from spectrum
+                value: this.NAN, // numeric luminosity value (Star/Sun), from lookup tables
             },
             mods: {
-                keys: []         // modifiers (ss, sh, p, Fe), series of keys (values in PSpectrum)
+                keys: []         // modifiers (ss, sh, p, Fe), values defined in PSpectrum
             },
             mass: {
-                value: this.NAN,
-                cvalue: this.NAN  // COMPUTED mass
-            },   // mass ratio, (Star/Sun)
+                value: this.NAN  // M(Star) / M(Sun)
+            },
             radius: {
-                value: this.NAN,
-                cvalue: this.NAN // COMPUTED radius
-            }, // radius ratio, (Star/Sun)
+                value: this.NAN  // R(Star) / R(Sun)
+            },
             rotation: {
-                value: this.NAN
+                value: this.NAN  // Rot(Star) / Rot(Sun)
             },
             temp: {
-                value: this.NAN,
-                lvalue: this.NAN, // lookup table value
-                cvalue: this.NAN, // COMPUTED temprature
-            },   // temperature (kelvin)
+                value: this.NAN  // Kelvins, from lookup tables in PSpectrum
+            },
+            luminosity: {
+                key: this.EMPTY,
+                value: this.NAN  // Lum(Star) / Lum(Sun)
+            },
             ci: {
-                value: this.EMPTY
-            },     // color index b-v
-            color: {
-                r:0,
+                value: this.EMPTY // b-v color index
+            },
+            color: { // 0-1.0, consistent with BABLON.Color3, .Color4
+                r:0, 
                 g:0,
                 b:0
             },     // color
             absmag: {
-                value: this.NAN,
-                lvalue: this.NAN, // lookup table value
-                cvalue: this.NAN, // COMPUTED absolute magnitude
-                hvalue: this.NAN  // Hyg value
-            }, // absolute magnitude, given or estimated
+                value: this.NAN // absolute magnitude, from lookup tables in PSpectrum
+            }, 
             bolo: {
-                value: this.NAN
-            }, // bolometric correction
-            var: {
-                var_min: this.NAN,
-                var_max: this.NAN
-            } // variability in absolute magnitudes
+                value: this.NAN // bolometric correction, from lookup tables in PSpectrum
+            } 
 
         };
 
     };
 
+
     PData.prototype.checkPSpectrum = function (pSpect) {
 
         let util = this.util;
 
-        if (!util.checkObject(pSpect)) {
+        if (!util.isObject(pSpect)) {
             console.error('checkPSpectrum ERROR: no object');
             return false;
         }
@@ -168,7 +168,7 @@ var PData = (function () {
 
     // constants related to hyg data
     PData.prototype.hygConstants = {
-        max_dist: 100000
+        max_dist: 100000 // no parallax, unreliable distance, > 10,000 parsecs
     };
 
     /**
@@ -205,7 +205,9 @@ var PData = (function () {
             var_max: this.NOT_FOUND,
             // additional, from spectrum parsing
             intermediate: [], // list intermediate type to primary
-            //comp, comp_primary, base
+            comp: this.ZERO, // part of multiple star system
+            comp_primary: this.MINUS_ONE, // base star for multi-star system
+            base: this.MINUS_ONE, // catalog ID or name for this multi-star system Gilese only.
             composite: [], // list composite spectral types
             temp: this.ZERO,
             radius: this.ONE,
@@ -220,11 +222,18 @@ var PData = (function () {
 
     };
 
-    PData.prototype.checkHygObj = function (hygObj) {
+    PData.prototype.checkHygObj = function (hygObj, suppress = false) {
+        let util = this.util;
+
+        if (!hygObj.id || !util.isNumber(hygObj.id)) {
+            if (!suppress) console.error('checkhygObj ERROR:' + name + ' missing ID value');
+            return false;
+        }
+
         return true;
     };
 
-    PData.prototype.cloneHygObj = function (hygObj = {}) {
+    PData.prototype.fixHygObj = function (hygObj = {}) {
             if (!hygObj.id) hygObj.id = this.MINUS_ONE;
             if (!hygObj.hip) hygObj.hip = this.MINUS_ONE;
             if (!hygObj.hd) hygObj.hd = this.MINUS_ONE;
@@ -244,15 +253,22 @@ var PData = (function () {
             if (!hygObj.y) hygObj.y = this.ZERO;
             if (!hygObj.z) hygObj.z = this.ZERO;
             //vx:, vy:, vz:, rarad:, decrad:, pmrarad:, pmdecrad:, bayer:, flam:
+
+            if (!hygObj.comp) hygObj.comp = this.ZERO; // part of multiple star system
+            if (!hygObj.comp_primary) hygObj.primary = this.MINUS_ONE; // base star for multi-star system
+            if (!hygObj.base) hygObj.base = this.MINUS_ONE; // catalog ID or name for this multi-star system Gilese only.
+            // additional data gleaned from spectrum parsing
+            if (!hygObj.intermediate) hygObj.intermediate = []; // list intermediate type to primary
+            if (!hygObj.composite) hygObj.composite = []; // list composite spectral types
+
             if (!hygObj.con) hygObj.con = this.EMPTY;
             if (!hygObj.lum) hygObj.lum = this.ZERO;
             if (!hygObj.var) hygObj.var = false;
             if (!hygObj.var_min) hygObj.var_min = this.NOT_FOUND;
             if (!hygObj.var_max) hygObj.var_max = this.NOT_FOUND;
-            // additional, from spectrum parsing
-            if (!hygObj.intermediate) hygObj.intermediate = []; // list intermediate type to primary
-            //comp, comp_primary, base
-            if (!hygObj.composite) hygObj.composite = []; // list composite spectral types
+
+
+
             if (!hygObj.temp) hygObj.temp = this.ZERO;
             if (!hygObj.radius) hygObj.radius = this.ONE;
             if (!hygObj.r) hygObj.r = this.ZERO;
@@ -266,6 +282,15 @@ var PData = (function () {
             return hygObj;
     };
 
+    /** 
+     * Clone a separate copy of the Object
+     * @param{Object.PData.HygObj} hygObj
+     */
+    PData.prototype.cloneHygObj = function (hygObj = {}) {
+        hygObj = this.fixHygObj(hygObj);
+        return Object.assign({}, hygObj);
+
+    };
 
     /*
      * ------------------------------------------------------
@@ -298,7 +323,6 @@ var PData = (function () {
     PData.prototype.checkPObj = function (pObj, checkData = true, checkModels = true, suppress = false) {
 
         let util = this.util;
-
         let name = pObj.name;
 
         if (!util.isObject(pObj)) {
