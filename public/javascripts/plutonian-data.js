@@ -87,15 +87,13 @@ var PData = (function () {
      * NOTE: does not contain the same fields as PHyg object.
      * @param {String} spect a stellar spectral string, e.g. 'A5IIb'
      * @param {Pdata.SPECTROLES} role the role of a sub-spectra, e.g. 'A7' in 'A6/7V'
-     * @param {Number} confidence a numerica score for correct spectral classification, defined in PSpectra
-     * @param {String} flag a string with additional information about confidence in classification
+     * @param {Number} confidence a numerical score for correct spectral classification, defined in PSpectra
      */
-    PData.prototype.createPSpectrum = function (spect = '', role = '', confidence = 0, flag = '') {
+    PData.prototype.createPSpectrum = function (spect = '', role = '', confidence = 0) {
         return {
             spect: spect || this.EMPTY, // spectra (sub)string
             role: role || this.SPECTROLES.UNKNOWN, // role of sub-spectra
             confidence: confidence || this.ZERO, // confidence in results
-            flag: flag || '', // verbal description of confidence score
             type: {
                 key: this.EMPTY, // stellar type (O, A, B,...), values defined in PSpectrum
             },
@@ -254,6 +252,7 @@ var PData = (function () {
             if (!hygObj.z) hygObj.z = this.ZERO;
             //vx:, vy:, vz:, rarad:, decrad:, pmrarad:, pmdecrad:, bayer:, flam:
 
+            // info about multi-star systems
             if (!hygObj.comp) hygObj.comp = this.ZERO; // part of multiple star system
             if (!hygObj.comp_primary) hygObj.primary = this.MINUS_ONE; // base star for multi-star system
             if (!hygObj.base) hygObj.base = this.MINUS_ONE; // catalog ID or name for this multi-star system Gilese only.
@@ -266,8 +265,6 @@ var PData = (function () {
             if (!hygObj.var) hygObj.var = false;
             if (!hygObj.var_min) hygObj.var_min = this.NOT_FOUND;
             if (!hygObj.var_max) hygObj.var_max = this.NOT_FOUND;
-
-
 
             if (!hygObj.temp) hygObj.temp = this.ZERO;
             if (!hygObj.radius) hygObj.radius = this.ONE;

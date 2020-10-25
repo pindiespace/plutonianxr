@@ -99,6 +99,63 @@ var PCelestial = (function () {
         'P': 16
     };
 
+    /** 
+     * Image sprites are selected via a combination of [type + luminosity]
+     */
+    PCelestial.prototype.ddSpriteIndex = {
+        'LBV': {I:0}, //luminous blue variable
+        'W': {I: 0}, // Wolf-rayet
+        'WR': {I: 0}, / Wolf-Rayet, young
+        'WC': {I: 0} // Wolf-Rayet, producing dust, strong C
+        'WN': {I: 0}, // Wolf-Rayet CNO
+        'WO': {I: 0}, // Wolf-Rayet strong O
+        'WC10': {I: 0}, // Wolf-Rayet, cooler, strong C
+        'WC11': {I: 0}, // Wolf-Rayet, coolest, strong C
+        'WNh' : {I: 0}, // Wolf-Rayet, young and massive
+        'WN10': {I: 0}, // Wolf-Rayet cooler, strong N
+        'WN11': {I: 0}, // Wolf-Rayet coolest, strong N
+        'O': {I: 1}, // Blue, luminous ultra-hot supergiant
+        'A': {I: 2}, // Blue luminous giant
+        'B': {I: 3}, // White giant'
+        'F': {I: 4}, // Yellow-white, giant or dwarf
+        'G': {I: 5}, // Yellow, giant or dwarf
+        'K': {I: 6}, // Yellow-orange, giant or dwarf
+        'M': {I: 9, II:8, III: 7 }, // Red, giant or dwarf
+        'MS': {I: 8}, // Red giant, asymptotic-giant branch carbon star, younger, transition to SC
+        'SC': {I: 10}, // Red giant, older sub-carbon star, asymptotic-giant branch, zirconium oxide in spectrum
+        'N': {I: 9}, // Red giant, older carbon star, giant equivalent of late K to M-type stars
+        'R': {I: 8}, // Red giant, carbon star equivalent of late G to early K-type stars
+        'C': {I: 8}, // Red giant, carbon star
+        'S': {I: 10}, // Red giant, sub-carbon star, asymptotic-giant-branch, zirconium oxide in spectrum
+        'C-R': {I: 8}, // Red giant, carbon star, equivalent of late G to early K-type stars
+        'C-N': {I: 9}, // Red giant, carbon star, older, giant equivalent of late K to M-type stars
+        'C-J': {I: 10}, // Red giant, cool carbon star with a high content of carbon-13
+        'C-H': {I: 10}, // Red giant, Population II equivalent of the C-R red giants
+        'C-Hd': {I:9}, // Red giant, Hydrogen-deficient, similar to late G supergiants with CH and C2 bands added
+        'D': {I:11}, // White dwarf
+        'DO': {I:11}, // White Dwarf, very hot, helium-rich atmosphere, 45-120,000K
+        'DAO': {I:11}, // White Dwarf, very hot, hydrogen and helium-rich atmosphere, ionized helium lines, >30,000K
+        'DA': {I:11}, // White Dwarf, hydrogen-rich, 30,000K
+        'DAB': {I:11}, // White Dwarf, hot, hydrogen and helium-rich atmosphere, neutral helium lines, 30,000K
+        'DAZ': {I:11}, // White Dwarf, hot, hydrogen-rich atmosphere, metallic spectral lines
+        'DB': {I:11}, // White Dwarf, helium-rich, 15-30,000K
+        'DBZ': {I:11}, // White Dwarf, cool, 15-30,000K, neutral helium, He I, spectral lines, metallic spectral lines',
+        'DQ': {I:11}, // White Dwarf, carbon-rich atmosphere, < 13,000K atomic or molecular carbon lines
+        'DZ': {I:11}, // White Dwarf, cool, metal-rich atmosphere, < 11,000K, merges DG, DK, DM, DF types
+        'DG': {I:11}, // White Dwarf, cool, metal-rich atmosphere, 6000K (old classification, now DZ)
+        'DK': {I:11}, // White Dwarf, metal-rich atmosphere (old classification, now DZ)
+        'DM': {I:11}, // White Dwarf, metal-rich atmosphere (old classification, now DZ)
+        'DF': {I:11}, // White Dwarf, metal-rich, CaII, FeI, no H (old classification, now DZ)
+        'DC': {I:11}, // White Dwarf, cool, no strong spectral lines, < 11,000K
+        'DX': {I:11}, // White Dwarf, spectral lines unclear',
+        'Q': {I:0}, // Recurring nova, white dwarf companion to mass donating star
+        'L': {I:12}, // Hot brown dwarf, lithium in atmosphere, dust grains
+        'T': {I:13}, // Cool brown dwarf, methane in atmosphere
+        'Y': {I:13}, // Gas giant, warm, able to fuse deuterium
+        'P': {I:15}, // Gas giant, cold, Jupiter-like
+        '': {I: 3}, // Unknown stellar type
+    };
+
     // dynamically-filled prototype variables
 
     // holds data loaded from hyg3 (JSON)
@@ -169,19 +226,12 @@ var PCelestial = (function () {
 		return parseFloat(d)+parseFloat(m)/60+parseFloat(s)/3600;	
     };
 
-    /*
-     * what the simulation needs to output
-     * 
-     * Augment the hyg object (which is like pObj.data) with
-     * Description
-     * computed color
-     * computed size (absolute)
-     * 
-     * use stellar type to set...
-     * computed color
-     * computed size (actual radius)
-     * computed sprite size
+    /**
+     * compute satistics
      */
+    PCelestial.prototype.stats = function () {
+
+    };
 
     /** 
      * Given a pObj, return the correct scaling. 
@@ -341,12 +391,12 @@ var PCelestial = (function () {
         let util = this.util;
 
         if (!util.isArray(hygData)) {
-            console.error(fn + 'ERROR: Hyg data not an array');
+            console.error(fn + 'checkHygData ERROR: Hyg data not an array');
             return false;
         }
 
         if (!hygData.length) {
-            console.error(fn + 'ERROR: no data in Hyg data');
+            console.error(fn + 'checkHygData ERROR: no data in Hyg JSON');
             return false;
         }
 
@@ -354,15 +404,16 @@ var PCelestial = (function () {
         let star = hygData[0];
 
         if (!util.isString(star.id)) {
-            console.error(fn + 'ERROR: no Star');
+            console.error(fn + 'checkHygData ERROR: no Star');
             return false;
         }
 
         // stellar type defined? (required for selecting Sprite frame)
+        if (!star.spect) console.log('checkHygData no type for hygid:' + star.id)
 
         // position in space defined?
         if (!util.isNumber(star.ra) || !util.isNumber(star.dec) || !util.isNumber(star.dist)) {
-            console.error(fn + 'ERROR: no Star RA or Dec');
+            console.error(fn + 'checkHygData ERROR: no Star RA or Dec');
         }
 
         return true;
@@ -374,10 +425,13 @@ var PCelestial = (function () {
      * @param {ObjectJSON} star Hyg3 data for a particular star
      */
     PCelestial.prototype.getHygSpriteName = function (star, sprite) {
+        let name = '';
         let n = star.proper || star.bf;
-        if (n.length) sprite.name = n;
-        else if (star.bayer && star.con) sprite.name = star.bayer + star.con;
-        else sprite.name = star.id;
+        if (n.length) name = n;
+        else if (star.bayer && star.con) name = star.bayer + star.con;
+        else name = star.id;
+
+        return name;
     };
 
     /**
@@ -433,32 +487,40 @@ var PCelestial = (function () {
         // TODO: create links, zoom option to 'split' multiple stars
     };
 
+    PCelestial.prototype.getSprites = function () {
+        return this.spriteManager.sprites;
+    };
+
     /**
      * 
      * get the sprite index to display for this type
      */
-    PCelestial.prototype.getHygSpriteIndex = function (star, sprite) {
+    PCelestial.prototype.getHygSpriteIndex = function (star) {
         let s = star.spect[0];
+        let index = 0;
         if (s) {
             // TODO: adjust base on prop values.
-            sprite.cellIndex = this.dSpriteIndex[s.toUpperCase()];
+            index = this.dSpriteIndex[s.toUpperCase()];
         } else {
-            sprite.cellIndex = this.dSpriteScreenIndex; // G
+            index = this.dSpriteScreenIndex; // G
         }
+        return index;
     };
 
     /**
-     * Get the estimated size of the star (dwarf, giant, supergiant) from 
-     * the spectrum. Secondary scaling based on stellar type.
-     * 1. If the star is bigger than the Sun, add the log of increased size to default, so 
-     *    100x = 1 + 2 = 3 units
-     * 2. If the star is smaller than the Sun, use the absolute value of the inverse of the log
-     *    10E-3 = 1 / 3;
+     * Compute a logarithmic scaled size for the star compatible with the simulation
+     * - primary scaling a log of radius
+     * - secondary scaling for very large and small Stars
+     * @param {Object.PData.HygObj} star
+     * @param {BABYLON.Sprite} sprite
      */
     PCelestial.prototype.getHygSpriteSize = function (star, sprite) {
+
+        let util = this.util;
+
         let w = this.dSpriteScreenSize, h = this.dSpriteScreenSize;
 
-        // flatten the star if rotating quickly
+        // flatten the star if it is rotating quickly
         let rot = star.rot;
         if (rot > 20) h /= 1.5;
         else if (rot > 10) h /= 1.2;
@@ -466,14 +528,14 @@ var PCelestial = (function () {
         sprite.width = w,
         sprite.height = h;
 
-        let rad = Math.log10(star.radius);
-        if (rad < 0) {
-            sprite.size = 1 - (1 - 1/rad);
-        } else if (rad >= 0) {
-            sprite.size = 1 + rad;
-        }
+        sprite.size = 0.69897 + (Math.log10(Number(star.radius) + 1));
 
-        sprite.size = 1 + rad;
+////////////////////////
+        sprite.width = sprite.height = 1;
+        sprite.size = 1;
+///////////////////////
+
+        //console.log('star.radius:' + Math.round(star.radius) + ' sprite.size:' + Math.round(sprite.size) + ' rounded:' + util.roundToFixed(sprite.size, 2));
 
     };
 
@@ -565,7 +627,7 @@ var PCelestial = (function () {
         let assetManager = new BABYLON.AssetsManager(scene);
 
         if (!model.hyg) {
-            console.error('loadHygData ERROR: invalid hyg data, dir:' + dir + ' file:' + model.hyg);
+            console.error('PCelestial.loadHygData ERROR: invalid hyg data, dir:' + dir + ' file:' + model.hyg);
         }
 
         // if present, load stellar colors by stellar spectrum
@@ -587,7 +649,7 @@ var PCelestial = (function () {
         this.loadStarHygData(assetManager, dir + model.hyg);
 
         assetManager.onProgress = function(remainingCount, totalCount, lastFinishedTask) {
-                console.log('Loading Hyg database files. ' + remainingCount + ' out of ' + totalCount + ' items still need to be loaded.');
+                console.log('PCelestial.loadHygData: Loading Hyg database files. ' + remainingCount + ' out of ' + totalCount + ' items still need to be loaded.');
         };
 
         // after all our lookup tables are loaded, parse the hyg3 database
@@ -624,25 +686,25 @@ var PCelestial = (function () {
         let util = this.util;
         let pdata = this.pdata;
         let hygData = this.hygData;
-        let numStars    = hygData.length; // an array of star data objects
+        let numStars  = hygData.length; // an array of star data objects
 
         // The loader should already have assigned these when we enter this function.
-        if (!hygData || !util.isArray(hygData) || !hygData.length) {
-            console.error('computeHygSprite ERROR: invalid Hyg data (not an array)');
-            return false;
-        }
+        if (!this.checkHygData(hygData)) return false;
 
         let spriteSheetFile = dir + model.spritesheet;
         let size = model.size;
 
-        let maxDist     = this.dMaxHygDist / this.dParsecUnits;
-        let oDist       = maxDist / 2; // cutoff for very distant stars in Hyg
-        let star;
+        let maxDist = this.dMaxHygDist / this.dParsecUnits;
+        let oDist   = maxDist / 2; // cutoff for very distant stars in Hyg
 
         // load a SpriteManager for the Stars
 
-        let spriteManagerStars = new BABYLON.SpriteManager('starsManager', spriteSheetFile, numStars, size, scene);
-        spriteManagerStars.isPickable = true;
+        this.spriteManager = new BABYLON.SpriteManager('starsManager', spriteSheetFile, numStars, size, scene);
+
+        // by default, make them all pickable
+        this.spriteManager.isPickable = true;
+
+        let sManager = this.spriteManager;
 
         console.log("COMPUTING HygSprite")
 
@@ -651,9 +713,9 @@ var PCelestial = (function () {
         // start the hyg3 loop
 
         for (let i = 0; i < hygData.length; i++) {
-        //for (let i = 0; i < 1000; i++) {
+        //for (let i = 0; i < 200; i++) {
 
-            star = hygData[i];
+            let star = hygData[i];
 
             /* 
              * extract stellar properties from the spectrum, returns props
@@ -663,42 +725,35 @@ var PCelestial = (function () {
              */
             let p = this.spectra.spectrumToStellarData(star);
 
-            if(star.spect == '') console.warn('star id:' + star.id + ' spect is EMPTY');
-            // TODO: If empty, we couldn't classify the star. So choose the .spriteIndex 
-            // TODO: based on distance and luminosity (W, WR, LBV)
+            let name = this.getHygSpriteName(star);
 
             // create the Sprite
-            //let sprite = new BABYLON.Sprite(name, spriteManagerStars); 
+            let sprite = new BABYLON.Sprite(name, sManager); 
+            sprite.stopAnimation();
 
-            let sprite = {};
-            sprite.position = {};
+            //let sprite = {};
+            //sprite.position = {};
 
             // make the sprite static
-            // sprite.stopAnimation();
-            // sprite.isVisible = true;
-            // sprite.isPickable = true;
-            // get the name
-            this.getHygSpriteName(star, sprite);
+            sprite.isVisible = true;
+            sprite.isPickable = true;
+
+            sprite.hyg = star;
+
+            sprite.cellIndex = this.getHygSpriteIndex(star);
 
             // set the star position
             this.getHygSpritePosition(star, sprite);
-            this.getHygSpriteIndex(star, sprite);
-            this.getHygSpriteSize(star, sprite);
-            this.getHygSpriteColor(star, sprite);
+            //this.getHygSpriteSize(star, sprite);
+            //this.getHygSpriteColor(star, sprite);
 
-            // see if spectrum calculations and Hyg3 data don't match
-            if (!star.flags) {
-            //if (star.type == 'O') {
-                sprite.star = star;
-                this.sprites.push(sprite); // only has props[0] for now
-                // TODO: get the description right
-            }
+            //sprite.cellIndex = 1;
+            sprite.width = sprite.height = dSpriteScreenSize * 2;
 
-            //if (!star.radius || star.radius <= 0) {
-            //if(star.computedRadius) {
-            //    sprite.star = star;
-            //    this.sprites.push(sprite);
-            //}
+            // banard's star test case
+            ///if (star.id == '87665') sprite.width = sprite.height = dSpriteScreenSize *20
+
+            //this.sprites.push(sprite);
 
             // update function for Sprites
             //function update () {

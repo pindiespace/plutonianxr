@@ -585,12 +585,19 @@ var PWorld = (function () {
 
         let domeDir = dir + '/' + pObj.dname + '/'; 
 
-        // use the AssetsManager to load the large JSON data file
-        let assetManager = new BABYLON.AssetsManager(scene);
+////////////////////
+        let old = false;
+        // TO REVERT< CHANGE WORLDS.JSON
+        // TO REVERT< CHANGE TO GLOBAL
+        // MOST SPRITES ARE NOT BEING DRAWN
+///////////////////
 
         // Specific to hyg3 stellar database models
         if (model.hyg) {
 
+            if (old) {
+            // use the AssetsManager to load the large JSON data file
+            let assetManager = new BABYLON.AssetsManager(scene);
             // TODO: GUI OR PERFORMANCE SELECT
             // mod = models.sprite120; ////////////////////////////////////////
 
@@ -619,11 +626,13 @@ var PWorld = (function () {
                 console.log('All done with loading GLOBAL Hyg database');
             };
 
+            assetManager.load();
+        } else {
             // Load Hyg and color data
             console.log('loading PCelestial Hyg data...')
             this.celestial.loadHygData(model, domeDir, scene);
+        }
 
-            assetManager.load();
 
         } else {
             console.error('loadStarDome ERROR: no Hyg model data');
@@ -1485,8 +1494,10 @@ var PWorld = (function () {
 
                 if (pickResult.pickedSprite) {
                     let s = pickResult.pickedSprite;
+                    let hyg = s.hyg;
                     console.log('^^^^^^^^^^^^^^^^^^^^^^');
-                    console.log('Picked SPRITE is:' + s.name + ' hygid:' + s.hygid);
+                    console.log('Picked SPRITE is:' + s.name + ' hygid:' + hyg.id);
+                    console.log('Description:' + hyg.description);
                     // NOTE: default camera wash pushed into array when the camera was created
                     let dist = BABYLON.Vector3.Distance(cam.position, s.position);
                     console.log('Distance:' + dist + ' width:' + s.width + ' height:' + s.height);

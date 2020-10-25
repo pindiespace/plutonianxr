@@ -1,9 +1,9 @@
 /**
- * Decode stellar spectra into Star properties, mostly without using regex, 
+ * Decode stellar spectra into Star properties, without using regex, 
  * which is slow on browsers which don't cache regex (non-Firefox).
  * 
- * Parsing results in a set of stellar properties which are not present in the 
- * hyg3 database. Added to hyg3 object (our version defined in PData.HygObj)
+ * Parsing a spectra provides additional properties not present in the 
+ * hyg3 database, which are added to hyg3 object (our version defined in PData.HygObj)
  *
  * {@link https://www.pas.rochester.edu/~emamajek/EEM_dwarf_UBVIJHK_colors_Teff.txt}
  * {@link http://www.vendian.org/mncharity/dir3/starcolor/details.html}
@@ -36,10 +36,21 @@ var PSpectrum = (function () {
      * Collect statistics on spectrum parsing
      */
     PSpectrum.prototype.stats = {
-        total: 0,
-        typeRangeLum: 0,
-        typeRange: 0,
-        typeLum: 0
+        total: [0, 'total spectra parsed:'],
+        typeDefault: [0,'.lookupSpectrumProps used default [type] '],
+        typeFail: [0, 'failed to find a stellar [type] '],
+        typeRangeLum: [0, '.lookupSpectumProps used full [type + range + luminosity] '],
+        typeRange: [0, '.lookupLuminosityClass [type + range] reverse luminosity lookup '],
+        typeLum: [0, '.lookupSpectrumProps used weighted [type + luminosity] '],
+        lumLookupFail: [0, '.lookupLuminosityClass, luminosity does not match lookup spectral class for absolute magnitude,'],
+        typeWhiteDwarf: [0, '.lookupSpectrumProps used White Dwarf lookup '],
+        computedSpectra: [0, 'no spectra, computed from hyg3 properties '],
+        computedSpectraMatchPoor: [0, 'hyg properties give poor match to lookup stellar properties '],
+        computedSpectraMatchFail: [0, 'failed to match hyg properties to lookup stellar properties '],
+        confident: [0, 'confident identification (3)'],
+        probable: [0, 'good identification (2)'],
+        possible: [0, 'probable identification (1)'],
+        unknown: [0, 'unknown, not identified (<1)']
     };
 
     /*
@@ -225,6 +236,7 @@ var PSpectrum = (function () {
 
     /**
      * compute colors based on blackbody temperature
+     * {@link http://www.vendian.org/mncharity/dir3/blackbody/UnstableURLs/bbr_color_D58.html}
      * {@link http://www.vendian.org/mncharity/dir3/blackbody/UnstableURLs/bbr_color.html}
      */
     PSpectrum.prototype.bbColors = [];
@@ -289,11 +301,11 @@ var PSpectrum = (function () {
         'K': 'Yellow-orange star', // giant or dwarf
         'M': 'Red star', //giant or dwarf
         'MS': 'Red giant, asymptotic-giant branch carbon star, younger, transition to SC',
-        'N': 'Red giant, older carbon star, giant equivalent of lat K to M-type stars',
+        'N': 'Red giant, older carbon star, giant equivalent of late K to M-type stars',
         'R': 'Red giant, carbon star equivalent of late G to early K-type stars',
         'C': 'Red giant, carbon star',
         'S': 'Red giant, sub-carbon star, asymptotic-giant-branch, zirconium oxide in spectrum',
-        'SC': 'Red giant, older sub-carbon star, asymptotic-giant branch, zirconium oxide in spectrum, older',
+        'SC': 'Red giant, older sub-carbon star, asymptotic-giant branch, zirconium oxide in spectrum',
         'SN': 'Supernova',
         'C-R': 'Red giant, carbon star, equivalent of late G to early K-type stars',
         'C-N': 'Red giant, carbon star, older, giant equivalent of late K to M-type stars',
@@ -319,7 +331,7 @@ var PSpectrum = (function () {
         'Q': 'Recurring nova, white dwarf companion to mass donating star',
         'L': 'Hot brown dwarf, lithium in atmosphere, dust grains',
         'T': 'Cool brown dwarf, methane in atmosphere',
-        'Y': 'Gas giant, cool, able to fuse deuterium',
+        'Y': 'Gas giant, warm, able to fuse deuterium',
         'P': 'Gas giant, cold, Jupiter-like',
         '': 'Unknown stellar type'
     };
@@ -437,10 +449,10 @@ var PSpectrum = (function () {
 
     // methods
 
-    PSpectrum.prototype.stats = function () {
+    PSpectrum.prototype.getStats = function () {
         console.log('-------------\nPSpectrum stats:\n');
         for (var i in this.stats) {
-            console.log(i + ':' + this.stats[i]);
+            console.log(this.stats[i][1] + this.stats[i][0] + ' times');
         }
     };
 
@@ -456,9 +468,8 @@ var PSpectrum = (function () {
      * spectral string, and determing what symbol preceded the splits.
      * @param {Array} spects the spectrum string, split by '/' and '-'
      * @param {String} orig the original spectrum
-     * @param {Boolean} flag debugging flag
      */
-    PSpectrum.prototype.getSubspectra = function (spects, orig, computed = 0, flag = '') {
+    PSpectrum.prototype.getSubspectra = function (spects, orig) {
         let pdata = this.pdata,
         role = pdata.SPECTROLES,
         props = [],
@@ -470,7 +481,7 @@ var PSpectrum = (function () {
         for (let i = 0; i < orig.length; i++) {
             r = orig[i];
             if (r == '/' || r == '-') {
-                props.push(pdata.createPSpectrum(spects[sIndex], sRole, computed, flag));
+                props.push(pdata.createPSpectrum(spects[sIndex], sRole));
                 hit = i;
                 if (r == '/') sRole = role.COMPOSITE;
                 else if (r == '-') sRole = role.INTERMEDIATE;
@@ -480,7 +491,7 @@ var PSpectrum = (function () {
         if (hit < orig.length) {
             if (r == '/') sRole = role.COMPOSITE;
             if (r == '-') sRole = role.INTERMEDIATE;
-            props.push(pdata.createPSpectrum(spects[sIndex], sRole, computed, flag));
+            props.push(pdata.createPSpectrum(spects[sIndex], sRole));
         }
 
         return props;
@@ -624,8 +635,8 @@ var PSpectrum = (function () {
 
         let spect = hyg.spect, // get the spectrum string
         props = [],
-        computed = 3, // confidence if we had to compute spectra
-        flag = 'spect'; // DEBUGGING
+        confidence = 3; // confidence if we had to compute spectra
+
 
         // no hyg record
         if (!hyg) return false;
@@ -633,17 +644,18 @@ var PSpectrum = (function () {
         // get a whitespace-free copy
         spect = spect.stripWhitespace();
 
+        this.stats.total[0]++;
+
         // if we don't have a spectra, approximate from hyg3 values, needed to generate descriptions
         if(!spect.length) {
             let matches = this.computeSpectFromHyg(hyg);
-            flag += ', no spectra, approximated from hyg3 values';
-            if (matches > 15) { 
-                computed = 1;
-                flag += ', poor match to existing stellar properties';
-            } else if (matches == 0) {
-                flag += ', no match to existing stellar properties';
+            this.stats.computedSpectra[0]++;
+            if (matches > 50 || matches == 0) { // weak assignment
+                confidence = 1;
             }
-            else computed = 2; //higher confidence
+            else confidence = 2; //higher confidence
+        } else {
+            confidence = 3;
         }
 
         // if there is a spectrum, parse it
@@ -656,12 +668,13 @@ var PSpectrum = (function () {
             let spects = spect.split(/\/|-/);
 
             // figure out the type of the sub-spectra (primary, composite, intermediate)
-            props = this.getSubspectra(spects, spect, computed, flag);
+            props = this.getSubspectra(spects, spect);
 
             // loop through the sub-spectra and extract keys for [type + range + luminosity + mods]
             for(let i = 0; i < props.length; i++) {
 
                 let p = props[i];
+                p.confidence = confidence; // initial, may change
                 let s = p.spect;
 
                 s = this.parseYerkesPrefix(s, p);
@@ -674,7 +687,7 @@ var PSpectrum = (function () {
 
             // flag empty props
             if(props[0].type.key == '') { // no primary type found
-                console.warn('spectrumToStellarData WARN: no type for spectra:"' + spect);
+                this.stats.typeFail[0]++;
             }
 
             // lookup the [type][range][luminosity] for stellar properties
@@ -708,7 +721,7 @@ var PSpectrum = (function () {
         let util = this.util;
 
         // if we are at max distance (no parallax) for hyg3 and very luminous, just leave
-        // -9 absmag and 100000 distance is out of range
+        // -9 absmag and 100000 distance is out of range.Could be either LBV, O, A, B
         // hyg limit, after which using absolute magnitude is unreliable (no parallax)
         let maxDist = this.pdata.hygConstants.max_dist;
         if (hyg.dist == maxDist && hyg.absmag > -9.3) {
@@ -752,6 +765,8 @@ var PSpectrum = (function () {
                 }
             }
 
+            this.stats.computedSpectraMatchPoor[0]++;
+
             // if we fail to get a key, just assign a single-letter type based on the closest temperature;
             if (!keys2.length) {
                 let oldTemp = 1E10+14;
@@ -763,8 +778,10 @@ var PSpectrum = (function () {
                         oldTemp = td;
                     }
                 };
-                if (!key) return 0;
-                else return 1; // low confidence
+                if (!key) {
+                    this.stats.computedSpectraMatchFail[0]++;
+                    return 0;
+                } else return 1; // low confidence
 
             }
 
@@ -814,12 +831,15 @@ var PSpectrum = (function () {
             // We found the [type + range], luminosity class versus absolute magnitude
             if (lc) {
 
+                this.stats.typeRange[0]++;
+
                 // find the closest table match to our luminosity by absolute magnitude
                 let lumMatch = util.getKeyForClosestNumericValue(lc, absmag);
 
-                // store hyg3 errors around Luminous Blue Variables
+                // luminosity class doesn't match absolute magnitude
                 if ((lumMatch.num < (lumMatch.min - 2)) || (lumMatch.num > lumMatch + 2)) {
-                    prop.flag += '.lookupLuminosityClass, luminosity does not match lookup spectral class for absolute magnitude,';
+                    prop.confidence = 2; //reduced confidence
+                    this.stats.lumLookupFail[0]++;
                 }
 
                 // store luminosity class.
@@ -828,9 +848,9 @@ var PSpectrum = (function () {
                     if (!prop.luminosity.key) {
                         prop.luminosity.key = lumMatch.key;  // from lookup table
                     }
-                    // if we didn't have luminosity value, put in the lookup value
+                    // if we didn't have luminosity value, put in the lookup value (might be overriden by hyg3)
                     if (!prop.luminosity.value) {
-                        prop.luminosity.value = this.computeLuminosityFromAbsMag(absmag)
+                        prop.luminosity.value = this.computeLuminosityFromAbsMag(absmag);
                     }
 
                 } else {
@@ -900,7 +920,7 @@ var PSpectrum = (function () {
                     pp = this.spectLookup[lp];
                     if (pp) {
                         prop.confidence = 3;
-                        prop.flag += ', .lookupSpectumProps used full [type + range + luminosity]';
+                        this.stats.typeRangeLum[0]++;
                     }
 
                 }
@@ -912,7 +932,7 @@ var PSpectrum = (function () {
                     if(!pp && t == 'DG' || t == 'DK' || t == 'DM' || t == 'DF') pp = this.dWhiteDwarfWeightedProps['DZ'];
                     if (pp) {
                         prop.confidence = 3;
-                        prop.flag += ', .lookupSpectrumProps used White Dwarf lookup'
+                        this.stats.typeWhiteDwarf[0]++;
                     }
                 }
 
@@ -921,7 +941,7 @@ var PSpectrum = (function () {
                     pp = this.dStarWeightedProps[t + '-' + l];
                     if (pp) {
                         prop.confidence = 2;
-                        prop.flag += ', .lookupSpectrumProps used weighted [type + luminosity]';
+                        this.stats.typeLum[0]++;
                     }
                 }
 
@@ -930,7 +950,7 @@ var PSpectrum = (function () {
                     pp = this.dStarProps[t];
                     if (pp) {
                         prop.confidence = 1;
-                        prop.flag += ', lookupSpectrumProps used inaccurate default [type] properties,';
+                        this.stats.typeDefault[0]++;
                     }
                 }
 
@@ -962,12 +982,15 @@ var PSpectrum = (function () {
      * Add properties to the hyg object, computed from the spectra
      * 1. always use the primary type to set values
      * 3. if details, store ALL the props
-     * NOTE: we're assuming some fields in hyg3 are ALWAYS filled
-     *       a) 'absmag'
-     *       b) 'lum'
-     *       some are only filled part of the time
-     *       a) 'spect'
-     *       b) 'ci'
+     * FIELDS: we're assuming some fields in hyg3 are ALWAYS filled
+     *           a) 'absmag'
+     *           b) 'lum'
+     *         some are only filled part of the time
+     *           a) 'spect'
+     *           b) 'ci'
+     * TYPE: we create a new 'type' from [type + lum]
+     *       type: {type: xxx, range: xxx, lumclass: xxx}
+     * 
      * @param {Object} hyg the returned json object describing a star
      * @param {Array} props the array of properties taken from the stellar spectra
      * @param {Boolean} details if true, store all the props, otherwise, just store the primary prop
@@ -994,12 +1017,8 @@ var PSpectrum = (function () {
                 c = prop.color,
                 mods = prop.mods.keys;
 
-                ///////////////////////////////////////
-                // TODO: DEBUG
-                hyg.confidence = prop.confidence
-                if (!hyg.flags) hyg.flags = '';
-                hyg.flags += prop.flag;
-                ///////////////////////////////////////
+                // record our confidence score
+                hyg.confidence = prop.confidence;
 
                 switch (prop.role) {
 
@@ -1014,20 +1033,20 @@ var PSpectrum = (function () {
 
                         // radius, from lookup, or absmag and temperature
                         if (prop.radius.value != pdata.NAN) hyg.radius = prop.radius.value;
-                        else hyg.radius = this.computeRadius(hyg.absmag, hyg.temp);
+                        else hyg.radius = this.computeRadius(hyg.temp, hyg.lum);
 
                         // get color from lookup (not initially in hyg3), or from temp, ci
                         if (c.r + c.g + c.b > 0) {
                             hyg.r = c.r, hyg.g = c.g, hyg.b = c.b;
                         } else if (hyg.temp) {
-                            let c = this.computeColorFromBlackbody(hyg.temp);
+                            let c = this.lookupColorFromBlackbody(hyg.temp);
                             hyg.r = c.r, hyg.g = c.g, hyg.b = c.b;
                         } else if (hyg.ci != '') {
-                            let c = this.computeColorFromBV(hyg.ci);
+                            let c = this.computeColorFromBV(hyg.ci); // approximation
                             hyg.r = c.r, hyg.g = c.g, hyg.b = c.b;
                         }
 
-                        // set rotation flag. Rotation tables don't appear to exist for 
+                        // Rotation tables don't appear to exist for 
                         // hyg3 stars, so just divide into a few multiples of solar rotation = 1
                         if(type == 'O' || type == 'A' || type == 'B' || type == 'W') hyg.rot = 10;
                         if(mods.indexOf('nn') != -1) hyg.rot = 30;
@@ -1038,9 +1057,6 @@ var PSpectrum = (function () {
                         if (!prop.luminosity.key) {
                             this.lookupLuminosityClass(prop, hyg.absmag);
                         }
-                        // TWO calculations, one from props, one in hyg
-                        // TODO: use this to look for large differences in results
-                        hyg.lumkey = prop.luminosity.key;
 
                         // variable star (provide a default if we don't have magnitudes or cycle length)
                         if (hyg.var_min || hyg.var_max || 
@@ -1093,6 +1109,24 @@ var PSpectrum = (function () {
         let role = this.pdata.SPECTROLES;
         let description = '';
 
+        switch (prop.confidence) {
+             case 3:
+                this.stats.confident[0]++;
+                break;
+             case 2:
+                this.stats.probable[0]++;
+                description += 'Probable ';
+                break;
+             case 1:
+                this.stats.possible[0]++;
+                description  += 'Possible ';
+                break;
+             default:
+                this.stats.unknown[0]++;
+                this.failedLookup.push(prop);
+                break;
+        };
+
             switch (prop.role) {
                 case role.PRIMARY:
                     // basic description
@@ -1130,8 +1164,7 @@ var PSpectrum = (function () {
      */
 
     /**
-     * Convert a b-v color index to the approx temperature
-     * lookup table
+     * compute approx temperature from blue-violet color index
      * {@link https://sites.uni.edu/morgans/astro/course/Notes/section2/spectraltemps.html}
      * @param {String} bv color index, blue-violet
      */
@@ -1143,9 +1176,10 @@ var PSpectrum = (function () {
      * Convert b-v (colorindex) values reported to stars to RGB color
      * @param {Number} bv the b-v value for the star.s
      * {@link https://stackoverflow.com/questions/21977786/star-b-v-color-index-to-apparent-rgb-color}
+     * {@link https://en.it1352.com/article/cab2367e8d784310b3846a705478ace3.html}
      * {@link http://www.vendian.org/mncharity/dir3/blackbody/UnstableURLs/bbr_color.html}
+     * The 2019 lookup table (more accurate)
      * {@link https://www.pas.rochester.edu/~emamajek/EEM_dwarf_UBVIJHK_colors_Teff.txt}
-     * {@link https://en.wikipedia.org/wiki/Color_index}
      */
     PSpectrum.prototype.computeColorFromBV = function (bv) {
         var r = 0, g = 0, b = 0, t = 0;
@@ -1195,16 +1229,17 @@ var PSpectrum = (function () {
     };
 
     /**
-     * look up a color from a blackbody to temperature lookup table
-     * {@link https://stackoverflow.com/questions/21977786/star-b-v-color-index-to-apparent-rgb-color}
-     * @param {Number} temp 
+     * temperature to blackbody color lookup table (2016 version, using CIE 1964 10 degree CMFs)
+     * {@link http://www.vendian.org/mncharity/dir3/blackbody/UnstableURLs/bbr_color_D58.html}
+     * @param {Number} temp - temperature in Kelvins
+     * @return {Number} - {r, g, b}
      */
-    PSpectrum.prototype.computeColorFromBlackbody = function (temp) {
-        let t = Math.floor(temp / 200);
-        t = t * 200;
-        if (t < 1000)  t = 1000;
-        else if (t > 29800) t = 29800;
-        return this.bbColors[t]; // associative lookup in object
+    PSpectrum.prototype.lookupColorFromBlackbody = function (temp) {
+        let t = Math.floor(temp / 100);
+        t *= 100;
+        if (t < 1000) t = 1000;
+        else if (t > 40000) t = 40000;
+        return this.bbColors[t];
     };
 
     /**
@@ -1233,12 +1268,27 @@ var PSpectrum = (function () {
         // Example: Alp1Cen (HR 5459) has vmag -0.01, and parallax 0.751 arc seconds. 
         // Therefore the distance is about 1/0.751 = 1.33 parsec. We get absolute visual magnitude
         // M=m−5⋅(log10DL−1)=−0.01−5⋅(log101.33−1)=4.37.
-    }
+    };
+
+
+    /**
+     * Compute stellar radius, based on luminosity
+     * - luminosity ratio to solar luminosity
+     * - temperature ratio to solar temperature
+     * {@link http://www.handprint.com/ASTRO/specclass.html}
+     * R/R⊙ = √(L/L⊙)/(T/T⊙)4
+     * @param {Number} temp absolute magnitude
+     * @param {Number} lum luminosity
+     */
+     PSpectrum.prototype.computeRadius = function (temp, lum) {
+        let util = this.util;
+        return Math.sqrt(lum / Math.pow((temp / this.SOL.temp), 4))
+     };
 
     /**
      * compute luminosity from radius and temperature
-     * {@link https://www.omnicalculator.com/physics/luminosity}
-     * @param {Number} radius, expressed as multiple of sun's radius
+     * {@link http://www.handprint.com/ASTRO/specclass.html}
+     * @param {Number} radius, expressed as L(Star) / L(Sun)
      * @param {Number} temp, expressed in kelvins.
      */
     PSpectrum.prototype.computeLuminosityfromRadTemp = function (radius, temp) {
@@ -1250,31 +1300,16 @@ var PSpectrum = (function () {
      * {@link https://astronomy.stackexchange.com/questions/13709/relationship-between-absolute-magnitude-of-a-star-and-its-luminosity}
      */
     PSpectrum.prototype.computeLuminosityFromAbsMag = function (absmag) {
-        let l = Math.pow(10, ((absmag - 4.77) / -2.5));
-        return l;
+        return Math.pow(10, ((absmag - 4.77) / -2.5));
     };
 
     /**
      Compute absolute magnitude from luminosity
-     @param {Number} luminosity the ratio of Lstar / LSun
+     @param {Number} luminosity the ratio of L(Star) / L(Sun)
      */
     PSpectrum.prototype.computeAbsMagFromLuminosity = function (luminosity) {
-        let M = 4.77 - (2.5 * Math.log10(luminosity));
-        return M
+        return 4.77 - (2.5 * Math.log10(luminosity));
     };
-
-    /**
-     * Compute stellar radius, based on luminosity
-     * - luminosity ratio to solar luminosity
-     * - temperature ratio to solar temperature
-     * {@link http://www.handprint.com/ASTRO/specclass.html}
-     * R/R⊙ = √(L/L⊙)/(T/T⊙)4
-     * @param {Number} absMag absolute magnitude
-     * @param {Number} temp temperature in Kelvins
-     */
-     PSpectrum.prototype.computeRadius = function (absmag, temp) {
-        return Math.pow(parseFloat(this.SOL.temp)/temp, 2) * Math.sqrt(Math.pow(2.51188643150958, (this.SOL.absmag - absmag)));
-     };
 
     /**
      * rough calculation using mass-luminosity relationship

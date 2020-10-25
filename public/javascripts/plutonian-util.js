@@ -90,12 +90,13 @@ var PUtil = (function () {
      */
     PUtil.prototype.isUndefined = function (value) {
         return typeof value === 'undefined';
+
     };
 
     /** 
      * Check if a number is even.
      * @param {Number} n the variable to be tested.
-     * @returns {Boolean} if even, return true, else false.
+     * @return {Boolean} if even, return true, else false.
      */
     PUtil.prototype.isEven = function (n) {
         return parseInt( n ) % 2 == 0;
@@ -104,10 +105,27 @@ var PUtil = (function () {
     /** 
      * Check if a number is odd.
      * @param {Number} n the variable to be tested.
-     * @returns {Boolean} if odd, return true, else false.
+     * @return {Boolean} if odd, return true, else false.
      */
     PUtil.prototype.isOdd = function (n) {
         return Math.abs( parseInt( n ) % 2 ) == 1;
+    };
+
+    /**
+    * Checks if number is prime
+    * Natural number greater than 1 that cannot be formed by multiplying two smaller natural numbers
+    *
+    * @static
+    * @param {Number} num Number to check
+    * @return {Boolean} Whether the numbere is prime or not
+    */
+    PUtil.prototype.isPrime = function (n) {
+        return (
+            num > 1 && Array(Math.floor(Math.sqrt(n)) - 1)
+            .fill(0)
+            .map((_, i) => i + 2)
+            .every((i) => n % i !== 0)
+        );
     };
 
     /**
@@ -175,7 +193,7 @@ var PUtil = (function () {
      * Number of keys in an associative array or object.
      * NOTE: won't work on old browsers, but we should never get here.
      * @param {Object} obj a JS Object.
-     * @returns {Number} the number of keys.
+     * @return {Number} the number of keys.
      */
     PUtil.prototype.numKeys = function (obj) {
         if ( this.isObject(obj)) {
@@ -188,12 +206,64 @@ var PUtil = (function () {
      * Given an associative arry of Number values, sort by those values, 
      * and returns the keys. Used to sort Obj file groups, obj, and material 
      * starts by their start positions in the overall arrays.
-     * @param {Object} obj the associative array. Values MUST be numbers.
-     * @returns {Array} a set of keys, sorted in order.
+     * @param {Object} obj - the associative array. Values MUST be numbers.
+     * @return {Array} - a set of keys, sorted in order.
      */
     PUtil.prototype.getSortedKeys = function (obj) {
         let keys = Object.keys(obj);
         return keys.sort(function(a, b) { return obj[b] - obj[a]});
+    };
+
+    /**
+     * clamp number within range
+     */
+    PUtil.prototype.clamp = function (num, min, max) {
+        if(num < min) return min;
+        if(num > max) return max;
+        return num;
+    };
+
+    /**
+    * convert Number to Float object (mantissa, exponent)
+    * @param {Number} val
+    * @return {Float}
+    */
+    PUtil.prototype.numToFloat = function (num) {
+
+        // TODO: replace this so an array is used in .roundToFixed, ES5 syntax
+        // Number.parseFloat(3.33).toExponential(2).split('e');
+
+        const [mant, exp] = Number(num)
+            .toExponential()
+            .split('e')
+            .map(str => +str);
+        return {
+            mant,
+            exp
+        };
+    };
+
+    /**
+    * round number x to digits number of digits after decimal point, by converting to 
+    * exponential notation
+    * {@link https://github.com/terrymorse58/round-tofixed/blob/master/round-tofixed.js}
+    * @param {Number} val - arbitrary float
+    * @param {Number} [digits=0] - positive integer
+    * @return {Number}
+    */
+    PUtil.prototype.roundToFixed = function (val, digits = 0) {
+        if (typeof val === 'number' && typeof digits === 'number'
+            && Number.isInteger(digits) &&
+            (digits === 0 || Math.sign(digits) === 1)) {
+            const valF = this.numToFloat(val);
+            const valFNew = this.numToFloat(Math.round(+(valF.mant + 'e' + (valF.exp + digits))));
+            return +(valFNew.mant + 'e' + (valFNew.exp - digits));
+        }
+        return NaN;
+    };
+
+    PUtil.prototype.getRound = function (num, decimals) {
+        return Number(Math.round(num + 'e' + decimals) + 'e-' + decimals);
     };
 
     PUtil.prototype.getMaxValueOfArray = function (numArray) {
@@ -300,7 +370,7 @@ var PUtil = (function () {
     /** 
      * Get an unique object id.
      * @link https://jsfiddle.net/briguy37/2MVFd/
-     * @returns {String} a unique UUID format id.
+     * @return {String} a unique UUID format id.
      */
     PUtil.prototype.computeId = function () {
 
