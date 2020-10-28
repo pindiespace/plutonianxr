@@ -274,6 +274,8 @@
                                     "dname": "pluto",
                                     "name": "Pluto",
                                     "description": "Dwarf Planet, innermost member of Kuiper belt",
+                                    "descimg": "roo_1.jpg",
+                                    "imgdesc": "(planet Roo)",
                                     "data": {
                                         "type": "planet",
                                         "diameter":2370,

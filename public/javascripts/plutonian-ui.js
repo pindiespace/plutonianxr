@@ -108,24 +108,34 @@ var PUI = (function() {
     /**
      * Create a label for the object
      */
-    PUI.prototype.createGUILabel = function (pObj, scene, isVisible = true, isPickable = true) {
+    PUI.prototype.createGUILabel = function (pObj, imgSrc, scene, isVisible = true, isPickable = true) {
 
         // GUI
         var advancedTexture = BABYLON.GUI.AdvancedDynamicTexture.CreateFullscreenUI("UI");
 
         var rect1 = new BABYLON.GUI.Rectangle();
-        rect1.width = 0.2;
-        rect1.height = "40px";
+        rect1.width = "233px";
+        rect1.height = "120px";
         rect1.cornerRadius = 20;
         rect1.color = "Orange";
         rect1.thickness = 4;
         rect1.background = "green";
         advancedTexture.addControl(rect1);
         rect1.linkWithMesh(pObj.mesh);   
-        rect1.linkOffsetY = -150;
+        rect1.linkOffsetY = -250;
 
+        
+
+        // image
+        var image = new BABYLON.GUI.Image("cat", imgSrc);
+        image.width = "100px";
+        image.height = "100px";
+        //image.stretch = BABYLON.GUI.Image.STRETCH_EXTEND;
+        rect1.addControl(image);
+
+        // text
         var label = new BABYLON.GUI.TextBlock();
-        label.text = pObj.name;
+        label.text = pObj.name + pObj.imgdesc;
         rect1.addControl(label);
 
         var target = new BABYLON.GUI.Ellipse();
@@ -144,7 +154,18 @@ var PUI = (function() {
         line.linkOffsetY = -10;
         advancedTexture.addControl(line);
         line.linkWithMesh(pObj.mesh); 
-        line.connectedControl = rect1; 
+        line.connectedControl = rect1;
+
+        // change visibility
+        rect1.isVisible = false;
+        line.isVisible = false;
+
+        return {
+            rect: rect1,
+            line: line
+        };
+
+
     };
 
     return PUI;

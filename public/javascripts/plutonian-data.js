@@ -75,24 +75,32 @@ var PData = (function () {
     /**
      * some PSpectrum constants, indicating the type of spectrum or sub-spectrum
      */
-    PData.prototype.SPECTROLES = {
+    PData.prototype.SPECT_ROLES = {
         PRIMARY: 'primary',
         COMPOSITE: 'composite',
         INTERMEDIATE: 'intermediate',
         UNKNOWN: 'unknown'
     };
 
+    PData.prototype.SPECT_CONFIDENCE = {
+        CERTAIN: 4,
+        PROBABLE: 3,
+        LIKELY: 2,
+        UNCERTAIN: 1,
+        NONE: 0
+    };
+
     /**
      * create a PSpectrum property object, storing values extract from the spectrum string.
      * NOTE: does not contain the same fields as PHyg object.
      * @param {String} spect a stellar spectral string, e.g. 'A5IIb'
-     * @param {Pdata.SPECTROLES} role the role of a sub-spectra, e.g. 'A7' in 'A6/7V'
+     * @param {Pdata.SPECT_ROLES} role the role of a sub-spectra, e.g. 'A7' in 'A6/7V'
      * @param {Number} confidence a numerical score for correct spectral classification, defined in PSpectra
      */
-    PData.prototype.createPSpectrum = function (spect = '', role = '', confidence = 0) {
+    PData.prototype.createPSpectrum = function (spect = '', role = '', confidence = 0 ) {
         return {
             spect: spect || this.EMPTY, // spectra (sub)string
-            role: role || this.SPECTROLES.UNKNOWN, // role of sub-spectra
+            role: role || this.SPECT_ROLES.UNKNOWN, // role of sub-spectra
             confidence: confidence || this.ZERO, // confidence in results
             type: {
                 key: this.EMPTY, // stellar type (O, A, B,...), values defined in PSpectrum
@@ -156,7 +164,6 @@ var PData = (function () {
         return true;
     };
 
-
     /*
      * ------------------------------------------------------
      * HYG3 database object ( used by PCelestial)
@@ -165,8 +172,11 @@ var PData = (function () {
      */
 
     // constants related to hyg data
-    PData.prototype.hygConstants = {
-        max_dist: 100000 // no parallax, unreliable distance, > 10,000 parsecs
+    PData.prototype.HYG_CONSTANTS = {
+        max_dist: 100000, // no parallax, unreliable distance, > 10,000 parsecs
+        ROTATION_VERY_FAST: 30,
+        ROTATION_FAST: 10,
+        ROTATION_DEFAULT: 1,
     };
 
     /**
@@ -212,7 +222,7 @@ var PData = (function () {
             r: this.ZERO,
             g: this.ZERO,
             b: this.ZERO,
-            rot: this.ONE,
+            rot: this.HYG_CONSTANTS.ROTATION_DEFAULT,
             dust: false,
             envelope: false,
             description: this.EMPTY
@@ -271,7 +281,7 @@ var PData = (function () {
             if (!hygObj.r) hygObj.r = this.ZERO;
             if (!hygObj.g) hygObj.g = this.ZERO;
             if (!hygObj.b) hygObj.b = this.ZERO;
-            if (!hygObj.rot) hygObj.rot = this.ONE;
+            if (!hygObj.rot) hygObj.rot = this.HYG_CONSTANTS.ROTATION_DEFAULT;
             if (!hygObj.dust) hygObj.dust = false;
             if (!hygObj.envelope) hygObj.envelope = false;
             if (!hygObj.description) hygObj.description = this.EMPTY;
@@ -485,6 +495,43 @@ var PData = (function () {
         if (!d.color) d.color = [1, 1, 1, 0.5];
 
         return Object.assign({}, d);
+
+    };
+
+    /*
+     * ------------------------------------------------------
+     * PData conversion routines
+     * ------------------------------------------------------
+     */
+
+    /**
+     * adjust color for Scene rendering (hex, 0-1)
+     * @param {BABYLON.Color3/Color4} color - a color object
+     */
+    PData.prototype.getColor = function (color) {
+
+        let util = this.util;
+
+        if (!util.isArray(color)) {
+            console.error('color ERROR: invalid color object passed (not a 3 or 4-element Array):' + typeof color);
+            console.error('color:' + color)
+            color = new BABYLON.Color3(1, 0, 0, 0.7);
+        }
+
+        // handle web versus BabylonJS color units (fails for [1,1,1])
+        if (color[0] + color[1] + color[2] > 3.0) {
+            color[0] /= 255,
+            color[1] /= 255,
+            color[2] /= 255
+        }
+
+        if (color.length === 3) {
+                color = new BABYLON.Color3(color[0], color[1], color[2]);
+        } else if (color.length === 4) {
+                color = new BABYLON.Color4(color[0], color[1], color[2], color[3]);
+        }
+
+        return color;
 
     };
 

@@ -46,7 +46,8 @@ var PCelestial = (function () {
         this.dMaxHygDist        = 100000;
 
         // SpriteManager for Hyg3 data
-        this.spriteManager      =   null;
+        this.spriteManager        =   null;
+        this.SPRITE_INDEX_DEFAULT = 7;
 
         // WebGL
         this.maxTexSize = 2048;         // minimum default for any modern videocard
@@ -56,6 +57,8 @@ var PCelestial = (function () {
         this.starSprites = null;
         this.scene = null;
         this.camera = null;
+
+        // we don't do this for the luminosity classes, since they are in an Array, not an Object, and pre-sorted
 
         // stellar spectra
         this.spectra = new PSpectrum(util, pdata);
@@ -99,61 +102,94 @@ var PCelestial = (function () {
         'P': 16
     };
 
+    /**
+     * M-K liminosity class assignment
+     * pre-sorted by length for .indexOf(xxx) matching
+     * This gives the array index for a sprite, with combined 
+     * with stellar type
+     */
+    PCelestial.prototype.ddLuminosityClassIndex = [
+        'III', // 0, giant
+        'Ia',  // 1, hypergiant
+        'Ib',  // 2, supergiant
+        'II',  // 3, bright giant
+        'IV',  // 4, subgiant
+        'VI',  // 5, subdwarf
+        'V',   // 6, dwarf
+        'D',   // 7, white dwarf
+        '',    // 8, use when no luminosity class is present (white and brown dwarfs, truncated spectra)
+    ];
+
     /** 
-     * Image sprites are selected via a combination of [type + luminosity]
+     * Image sprites are selected via a combination of [type + luminosity class]
+     * The program matches by finding the correct luminosity class from .PCelestial.dLuminosityClassIndex,
+     * and using its index to retrive the sprite index from the matrix below
+     *
+     * In theory, one image or texture can be made for every stellar [type + luminosity]
+     * As more complex spritesheets are built, these indices would be less redundant
+     *
+        'III', // 0  giant
+        'Ia',  // 1, hypergiant
+        'Ib',  // 2, supergiant
+        'II',  // 3, bright giant
+        'IV',  // 4, subgiant
+        'VI',  // 5, subdwarf
+        'V',   // 6, dwarf
+        'D',   // 7, white dwarf
+        ''     // 8, unknown
      */
     PCelestial.prototype.ddSpriteIndex = {
-        'LBV': {I:0}, //luminous blue variable
-        'W': {I: 0}, // Wolf-rayet
-        'WR': {I: 0}, / Wolf-Rayet, young
-        'WC': {I: 0} // Wolf-Rayet, producing dust, strong C
-        'WN': {I: 0}, // Wolf-Rayet CNO
-        'WO': {I: 0}, // Wolf-Rayet strong O
-        'WC10': {I: 0}, // Wolf-Rayet, cooler, strong C
-        'WC11': {I: 0}, // Wolf-Rayet, coolest, strong C
-        'WNh' : {I: 0}, // Wolf-Rayet, young and massive
-        'WN10': {I: 0}, // Wolf-Rayet cooler, strong N
-        'WN11': {I: 0}, // Wolf-Rayet coolest, strong N
-        'O': {I: 1}, // Blue, luminous ultra-hot supergiant
-        'A': {I: 2}, // Blue luminous giant
-        'B': {I: 3}, // White giant'
-        'F': {I: 4}, // Yellow-white, giant or dwarf
-        'G': {I: 5}, // Yellow, giant or dwarf
-        'K': {I: 6}, // Yellow-orange, giant or dwarf
-        'M': {I: 9, II:8, III: 7 }, // Red, giant or dwarf
-        'MS': {I: 8}, // Red giant, asymptotic-giant branch carbon star, younger, transition to SC
-        'SC': {I: 10}, // Red giant, older sub-carbon star, asymptotic-giant branch, zirconium oxide in spectrum
-        'N': {I: 9}, // Red giant, older carbon star, giant equivalent of late K to M-type stars
-        'R': {I: 8}, // Red giant, carbon star equivalent of late G to early K-type stars
-        'C': {I: 8}, // Red giant, carbon star
-        'S': {I: 10}, // Red giant, sub-carbon star, asymptotic-giant-branch, zirconium oxide in spectrum
-        'C-R': {I: 8}, // Red giant, carbon star, equivalent of late G to early K-type stars
-        'C-N': {I: 9}, // Red giant, carbon star, older, giant equivalent of late K to M-type stars
-        'C-J': {I: 10}, // Red giant, cool carbon star with a high content of carbon-13
-        'C-H': {I: 10}, // Red giant, Population II equivalent of the C-R red giants
-        'C-Hd': {I:9}, // Red giant, Hydrogen-deficient, similar to late G supergiants with CH and C2 bands added
-        'D': {I:11}, // White dwarf
-        'DO': {I:11}, // White Dwarf, very hot, helium-rich atmosphere, 45-120,000K
-        'DAO': {I:11}, // White Dwarf, very hot, hydrogen and helium-rich atmosphere, ionized helium lines, >30,000K
-        'DA': {I:11}, // White Dwarf, hydrogen-rich, 30,000K
-        'DAB': {I:11}, // White Dwarf, hot, hydrogen and helium-rich atmosphere, neutral helium lines, 30,000K
-        'DAZ': {I:11}, // White Dwarf, hot, hydrogen-rich atmosphere, metallic spectral lines
-        'DB': {I:11}, // White Dwarf, helium-rich, 15-30,000K
-        'DBZ': {I:11}, // White Dwarf, cool, 15-30,000K, neutral helium, He I, spectral lines, metallic spectral lines',
-        'DQ': {I:11}, // White Dwarf, carbon-rich atmosphere, < 13,000K atomic or molecular carbon lines
-        'DZ': {I:11}, // White Dwarf, cool, metal-rich atmosphere, < 11,000K, merges DG, DK, DM, DF types
-        'DG': {I:11}, // White Dwarf, cool, metal-rich atmosphere, 6000K (old classification, now DZ)
-        'DK': {I:11}, // White Dwarf, metal-rich atmosphere (old classification, now DZ)
-        'DM': {I:11}, // White Dwarf, metal-rich atmosphere (old classification, now DZ)
-        'DF': {I:11}, // White Dwarf, metal-rich, CaII, FeI, no H (old classification, now DZ)
-        'DC': {I:11}, // White Dwarf, cool, no strong spectral lines, < 11,000K
-        'DX': {I:11}, // White Dwarf, spectral lines unclear',
-        'Q': {I:0}, // Recurring nova, white dwarf companion to mass donating star
-        'L': {I:12}, // Hot brown dwarf, lithium in atmosphere, dust grains
-        'T': {I:13}, // Cool brown dwarf, methane in atmosphere
-        'Y': {I:13}, // Gas giant, warm, able to fuse deuterium
-        'P': {I:15}, // Gas giant, cold, Jupiter-like
-        '': {I: 3}, // Unknown stellar type
+        'LBV': [ 1,  1,  1,  1,  1,  1, -1, -1,  1], //luminous blue variable
+        'W':   [ 0,  0,  0,  0,  0,  0, -1, -1,  0], // Wolf-Rayet
+        'WR':  [ 0,  0,  0,  0,  0,  0, -1, -1,  0], // Wolf-Rayet, young
+        'WC':  [ 0,  0,  0,  0,  0,  0, -1, -1,  0], // Wolf-Rayet, producing dust, strong C
+        'WN':  [ 0,  0,  0,  0,  0,  0, -1, -1,  0], // Wolf-Rayet CNO
+        'WO':  [ 0,  0,  0,  0,  0,  0, -1, -1,  0], // Wolf-Rayet strong O
+        'WC10':[ 0,  0,  0,  0,  0,  0, -1, -1,  0], // Wolf-Rayet, cooler, strong C
+        'WC11':[ 0,  0,  0,  0,  0,  0, -1, -1,  0], // Wolf-Rayet, coolest, strong C
+        'WNh' :[ 0,  0,  0,  0,  0,  0, -1, -1,  0], // Wolf-Rayet, young and massive
+        'WN10':[ 0,  0,  0,  0,  0,  0, -1, -1,  0], // Wolf-Rayet cooler, strong N
+        'WN11':[ 0,  0,  0,  0,  0,  0, -1, -1,  0], // Wolf-Rayet coolest, strong N
+        'O':   [ 1,  0,  0,  1,  1,  1,  1, -1,  1], // Blue, luminous ultra-hot supergiant
+        'A':   [ 2,  2,  2,  2,  2,  2,  2, -1,  2], // Blue giant, subgiant or dwarf
+        'B':   [ 3,  3,  3,  3,  3,  3,  3, -1,  3], // Blue-White giant, bigger than type A
+        'F':   [ 4,  4,  4,  4,  4,  4,  4, -1,  4], // Yellow-white, giant or dwarf
+        'G':   [ 5,  5,  5,  5,  5,  5,  5, -1,  5], // Yellow, giant or dwarf
+        'K':   [ 6,  6,  6,  6,  6,  6,  6, -1,  6], // Yellow-orange, giant or dwarf
+        'M':   [ 8,  9,  9,  8,  8,  7,  7, -1,  7], // Red, giant or dwarf or subdwarf
+        'MS':  [10,  9,  9,  9,  9, -1, -1, -1,  9], // Red giant, asymptotic-giant branch carbon star, younger, transition to SC
+        'S':   [ 8,  9,  9,  9,  9, -1, -1, -1,  9], // Red giant, sub-carbon star, asymptotic-giant-branch, zirconium oxide in spectrum
+        'SC':  [ 9,  9,  9,  9,  8, -1, -1, -1,  9], // Red giant, older asymptotic-giant branch sub-carbon star, zirconium oxide in spectrum
+        'R':   [ 9,  9,  9,  9,  9,  9,  8, -1,  9], // Red giant, carbon star equivalent of late G to early K-type stars
+        'N':   [10, 10,  8,  8,  8,  8,  8, -1, 10], // Red older carbon star, giant equivalent of late K to M-type stars
+        'C':   [ 8,  9,  9,  8,  8,  8,  7, -1,  8], // Red carbon star, giant/dwarf
+        'C-R': [ 9,  9,  9,  9,  9,  8,  7, -1,  9], // Red giant, carbon star, equivalent of late G to early K-type stars
+        'C-N': [10, 10,  8,  8,  8,  8,  7, -1, 10], // Red carbon star, older, giant equivalent of late K to M-type stars
+        'C-J': [10, 10, 10,  8,  2,  8, -1, -1, 10], // Red giant, cool carbon star with a high content of carbon-13
+        'C-H': [10, 10, 10,  8,  2, 10, -1, -1, 10], // Red giant, Population II equivalent of the C-R red giants
+        'C-Hd':[10, 10,  9,  8,  2, 10, -1, -1, 10], // Red giant, Hydrogen-deficient, similar to late G supergiants with CH and C2 bands added
+        'D':   [-1, -1, -1, -1, -1, -1, -1, 11, 11], // White dwarf
+        'DO':  [-1, -1, -1, -1, -1, -1, -1, 11, 11], // White Dwarf, very hot, helium-rich atmosphere, 45-120,000K
+        'DAO': [-1, -1, -1, -1, -1, -1, -1, 11, 11], // White Dwarf, very hot, hydrogen and helium-rich atmosphere, ionized helium lines, >30,000K
+        'DA':  [-1, -1, -1, -1, -1, -1, -1, 11, 11], // White Dwarf, hydrogen-rich, 30,000K
+        'DAB': [-1, -1, -1, -1, -1, -1, -1, 11, 11], // White Dwarf, hot, hydrogen and helium-rich atmosphere, neutral helium lines, 30,000K
+        'DAZ': [-1, -1, -1, -1, -1, -1, -1, 11, 11], // White Dwarf, hot, hydrogen-rich atmosphere, metallic spectral lines
+        'DB':  [-1, -1, -1, -1, -1, -1, -1, 11, 11], // White Dwarf, helium-rich, 15-30,000K
+        'DBZ': [-1, -1, -1, -1, -1, -1, -1, 11, 11], // White Dwarf, cool, 15-30,000K, neutral helium, He I, spectral lines, metallic spectral lines',
+        'DQ':  [-1, -1, -1, -1, -1, -1, -1, 11, 11], // White Dwarf, carbon-rich atmosphere, < 13,000K atomic or molecular carbon lines
+        'DZ':  [-1, -1, -1, -1, -1, -1, -1, 11, 11], // White Dwarf, cool, metal-rich atmosphere, < 11,000K, merges DG, DK, DM, DF types
+        'DG':  [-1, -1, -1, -1, -1, -1, -1, 11, 11], // White Dwarf, cool, metal-rich atmosphere, 6000K (old classification, now DZ)
+        'DK':  [-1, -1, -1, -1, -1, -1, -1, 11, 11], // White Dwarf, metal-rich atmosphere (old classification, now DZ)
+        'DM':  [-1, -1, -1, -1, -1, -1, -1, 11, 11], // White Dwarf, metal-rich atmosphere (old classification, now DZ)
+        'DF':  [-1, -1, -1, -1, -1, -1, -1, 11, 11], // White Dwarf, metal-rich, CaII, FeI, no H (old classification, now DZ)
+        'DC':  [-1, -1, -1, -1, -1, -1, -1, 11, 11], // White Dwarf, cool, no strong spectral lines, < 11,000K
+        'DX':  [-1, -1, -1, -1, -1, -1, -1, 11, 11], // White Dwarf, spectral lines unclear',
+        'L':   [-1, -1, -1, -1, -1, 12, 12, -1, 12], // Hot brown dwarf, lithium in atmosphere, dust grains
+        'T':   [-1, -1, -1, -1, -1, 13, 13, -1, 13], // Cool brown dwarf, methane in atmosphere
+        'Y':   [-1, -1, -1, -1, -1, 14, 14, -1, 14], // Gas giant, warm, able to fuse deuterium
+        'P':   [-1, -1, -1, -1, -1, 14, 15, -1, 15], // Gas giant, cold, Jupiter-like
+        'Q':   [ 0,  0,  0, -1, -1, -1, -1, -1,  0], // Recurring nova, white dwarf companion to mass donating star
+        '':    [ 4,  4,  4,  4,  4,  4,  4,  4,  4], // Unknown stellar type
     };
 
     // dynamically-filled prototype variables
@@ -164,6 +200,9 @@ var PCelestial = (function () {
 
     // Stellar colors based on spectrum (JSON)
     PCelestial.prototype.sprites = [];
+
+    // collect failed stellar type classifications for debugging
+    PCelestial.prototype.failedTypeLookup = [];
 
     // functions
 
@@ -317,60 +356,6 @@ var PCelestial = (function () {
 
     };
 
-    /**
-     * TODO: make color selector that tries
-     * - listed color
-     * - spectral type, if present
-     * TODO: use in celestial and scene alike (merge)
-     * @param {PCelestial.data} data
-     */
-    PCelestial.prototype.color = function (data) {
-
-        let util = this.util;
-
-        if (!util.isObject(data)) {
-            console.error('color ERROR: invalid data object passed:' + typeof data);
-            return null;
-        }
-
-        let color = data.color;
-        let c = null;
-
-        if (util.isString(data.spec)) {
-
-            let cc = this.getHygColor(data);
-            c = new BABYLON.Color3(cc[0], cc[1], cc[2]);
-
-
-        } else {
-            color = data.color;
-        }
-
-        // at this point, we should have an array with 3 valid colors
-        try {
-
-            // handle web versus BabylonJS color units (fails for [1,1,1])
-            if (color[0] + color[1] + color[2] > 3.0) {
-                color[0] /= 255,
-                color[1] /= 255,
-                color[2] /= 255
-            }
-
-            if (color.length === 3) {
-                c = new BABYLON.Color3(color[0], color[1], color[2]);
-            }
-            else if (color.length === 4) {
-                c = new BABYLON.Color4(color[0], color[1], color[2], color[3]);
-            }
-
-        } catch (e) {
-            console.error('color ERROR: could not make a valid color with:' + color);
-        }
-
-        return c;
-
-    };
-
     PCelestial.prototype.rotate = function (data) {
         console.log("celestial.rotate TODO:")
     };
@@ -421,15 +406,15 @@ var PCelestial = (function () {
     };
 
     /**
-     * set a readable name for the star
-     * @param {ObjectJSON} star Hyg3 data for a particular star
+     * set a readable name for the star created from the hyg record
+     * @param {Object.PData.HygObj} hyg - Hyg3 data for a particular star
      */
-    PCelestial.prototype.getHygSpriteName = function (star, sprite) {
+    PCelestial.prototype.getHygSpriteName = function (hyg) {
         let name = '';
-        let n = star.proper || star.bf;
+        let n = hyg.proper || hyg.bf;
         if (n.length) name = n;
-        else if (star.bayer && star.con) name = star.bayer + star.con;
-        else name = star.id;
+        else if (hyg.bayer && hyg.con) name = hyg.bayer + hyg.con;
+        else name = hyg.id;
 
         return name;
     };
@@ -491,20 +476,42 @@ var PCelestial = (function () {
         return this.spriteManager.sprites;
     };
 
-    /**
-     * 
-     * get the sprite index to display for this type
-     */
     PCelestial.prototype.getHygSpriteIndex = function (star) {
-        let s = star.spect[0];
-        let index = 0;
-        if (s) {
-            // TODO: adjust base on prop values.
-            index = this.dSpriteIndex[s.toUpperCase()];
+        let index = -1;
+        let SPRITE_INDEX_DEFAULT = this.SPRITE_INDEX_DEFAULT;
+
+        let pt = star.primary.type;
+        let si = this.ddSpriteIndex[pt]; // exact match to type needed
+
+        // M-K typelist, each type with a luminosity vs. spriteIndex array
+        if (si) {
+
+            // M-K luminosity - index lookup
+            let lc = this.ddLuminosityClassIndex; 
+            let pl = star.primary.luminosity;
+            if (pl) {
+
+                for (let j = 0; j < lc.length; j++) {  // look for luninosity class
+                    let idx = pl.indexOf(lc[j]);
+                    if (pl && idx == 0) {
+                        let ii = si[j];
+                        if (ii == -1) {
+                            console.log('bad index, proper:' + star.proper + ' type:' + pt + ' lum:' + lc[j] + ' index:' + si[j]);
+                        }
+                        return ii;
+                    }
+                } // end of loop
+
+            } // luminosity present
+
+            return si[SPRITE_INDEX_DEFAULT]; // no luminosity class present, use default for type
+
         } else {
-            index = this.dSpriteScreenIndex; // G
+            console.warn('.getHygSpriteIndex WARN: did not find:' + pt + ' in lookup');
+            this.failedTypeLookup.push(star)
         }
-        return index;
+
+        return SPRITE_INDEX_DEFAULT; // emergency default
     };
 
     /**
@@ -514,7 +521,7 @@ var PCelestial = (function () {
      * @param {Object.PData.HygObj} star
      * @param {BABYLON.Sprite} sprite
      */
-    PCelestial.prototype.getHygSpriteSize = function (star, sprite) {
+    PCelestial.prototype.setHygSpriteSize = function (star, sprite) {
 
         let util = this.util;
 
@@ -540,29 +547,10 @@ var PCelestial = (function () {
     };
 
     /**
-     * Get the overall color, based on spectral type
-     */
-    PCelestial.prototype.getHygSpriteColor = function (star, sprite) {
-
-        // compute the color
-        sprite.color = new BABYLON.Color4(star.r, star.g, star.b, 1.0);
-
-        // scale brightness up or down a bit based on absolute magnitude
-        let s = 1;
-        if (star.absmag < 0) {
-            s = Math.log10(-star.absMag);
-        } else {
-            s = Math.log10(-star.absmag);
-        }
-        // TODO: clamp upwards to 1, 1, 1 or 0,0,0 based on absmag
-
-    };
-
-    /**
      * Set the Star position in 3D space
      * @param {ObjectJSON} star Hyg3 data for a particular star
      */
-    PCelestial.prototype.getHygSpritePosition = function (star, sprite) {
+    PCelestial.prototype.setHygSpritePosition = function (star, sprite) {
         // dParsed units = 10, 10 units per parsec
 
         let maxHygDist = 100000;
@@ -687,6 +675,8 @@ var PCelestial = (function () {
         let pdata = this.pdata;
         let hygData = this.hygData;
         let numStars  = hygData.length; // an array of star data objects
+        let TWOPI = Math.PI * 2;
+        let camera = scene.cameras[0]; // can't used scene.activeCamera, conficts with WebXR
 
         // The loader should already have assigned these when we enter this function.
         if (!this.checkHygData(hygData)) return false;
@@ -712,8 +702,12 @@ var PCelestial = (function () {
 
         // start the hyg3 loop
 
+        // 0-20,000 - 58fps
+        //   40,000 - 30fps
+        //  119,000 - 23fps
+
         for (let i = 0; i < hygData.length; i++) {
-        //for (let i = 0; i < 200; i++) {
+        //for (let i = 0; i < 400; i++) {
 
             let star = hygData[i];
 
@@ -738,31 +732,40 @@ var PCelestial = (function () {
             sprite.isVisible = true;
             sprite.isPickable = true;
 
+            // random angle for sprite billboard image (not the same as stellar rotation)
+            sprite.angle = Math.random() * TWOPI;
+
             sprite.hyg = star;
 
             sprite.cellIndex = this.getHygSpriteIndex(star);
 
             // set the star position
-            this.getHygSpritePosition(star, sprite);
-            //this.getHygSpriteSize(star, sprite);
-            //this.getHygSpriteColor(star, sprite);
+            this.setHygSpritePosition(star, sprite);
+            this.setHygSpriteSize(star, sprite);
 
             //sprite.cellIndex = 1;
             sprite.width = sprite.height = dSpriteScreenSize * 2;
 
             // banard's star test case
             ///if (star.id == '87665') sprite.width = sprite.height = dSpriteScreenSize *20
+             if (star.id == "117999") { // high-carbon red dwarf
+                window.dwarf = sprite;
+                sprite.size /= 2;
+                sprite.lookAt = function () {camera.setTarget(this.position)}
+            }
+
+             
 
             //this.sprites.push(sprite);
 
             // update function for Sprites
-            //function update () {
-            //
-            //};
+            function update (sprite, cam) {
+            
+            };
 
-            //scene.registerBeforeRender(() => {
-            //    update();
-            //});
+            scene.registerBeforeRender(() => {
+                update();
+            });
 
         }
 

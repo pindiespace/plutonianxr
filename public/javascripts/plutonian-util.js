@@ -203,15 +203,20 @@ var PUtil = (function () {
     };
 
     /** 
-     * Given an associative arry of Number values, sort by those values, 
-     * and returns the keys. Used to sort Obj file groups, obj, and material 
-     * starts by their start positions in the overall arrays.
+     * sort an associate array (JS Object) by numerical values
      * @param {Object} obj - the associative array. Values MUST be numbers.
      * @return {Array} - a set of keys, sorted in order.
      */
-    PUtil.prototype.getSortedKeys = function (obj) {
-        let keys = Object.keys(obj);
-        return keys.sort(function(a, b) { return obj[b] - obj[a]});
+    PUtil.prototype.getSortedKeysbyValue = function (obj) {
+        return Object.keys.sort(function(a, b) { return obj[b] - obj[a]});
+    };
+
+    /**
+     * Sort an associative array (JS Object) by the length of its keys.
+     * @param {Object} obj - the associative array, any values
+     */
+    PUtil.prototype.getSortedKeysByLength = function (obj) {
+        return Object.keys(obj).sort((a,b) => b.length - a.length);
     };
 
     /**

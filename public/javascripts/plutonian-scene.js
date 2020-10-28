@@ -364,16 +364,12 @@ var PWorld = (function () {
         //mat.backFaceCulling = true;
 
         // space volumes only have color, no texture
-        let clr = celestial.color(data);
+        let clr = pdata.getColor(data.color);
 
-        if (clr) {
-            mat.diffuseColor = clr;
-            // make the SpaceVolume bright, independent of dark objects
-
-        } else {
-            mat.diffuseColor = new BABYLON.Color3.Green();
-        }
-
+        if (!clr) clr = new BABYLON.Color3.Green();
+ 
+        mat.diffuseColor = clr;
+ 
         // soft specular highlight
         mat.specularColor = new BABYLON.Color3(0.3, 0.3, 0.3);
 
@@ -782,6 +778,7 @@ var PWorld = (function () {
     PWorld.prototype.setMaterial = function (pObj, model, dir, scene) {
 
         const util = this.util;
+        const pdata = this.pdata;
         const celestial = this.celestial;
 
         let data = pObj.data;
@@ -799,8 +796,8 @@ var PWorld = (function () {
             return null;
         }
 
-        // color (either an array, or from spectral type for Stars)
-        let clr = celestial.color(pObj.data);
+        // color
+        let clr = pdata.getColor(data.color);
         if (!clr) {
             console.error('setMaterial Warning: no pObj:' + pObj.name + ' color specified, setting GREY');
             clr = [0.5, 0.5, 0.5];
@@ -1077,8 +1074,14 @@ var PWorld = (function () {
         // set user interactions
         this.setMeshMetaData(pObj, scene);
 
-        // create 2D GUI label
-        //////////////////////this.ui.createLabel(pObj, scene, false, false);
+        // TODO: create 2D GUI label
+//////////////////////////////////////////////
+            //let pScene = this;
+            //let imgsrc = dir + pObj.dname + '/textures/' + pObj.descimg;
+            //if (pObj.descimg) {
+            //    pObj.plutoLabel = pScene.ui.createGUILabel(pObj, imgsrc, scene, false, true); // 2D ONLY
+            //}
+///////////////////////////////////////////////
 
         return mesh;
 
@@ -1127,8 +1130,6 @@ var PWorld = (function () {
         let mesh = this.loadPlanetModel(pObj, dir + '/', scene, parent);
 
         if (mesh) {
-
-            //////////////////////this.ui.createLabel(pObj, scene, true, true);
 
             // draw the moons
 
@@ -1206,8 +1207,22 @@ var PWorld = (function () {
             //pObj.tMesh = new BABYLON.TransformNode("root"); 
 
             // add 2 'false' to turn off visibility and pickability
+
+            // create labels
+            // image for description
+
+//////////////////////////////////////
+/*
+            let pScene = this;
+            if (pObj.descimg) {
+                let imgsrc = dir + '/' + pObj.dname + '/' + '/stars/sol/textures/' + pObj.descimg;
+                console.log("DESCIMG::::::::::::::::" + imgsrc);
+                pScene.ui.createGUILabel(pObj, imgsrc, scene); // 2D ONLY
+            }
+*/
+///////////////////////////////////////
+
             //this.ui.createMeshLabel(pObj, scene);
-            ////////////////////////////this.ui.createGUILabel(pObj, scene); // 2D ONLY
 
             if (util.isArray(pObj.stars)) {
                 for(let i = 0; i < pObj.stars.length; i++) {
@@ -1477,7 +1492,9 @@ var PWorld = (function () {
         }
 
         // set pickerInteractions, we can only use .onPointerDown ONCE
-
+        /////////////////////////////////////////////////////
+        let pWorld = this; ///////////////////////////////////////////////////////////
+        ////////////////////////////////////////////////////
         scene.onPointerDown = function (evt) {
 
             let cam = this.activeCamera;
@@ -1496,12 +1513,12 @@ var PWorld = (function () {
                     let s = pickResult.pickedSprite;
                     let hyg = s.hyg;
                     console.log('^^^^^^^^^^^^^^^^^^^^^^');
-                    console.log('Picked SPRITE is:' + s.name + ' hygid:' + hyg.id);
-                    console.log('Description:' + hyg.description);
-                    // NOTE: default camera wash pushed into array when the camera was created
-                    let dist = BABYLON.Vector3.Distance(cam.position, s.position);
-                    console.log('Distance:' + dist + ' width:' + s.width + ' height:' + s.height);
-                    console.log('Camera at:' + cam.position);
+                    console.log('Picked SPRITE is:' + s.name + ' hygid:' + hyg.id + ' spect:' + hyg.spect);
+                    console.log('DESCRIPTION:' + hyg.description);
+                    // NOTE: default camera was pushed into array when the camera was created
+                    /////////////let dist = BABYLON.Vector3.Distance(cam.position, s.position);
+                    ///////////console.log('Distance:' + dist + ' width:' + s.width + ' height:' + s.height);
+                    ////////console.log('Camera at:' + cam.position);
                     window.sprite = s; // TODO: remove
                 }
 
@@ -1517,11 +1534,31 @@ var PWorld = (function () {
                         console.log('^^^^^^^^^^^^^^^^^^^^^^');
                         console.log('Picked MESH is:' + m.name + ' pObj:' + m.pObj.name);
                         let dist = BABYLON.Vector3.Distance(cam.position, m.position);
+
+                        ///////////////////////////////////////
+                        ///////////////////////////////////////
+                        // TODO: temporary, experiment with Pluto UI
+                        if (m.name == 'pluto') {
+                            let l = m.pObj.plutoLabel;
+                            if (l) {
+                            console.log("plutolabel is:" + l )
+                                if (l.rect.isVisible) {
+                                    l.rect.isVisible = false;
+                                    l.line.isVisible = false;
+                                } else {
+                                    l.rect.isVisible = true;
+                                    l.line.isVisible = true;
+                                }
+                            }
+                        }
+                        ///////////////////////////////////////
+                        ///////////////////////////////////////
+
                         //console.log('Distance:' + util.computeDistance3(cam.position, m.position));
-                        let w = m.getBoundingInfo().boundingBox.maximum;
-                        let h = m.getBoundingInfo().boundingBox.minimum;
-                        console.log('Distance:' + dist + ' max:' + w + ' min:' + h);
-                        console.log('Camera at:' + cam.position);
+                        ///////let w = m.getBoundingInfo().boundingBox.maximum;
+                        ///////let h = m.getBoundingInfo().boundingBox.minimum;
+                        ///////console.log('Distance:' + dist + ' max:' + w + ' min:' + h);
+                        /////////console.log('Camera at:' + cam.position);
                         window.mesh = m;
                         // skybox is at m.infiniteDistance
                     }
@@ -1540,10 +1577,10 @@ var PWorld = (function () {
                     console.log('Picked RAY MESH:' + m.name + ' pObj:' + m.pObj.name);
                     let dist = BABYLON.Vector3.Distance(cam.position, m.position);
                     //console.log('Distance:' + util.computeDistance3(cam.position, m.position));
-                    let w = m.getBoundingInfo().boundingBox.maximum;
-                    let h = m.getBoundingInfo().boundingBox.minimum;
-                    console.log('Distance:' + dist + ' max:' + w + ' min:' + h);
-                    console.log('Camera at:' + cam.position);
+                    //////let w = m.getBoundingInfo().boundingBox.maximum;
+                    //////let h = m.getBoundingInfo().boundingBox.minimum;
+                    //////console.log('Distance:' + dist + ' max:' + w + ' min:' + h);
+                    //////console.log('Camera at:' + cam.position);
                     //createGUIButton();
 
                     // NOTE: TODO: disable "local_group" and "skybox" for picking after debug
