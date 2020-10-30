@@ -82,26 +82,18 @@ var PData = (function () {
         UNKNOWN: 'unknown'
     };
 
-    PData.prototype.SPECT_CONFIDENCE = {
-        CERTAIN: 4,
-        PROBABLE: 3,
-        LIKELY: 2,
-        UNCERTAIN: 1,
-        NONE: 0
-    };
-
     /**
      * create a PSpectrum property object, storing values extract from the spectrum string.
      * NOTE: does not contain the same fields as PHyg object.
      * @param {String} spect a stellar spectral string, e.g. 'A5IIb'
      * @param {Pdata.SPECT_ROLES} role the role of a sub-spectra, e.g. 'A7' in 'A6/7V'
-     * @param {Number} confidence a numerical score for correct spectral classification, defined in PSpectra
+     * @param {Number} confidence a numerical (0-100) score for correct spectral classification, defined in PSpectra
      */
-    PData.prototype.createPSpectrum = function (spect = '', role = '', confidence = 0 ) {
+    PData.prototype.createPSpectrum = function (spect = '', role = '') {
         return {
             spect: spect || this.EMPTY, // spectra (sub)string
+            computed: false, // set true if we compute spectra from hyg properties
             role: role || this.SPECT_ROLES.UNKNOWN, // role of sub-spectra
-            confidence: confidence || this.ZERO, // confidence in results
             type: {
                 key: this.EMPTY, // stellar type (O, A, B,...), values defined in PSpectrum
             },

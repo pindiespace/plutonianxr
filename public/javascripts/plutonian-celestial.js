@@ -340,7 +340,7 @@ var PCelestial = (function () {
                 window.tt = t;
                 break;
 
-        }
+        };
 
         // warnings for objects without data yet
 
@@ -420,46 +420,15 @@ var PCelestial = (function () {
     };
 
     /**
-     * Get the colors by loading a JSON file
+     * Get the colors from the hyg record (if they're not there, they can't be computed)
+     * NOTE: specifying a Sprite color SLOWS IT DOWN!
      * @param {ObjectJSON} star Hyg3 data for a particular star
      * @param {String} name name of star (for error message)
+     * @return {BABYLON.Color3}
      */
-    PCelestial.prototype.getHygColor = function (star) {
-
-        let spectra = this.spectra;
-
-        let c = null;
-        let s = star.spect; // complete spectrum
-        let slook = this.spectra.spectLookup;
-
-        // look for an exact match to the spectral type
-        c = slook[s];
-        if (c) {
-            return [c.r, c.g, c.b];
-        }
-
-        /////////////////////////////////////
-        // TODO: THIS SHOULD RELY ON PROPS 
-        // TODO:
-        // TODO:
-        /////////////////////////////////////
-
-        // if an exact match doesn't exist, truncate, e.g. 'M5Ve'...'M5V'...'M5'...'M'
-        for (i = s.length - 2; i > 1; i--) {
-            let t = s.substring(0, i);
-            c = slook[t];
-            if (c) {
-                return [c.r, c.g, c.b];
-            }
-        }
-
-        // if everything fails, make it white, includes 'pec' for novas
-        if (!c) {
-
-            return [1, 1, 1];
-
-        }
-
+    PCelestial.prototype.getHygColor = function (hyg) {
+        if (hyg.r + hyg.g + hyg.b > 0) return [hyg.r, hyg.g, hyg.b];
+        else return [1, 1, 1];
     };
 
     /**
@@ -534,16 +503,7 @@ var PCelestial = (function () {
 
         sprite.width = w,
         sprite.height = h;
-
         sprite.size = 0.69897 + (Math.log10(Number(star.radius) + 1));
-
-////////////////////////
-        sprite.width = sprite.height = 1;
-        sprite.size = 1;
-///////////////////////
-
-        //console.log('star.radius:' + Math.round(star.radius) + ' sprite.size:' + Math.round(sprite.size) + ' rounded:' + util.roundToFixed(sprite.size, 2));
-
     };
 
     /**
@@ -707,26 +667,23 @@ var PCelestial = (function () {
         //  119,000 - 23fps
 
         for (let i = 0; i < hygData.length; i++) {
-        //for (let i = 0; i < 400; i++) {
+        //////////////////////for (let i = 0; i < 400; i++) {
 
-            let star = hygData[i];
+            let hyg = hygData[i];
 
             /* 
              * extract stellar properties from the spectrum, returns props
              * NOTE: already merged props with hyg fields
              * NOTE: 'p' are the extracted properties
-             * NOTE: 'star' is the hyg object with properties augmented by spectrum data
+             * NOTE: 'hyg' is a hyg record with properties augmented by spectrum data
              */
-            let p = this.spectra.spectrumToStellarData(star);
+            let p = this.spectra.spectrumToStellarData(hyg);
 
-            let name = this.getHygSpriteName(star);
+            let name = this.getHygSpriteName(hyg);
 
             // create the Sprite
             let sprite = new BABYLON.Sprite(name, sManager); 
             sprite.stopAnimation();
-
-            //let sprite = {};
-            //sprite.position = {};
 
             // make the sprite static
             sprite.isVisible = true;
@@ -735,28 +692,32 @@ var PCelestial = (function () {
             // random angle for sprite billboard image (not the same as stellar rotation)
             sprite.angle = Math.random() * TWOPI;
 
-            sprite.hyg = star;
+            sprite.hyg = hyg;
 
-            sprite.cellIndex = this.getHygSpriteIndex(star);
+            sprite.cellIndex = this.getHygSpriteIndex(hyg);
 
             // set the star position
-            this.setHygSpritePosition(star, sprite);
-            this.setHygSpriteSize(star, sprite);
+            this.setHygSpritePosition(hyg, sprite);
+            //// TODO:
+            this.setHygSpriteSize(hyg, sprite);
+            /// TODO:
+            /// TODO:
 
-            //sprite.cellIndex = 1;
-            sprite.width = sprite.height = dSpriteScreenSize * 2;
-
+            // TODO: possibly a way to "apply" or "call" so we don't have to create a unique function
+            // TODO:
+            // TODO:
             // banard's star test case
-            ///if (star.id == '87665') sprite.width = sprite.height = dSpriteScreenSize *20
-             if (star.id == "117999") { // high-carbon red dwarf
+            ///if (hyg.id == '87665') sprite.width = sprite.height = dSpriteScreenSize *20
+             if (hyg.id == "117999") { // high-carbon red dwarf
                 window.dwarf = sprite;
-                sprite.size /= 2;
                 sprite.lookAt = function () {camera.setTarget(this.position)}
             }
 
-             
+            if (sprite.size > 3) {
+                window.big = sprite;
+                big.lookAt = function () {camera.setTarget(this.position)}
+            }
 
-            //this.sprites.push(sprite);
 
             // update function for Sprites
             function update (sprite, cam) {

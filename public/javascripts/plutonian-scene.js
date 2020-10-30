@@ -798,6 +798,7 @@ var PWorld = (function () {
 
         // color
         let clr = pdata.getColor(data.color);
+
         if (!clr) {
             console.error('setMaterial Warning: no pObj:' + pObj.name + ' color specified, setting GREY');
             clr = [0.5, 0.5, 0.5];
@@ -1513,7 +1514,7 @@ var PWorld = (function () {
                     let s = pickResult.pickedSprite;
                     let hyg = s.hyg;
                     console.log('^^^^^^^^^^^^^^^^^^^^^^');
-                    console.log('Picked SPRITE is:' + s.name + ' hygid:' + hyg.id + ' spect:' + hyg.spect);
+                    console.log('Picked SPRITE is:' + s.name + ' hygid:' + hyg.id + ' spect:' + hyg.spect + ' computed:' + hyg.computed + ' lastditch:' + hyg.lastditch + ' lum:' + hyg.lum + ' radius:' + hyg.radius + ' size:' + pickResult.pickedSprite.size);
                     console.log('DESCRIPTION:' + hyg.description);
                     // NOTE: default camera was pushed into array when the camera was created
                     /////////////let dist = BABYLON.Vector3.Distance(cam.position, s.position);
