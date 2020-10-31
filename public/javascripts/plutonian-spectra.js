@@ -28,7 +28,7 @@ var PSpectrum = (function () {
         // create a keylist for .dStarMods, sorted by size (reduces pattern-matching ambiguity)
         this.dStarModKeys = Object.keys(this.dStarMods).sort((a,b) => b.length - a.length);
 
-        this.spectLookupKeys = {}; // initialized on loading
+        this.spectLookupKeys = {}; // initialized on loading, since it dependes on loaded JSON
 
     };
 
@@ -61,7 +61,7 @@ var PSpectrum = (function () {
         radiusKm: 695700,
         lumWatts: 3.828E+26,
         absmag: 4.83,
-        temp: 5778, // kelvins
+        temp: 5778, // Kelvins
         metallicity: 1.0
     };
 
@@ -69,7 +69,7 @@ var PSpectrum = (function () {
      * exoplanet masses expressed as (Mass)Exoplanet / (Mass)Jupiter
      */
     PSpectrum.prototype.JUPITER = {
-        mEarth: 317.646185839028
+        mass: 317.646185839028 // multiple of Earth's mass
     };
 
     /**
@@ -130,59 +130,105 @@ var PSpectrum = (function () {
     PSpectrum.prototype.dStarWeightedProps = {
         'WN-III':{mass:70.2,luminosity:376000,radius:15.6,temp:36800,ci:-0.32,absmag:-5.5,bolo:-3.69,r:0.6078,g:0.7020,b:1},
         'WN-V':{mass:37,luminosity:260000,radius:12.9,temp:36800,ci:-0.32,absmag:-5.1,bolo:-3.69,r:0.5921,g:0.6823,b:1},
+        'O-Ia0':{mass: 159.7,luminosity:2.71E+07,radius:7.88E+01,temp:47600,ci:-0.35,absmag:-9.4,bolo:-4.43,r:0.5647,g:0.6510,b:1},
+        'O-Ia+':{mass: 159.7,luminosity:2.71E+07,radius:7.88E+01,temp:47600,ci:-0.35,absmag:-9.4,bolo:-4.43,r:0.5647,g:0.6510,b:1},
         'O-Ia':{mass:63.1,luminosity:731000,radius:38.5,temp:27600,ci:-0.29,absmag:-7,bolo:-2.91,r:0.6431,g:0.7255,b:1},
+        'O-Iab':{mass:58.8,luminosity:525000,radius:32,temp:27600,ci:-0.29,absmag:-6.6,bolo:-2.91,r:6431,g:0.7255,b:1},
         'O-Ib':{mass:54.5,luminosity:319000,radius:25.5,temp:27600,ci:-0.29,absmag:-6.1,bolo:-2.91,r:0.6431,g:0.7255,b:1},
+        'O-I':{mass:53.6,luminosity:3.13E+05,radius:1.42E+01,temp:36800,ci:-0.32,absmag:-5.3,bolo:-3.69,r:0.6118,g:0.6862,b:1},
         'O-II':{mass:50.33,luminosity:315000,radius:19.92,temp:30933,ci:-0.303,absmag:-5.75,bolo:-3.211,r:0.6405,g:0.7229,b:1},
         'O-III':{mass:41.58,luminosity:185500,radius:15.075,temp:31117,ci:-0.304,absmag:-5.16,bolo:-3.2275,r:0.6242,g:0.7251,b:1},
         'O-IV':{mass:28.6,luminosity:110000,radius:12.5,temp:30200,ci:-0.3,absmag:-4.7,bolo:-3.15,r:0.6196,g:0.6941,b:1},
-        'O-V':{mass:23.73,luminosity:81571.74,radius:10.52,temp:33543,ci:-0.329,absmag:-4.53,bolo:-3.485,r:0.6594,g:0.7532,b:1.0869},
+        'O-V':{mass:23.73,luminosity:81571.74,radius:10.52,temp:33543,ci:-0.329,absmag:-4.53,bolo:-3.485,r:0.6594,g:0.7532,b:1},
+        'O-VI':{mass:17.5,luminosity:3.02E+05,radius:1.24E+01,temp:39000,ci:-0.33,absmag:-5.1,bolo:-3.85,r:0.6078,g:0.6902,b: 1},
         'A-Ia0':{mass:15.18,luminosity:198500,radius:162.75,temp:9706.75,ci:-0.0574,absmag:-8.1,bolo:-0.39,r:0.7196,g:0.7843,b:1},
+        'A-Ia+':{mass:15.18,luminosity:198500,radius:162.75,temp:9706.75,ci:-0.0574,absmag:-8.1,bolo:-0.39,r:0.7196,g:0.7843,b:1},
         'A-Ia':{mass:12.65,luminosity:129690.48,radius:138.95,temp:9495,ci:-0.0357,absmag:-7.64,bolo:-0.36,r:0.7868,g:0.842,b:1},
+        'A-Iab':{mass:11.54,luminosity:71564.75,radius:91.96,temp:9450,ci:-0.0323,absmag:-6.43,bolo:-0.35,r:0.7894,g:0.844,b:1},
         'A-Ib':{mass:10.43,luminosity:13439.02,radius:44.97,temp:9405,ci:-0.029,absmag:-5.22,bolo:-0.344,r:0.7920,g:0.8453,b:1},
         'A-II':{mass:7.96,luminosity:1664.23,radius:17.22,temp:8927,ci:0.0249,absmag:-2.97,bolo:-0.27,r:0.8178,g:0.8617,b:1},
         'A-III':{mass:6,luminosity:75.73,radius:3.61,temp:8811,ci:0.044,absmag:0.48,bolo:-0.26,r:0.7545,g:0.8189,b:1},
         'A-IV':{mass:4.24,luminosity:46.47,radius:2.70,temp:8974,ci:0.0251,absmag:1.06,bolo:-0.28,r:0.76859,g:0.8218,b:1},
         'A-V':{mass:3.73,luminosity:54.62,radius:3.21,temp:11926,ci:0.00561,absmag:1.57,bolo:-0.41,r:0.64,g:0.75,b:1.3016},
+        'A-Va':{mass:1.9,luminosity:1.70E+01,radius:1.89E+00,temp:8650,ci:0.05,absmag:1.9,bolo:-0.23,r:0.8314,g:0.8627,b:1},
+        'A-Vb':{mass:1.7,luminosity:8.85E+00,radius:1.75E+00,temp:7650,ci:0.24,absmag:2.5,bolo:-0.12,r:0.8784,g:0.8902,b:1},
         'A-VI':{mass:1.7,luminosity:10.58,radius:1.34,temp:8900,ci:0.020,absmag:2.6,bolo:-0.27,r:0.7569,g:0.8137,b:1},
         'B-Ia0':{mass:17.7,luminosity:273000,radius:131,temp:11710,ci:-0.11,absmag:-8.1,bolo:-0.74,r:0.6941,g:0.7647,b:1},
+        'B-Ia+':{mass:17.7,luminosity:273000,radius:131,temp:11710,ci:-0.11,absmag:-8.1,bolo:-0.74,r:0.6941,g:0.7647,b:1},
+        'B-I':{mass:26.2,luminosity:3.38E+05,radius:4.92E+01,temp:20160,ci:-0.23,absmag:-7,bolo:-2.07,r: 0.7333,g:0.7961,b:1},
         'B-Ia':{mass:32.10,luminosity:402627.74,radius:52.08,temp:20826,ci:-0.229,absmag:-7.06,bolo:-2.106,r:0.6912,g:0.7753,b:1},
+        'B-Iab':{mass:29.56,luminosity:267294.76,radius:40.45,temp:20583,ci:-0.226,absmag:-6.50,bolo:-2.070,r:0.6929,g:7771,b:1},
         'B-Ib':{mass:27.02,luminosity:131961.81,radius:28.82,temp:20340,ci:-0.223,absmag:-5.77,bolo:-2.034,r:0.6946,g:0.7788,b:1},
         'B-II':{mass:16.64,luminosity:40379.58,radius:16.56,temp:17508,ci:-0.191,absmag:-4.28,bolo:-1.615,r:0.7227,g:0.7997,b:1},
         'B-III':{mass:12.76,luminosity:11227.15,radius:6.13,temp:17144,ci:-0.186,absmag:-1.92,bolo:-1.564,r:0.6890,g:0.7714,b:1},
         'B-IV':{mass:9.45,luminosity:7653.59,radius:5.014,temp:17008,ci:-0.182,absmag:-1.43,bolo:-1.535,r:0.6680,g:0.7436,b:1},
         'B-V':{mass:9.05,luminosity:5730.48,radius:5.325,temp:22555,ci:-0.242,absmag:-1.26,bolo:-2.03,r:0.9047,g:0.95,b:1},
+        'B-VI':{mass: 2.9,luminosity:6.67E+02,radius:2.47E+00,temp:18950,ci:-0.22,absmag:-0.4,bolo:-1.91,r:0.6667,g:0.7490,b:1},
         'F-Ia':{mass:9.28,luminosity:175000,radius:287.09,temp:7074,ci:0.377,absmag:-8.22,bolo:-0.11,r:0.9219,g:0.9223,b:0.9853},
+        'F-Iab':{mass:8.38,luminosity:127279,radius:176.00,temp:6982,ci:0.397,absmag:-6.55,bolo:0.11,r:9355,g:0.9302,b:0.9852},
         'F-Ib':{mass:7.47,luminosity:7955.88,radius:65.21,temp:6890,ci:0.417,absmag:-4.89,bolo:-0.10,r:0.9491,g:0.9381,b:0.9851},
+        'F-I':{mass:6.3,luminosity:7.82E+02,radius:1.97E+01,temp:6980,ci:0.39,absmag:-2.4,bolo: -0.08,r:0.9255,g:0.9294,b:1},
         'F-II':{mass:6.16,luminosity:807.33,radius:20.77,temp:6870,ci:0.419,absmag:-2.43,bolo:-0.09,r:0.9168,g:0.9190,b:0.9948},
         'F-III':{mass:4.80,luminosity:21.35,radius:3.24,temp:7027,ci:0.383,absmag:1.52,bolo:-0.09,r:0.8964,g:0.9122,b:1},
         'F-IV':{mass:3.04,luminosity:15.58,radius:2.85,temp:6910,ci:0.41,absmag:1.89,bolo:-0.09,r:0.9277,g:0.9312,b:0.9998},
         'F-V':{mass:2.055,luminosity:7.63,radius:2.12,temp:8259,ci:0.531,absmag:3.75,bolo:-0.11,r:0.89,g:0.90,b:1},
+        'F-Va':{mass:1.4,luminosity:3.75E+00,radius:1.48E+00,temp:6700,ci:0.46,absmag:3.4,bolo:-0.08,r:0.9451,g:0.9372,b:1},
+        'F-Vb':{mass:1.2,luminosity:2.41E+00,radius:1.35E+00,temp:6280,ci:0.56,absmag:3.9,bolo:-0.11,r:1,g:0.9882,b:0.9922},
         'F-VI':{mass:1.11,luminosity:1.12,radius:0.79,temp:6675,ci:0.466,absmag:4.81,bolo:-0.0945,r:0.9576,g:0.9494,b:0.9964},
         'G-Ia0':{mass:10.83,luminosity:686666.67,radius:1101.33,temp:5295,ci:0.843,absmag:-9.36,bolo:-0.40,r:1,g:0.9608,b:0.9582},
-        'G-Ia':{mass:7.02,luminosity:150750,radius:546.625,temp:5108,ci:0.901,absmag:-7.7,bolo:-0.48,r:1,g:0.9174,b:0.79},
+        'G-I':{mass:7.5,luminosity:1.70E+05,radius:6.49E+02,temp:5169,ci:0.903,absmag:-8.1,bolo:-0.62,r:1,g:0.9059,b:0.7569},
+        'G-Ia':{mass:7.02,luminosity:150750,radius:546.625,temp:5108,ci:0.901,absmag:-7.7,bolo:-0.48,r:1,g:0.9174,b:0.7900},
+        'G-Iab':{mass:4.96,luminosity:8342.42,radius:273.39,temp:5066,ci:0.9260,absmag:-5.83,bolo:-502,r:1,g:0.9132,b:7806},
         'G-Ib':{mass:2.97,luminosity:9934.83,radius:148.32,temp:4944,ci:0.9511,absmag:-4.66,bolo:-0.544,r:1,g:0.9092,b:0.7712},
         'G-II':{mass:2.72,luminosity:1690.99,radius:73.84,temp:4442,ci:1.12,absmag:-2.44,bolo:-0.843,r:1,g:0.8827,b:0.6974},
+        'G-IIb':{mass:2.44,luminosity:905,radius:46,remp:4354,ci:1.14,absmag:-0,bolo:-0.87,r:1,g:0.8932,b:0.7365},
         'G-III':{mass:2.16,luminosity:120.29,radius:20.525,temp:4307,ci:1.163,absmag:0.49,bolo:-0.93,r:1,g:0.9039,b:0.7556},
+        'G-IIIa':{mass:1.92,luminosity:80,radius:15,temp:4940,ci:1.12,absmag:0.85,bolo:-0.6,r:1,g:0.9102,b:0.7854},
+        'G-IIIb':{mass:1.62,luminosity:20,radius:6,temp:5140,ci:0.97,absmag:2.25,bolo:-0.4,r:1,g:0.9177,b:0.8102},
         'G-IV':{mass:1.48,luminosity:6.43,radius:3.04,temp:5374,ci:0.813,absmag:3.03,bolo:-0.30,r:1,g:0.9232,b:0.8296},
-        'G-VI':{mass:0.83,luminosity:0.3362,radius:0.616,temp:5618,ci:0.739,absmag:6.23,bolo:-0.23,r:1,g:0.9540,b:0.9302},
+        'G-IVa':{mass:1.5,luminosity:6.20E+00,radius:2.76E+00,temp:5560,ci:0.75,absmag:3,bolo:-0.23,r:1,g:0.9529,b:0.9137},
         'G-V':{mass:1.32,luminosity:2.67,radius:1.85,temp:6899,ci:0.926,absmag:5.58,bolo:-0.29,r:1,g:9253,b:0.861},
+        'G-Va':{mass:0.9,luminosity:8.41E-01,radius:1.06E+00,temp:5450,ci:0.79,absmag:5.2,bolo:-0.26,r:1,g:0.9216,b:0.8353},
+        'G-Vb':{mass:0.8,luminosity:5.66E-01,radius:1.03E+00,temp:5010,ci:0.92,absmag:5.8,bolo:-0.43,r:1,g:0.8980,b:0.7843},
+        'G-VI':{mass:0.83,luminosity:0.3362,radius:0.616,temp:5618,ci:0.739,absmag:6.23,bolo:-0.23,r:1,g:0.9540,b:0.9302},
+        'G-VII':{mass:0.50,luminosity:2.40,radius:1.57,temp:5051,ci:0.644,absmag:7.59,bolo:-2.62,r:1,g:0.8990,b:0.7325},
         'K-Ia0':{mass:15,luminosity:1680000,radius:3090,temp:3800,ci:1.365,absmag:-9.3,bolo:-1.505,r:1,g:0.8686,b:0.7392},
+        'K-I':{mass:9.3,luminosity:210000.33,radius:2013.33,temp:3943,ci:1.3,absmag:-8.47,bolo:-1.39,r:1,g:0.8544,b:0.6905},
         'K-Ia':{mass:8.6,luminosity:230333.33,radius:1013.33,temp:4043,ci:1.267,absmag:-7.47,bolo:-1.19,r:1,g:0.8444,b:0.6405},
+        'K-Iab':{mass:6.74,luminosity:128067.50,radius:686.73,temp:3531,ci:1.291,absmag:-6.18,bolo:-1.275,r:1,g:0.8353,b:6118},
         'K-Ib':{mass:4.48,luminosity:25802.56,radius:360.46,temp:3919,ci:1.3159,absmag:-4.88,bolo:-1.347,r:1,g:0.8262,b:0.5831},
-        'K-II':{mass:3.332224532,luminosity:2446.99,radius:105.66,temp:4021,ci:1.274,absmag:-2.5,bolo:-1.214,r:1,g:0.8453,b:0.6321},
-        'K-III':{mass:2.46,luminosity:204.32,radius:30.55,temp:4003,ci:1.282,absmag:0.28,bolo:-1.24,r:1,g:0.8738,b:0.6758},
+        'K-II':{mass:3.33,luminosity:2446.99,radius:105.66,temp:4021,ci:1.274,absmag:-2.5,bolo:-1.214,r:1,g:0.8453,b:0.6321},
+        'K-IIb':{mass:2.89,luminosity:1000,radius:700,temp:4010,ci:1.277,absmag:-0.5,bolo:-1.22,r:1,g:0.8566,b:0.6523},
+        'K-III':{mass:2.46,luminosity:504.32,radius:200.55,temp:4003,ci:1.282,absmag:0.28,bolo:-1.24,r:1,g:0.8738,b:0.6758},
+        'K-IIIa':{mass:2.03,luminosity:201.22,radius:90,temp:4129,ci:1.2,absmag:1,bolo:-1,r:1,g:0.9300,b:0.7210},
+        'K-IIIb':{mass:1.83,luminosity:105,radius:17,temp:4392,ci:0.54,absmag:2,bolo:-0.8,r:1,g:0.9160,b:0.7114},
         'K-IV':{mass:1.61,luminosity:7.69,radius:4.19,temp:4782,ci:0.9973,absmag:3.10,bolo:-0.56,r:1,g:0.8780,b:0.7168},
         'K-V':{mass:1.26,luminosity:2.89,radius:2.38,temp:6121,ci:1.395,absmag:7.54,bolo:-0.91,r:1,g:0.8287,b:0.61},
         'K-VI':{mass:0.7,luminosity:0.15,radius:0.553,temp:4900,ci:0.96,absmag:7.3,bolo:-0.49,r:1,g:0.9333,b:0.8667},
         'M-Ia0':{mass:14.033,luminosity:4596666.67,radius:7243.33,temp:3193,ci:1.64,absmag:-9.23,bolo:-2.66,r:1,g:0.7791,b:0.5281},
         'M-Ia':{mass:11.95,luminosity:626916.67,radius:2615.83,temp:3257,ci:1.612,absmag:-7.09,bolo:-2.552,r:1,g:0.7598,b:0.4611},
+        'M-Iab':{mass:10.69,luminosity:674372.62,raduis:2564.5,temp:3224,ci:1.634,absmag:-6.28,bolo:-2.705,r:1,g:0.7503,b:0.4650},
         'M-Ib':{mass:9.53,luminosity:721828.57,radius:2584.14,temp:3190,ci:1.656,absmag:-5.48,bolo:-2.858,r:1,g:0.7488,b:0.4189},
+        'M-I':{mass:7.8,luminosity:5.86E+03,radius:2.13E+02,temp:3510,ci:1.49,absmag:-2.7,bolo:-1.97,r:1,g:0.7921,b:0.5411},
         'M-II':{mass:7.092,luminosity:27072,radius:591.125,temp:3118,ci:1.689,absmag:-2.78,bolo:-2.991,r:1,g:0.7421,b:0.4143},
+        'M-IIa':{mass:6.4,luminosity:4.62E+04,radius:9.76E+02,temp:2750,ci:1.88,absmag:-2.9,bolo:-4.01,r:1,g:0.6980,b:0.3059},
+        'M-IIb':{mass:6.49,luminosity:1478,radius:373,temp:3207,ci:1.624,absmag:-1.69,bolo:-2.77,r:4,g:0.7686,b:4215},
         'M-III':{mass:5.06,luminosity:2489.81,radius:156.92,temp:3296,ci:1.560,absmag:-0.61,bolo:-2.54,r:1,g:0.7951,b:0.4827},
+        'M-IIIa':{mass:4.12,luminosity:1292.00,radius:94.00,temp:3273,ci:1.561,absmag:2,bolo:-2.61,r:1,g:0.7703,b:0.4884},
+        'M-IIIb':{mass:3.40,luminosity:500,radius:60,temp:3266,ci:1.58,absmag:3,bolo:-2.64,r:1,g:0.7721,b:0.4910},
         'M-IV':{mass:2.85,luminosity:95.73,radius:32.78,temp:3250,ci:1.62,absmag:3.22,bolo:-2.68,r:1,g:0.7745,b:0.4941},
         'M-V':{mass:0.50,luminosity:2.40,radius:1.57,temp:3351,ci:1.644,absmag:10.59,bolo:-2.62,r:1,g:0.8490,b:0.6325},
         'M-VI':{mass:0.14,luminosity:0.0051,radius:0.26,temp:2833,ci:1.838,absmag:14.76,bolo:-3.84,r:1,g:0.7905,b:0.4829},
+        'N-V':{mass:0.2,luminosity:6.24E-03,radius:3.81E-01,temp:2667,ci:1.93,absmag:14.6,bolo:-4.34,r:1,g:0.8196,b:0.6039},
+        'C-Ia0':{mass:12,luminosity:8.13E+05,radius:1.42E+03,temp:4669,ci:1.03,absmag:-9.4,bolo:-0.62,r:1,g:0.7647,b:0.5450},
+        'C-I':{mass:8.3,luminosity:9.77E+03,radius:1.56E+02,temp:4669,ci: 1.03,absmag:-4.6,bolo:-0.62,r:1,g:0.9059,b:0.7569},
+        'C-Iab':{mass:8.1,luminosity:10.77E+03,radius:2.56E+02,temp:4269,ci:1.33,absmag:-3.6,bolo:-1.62,r:1,g:0.8059,b:0.5569},
         'C-II':{mass:7.94,luminosity:13941.28,radius:408.53,temp:3167,ci:1.6572,absmag:-2.72,bolo:-2.759,r:1,g:0.7438,b:0.3331},
+        'C-III':{mass:5.5,luminosity:1.49E+03,radius:1.31E+02,temp:3180,ci:1.65,absmag:-0.5,bolo:-2.68,r:1,g:0.8274,b:0.5608},
+        'C-IV':{mass:3,luminosity:2.27E+01,radius:1.28E+01,temp:3582,ci:1.46,absmag:3.2,bolo:-1.84,r: 1,g:0.9294,b:0.7412},
+        'C-V':{mass: 0.5,luminosity:5.20E-03,radius: 1.93E-01,temp:3582,ci:1.46,absmag:12.3,bolo:-1.84,r:1,g:0.8745,b:0.7412},
+        'C-VI':{mass: 0.1,luminosity:4.15E-03,radius:5.53E-01,temp:2000,ci:2.39,absmag:19,bolo:-8.3,r:1,g:0.7765,b:0.4235},
+        'C-VII':{mass: 0.07, luminosity: 2E-03, radius: 0.2, temp: 2000, ci:3, absmag: 20, bolo:-9, r:1, g:0.4235, b:0}
     };
 
     /**
@@ -713,7 +759,7 @@ var PSpectrum = (function () {
 
         // parameters we need to compute the spectra
         let temp = Math.round(this.computeTempFromBV(hyg.ci)),
-        tempRange = 1000, // degrees kelvin, empirically determined from hyg3 dataset
+        tempRange = 1000, // degrees Kelvin, empirically determined from hyg3 dataset
         lum = hyg.lum; // luminosity
 
         let keys1 = [], keys1diff = [], keys2 = [], keys2diff = [];
@@ -882,6 +928,7 @@ var PSpectrum = (function () {
 
         if (props.length) {
 
+            // set the primary spectra, getting tokens from other props as needed
             let primary = props[0]; // primary spectral type
 
             // loop through all sub-spectra
@@ -890,7 +937,7 @@ var PSpectrum = (function () {
                 let pp, lp;
 
                 let t = prop.type.key,
-                r = prop.range.value,
+                r = prop.range.key,
                 l = prop.luminosity.key;
 
                 ////////////////////////////
@@ -904,6 +951,24 @@ var PSpectrum = (function () {
                 switch (prop.role) {
 
                     case role.PRIMARY:
+                        if (!r) { // secondary loop through non-primary props
+                            for (let j = 1; j < props.length; j++) {
+                                if (props[j].range.key.length) {
+                                    primary.range.key = props[j].range.key;
+                                    r = primary.range.key;
+                                    break;
+                                }
+                            }
+                        }
+                        if (!l) {
+                            for (let j = 1; j < props.length; j++) {
+                                if (props[j].luminosity.key.length) {
+                                    primary.luminosity.key = props[j].luminosity.key;
+                                    l = primary.luminosity.key;
+                                    break;
+                                }
+                            }
+                        }
                     break;
 
                     case role.INTERMEDIATE:
@@ -949,8 +1014,17 @@ var PSpectrum = (function () {
 
                 // lookup by weighted averages for [type + luminosity class]
                 if (!pp) {
+
+                    // If we don't have a luminosity, estimate
+                    if (!l) {
+                        hyg.computed = true;
+                        this.lookupLuminosityClass(hyg, primary);
+                        l = primary.luminosity.key;
+                    }
+
                     pp = this.dStarWeightedProps[t + '-' + l];
                     if (pp) this.stats.oklookup++; ///////////////////////////////////////////
+                    if (!pp && l) console.log('lum lookup failed with t:' + t + ' l:' + l)
                 }
 
                 // no lookup hits, assign default stellar type properties (inaccurate)

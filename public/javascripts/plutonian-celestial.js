@@ -503,7 +503,7 @@ var PCelestial = (function () {
 
         sprite.width = w,
         sprite.height = h;
-        sprite.size = 0.69897 + (Math.log10(Number(star.radius) + 1));
+        sprite.size = 0.69897 + (Math.log(Number(star.radius) + 1));
     };
 
     /**
