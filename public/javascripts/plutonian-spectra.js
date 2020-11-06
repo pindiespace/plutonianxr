@@ -5,11 +5,8 @@
  * Parsing a spectra provides additional properties not present in the 
  * hyg3 database, which are added to hyg3 object (our version defined in PData.HygObj)
  *
- * {@link https://www.pas.rochester.edu/~emamajek/EEM_dwarf_UBVIJHK_colors_Teff.txt}
- * {@link http://www.vendian.org/mncharity/dir3/starcolor/details.html}
- * {@link https://sites.uni.edu/morgans/astro/course/Notes/section2/spectraltemps.html}
- * {@link https://en.wikipedia.org/wiki/List_of_star_systems_within_25%E2%80%9330_light-years}
  * {@link http://www.livingfuture.cz/stars.php}
+ * {@link http://archive.seattleastro.org/webfoot/feb00/pg2.htm}
  * {@link http://www.vendian.org/mncharity/dir3/blackbody/UnstableURLs/bbr_color.html}
  */
 var PSpectrum = (function () {
@@ -19,16 +16,17 @@ var PSpectrum = (function () {
         this.util = util;
         this.pdata = pdata;
 
-        // create a keylist for .dStarType, sorted by size of string (reduces pattern-matching ambiguity)
+        // create a keylist for .dSpectrumTrans, sorted by string size
+        this.dSpectrumTransKeys = Object.keys(this.dSpectrumTrans).sort((a,b) => b.length - a.length);
+
+        // create a keylist for .dStarType, sorted by string size (reduces pattern-matching ambiguity)
         this.dStarTypeKeys = Object.keys(this.dStarType).sort((a,b) => b.length - a.length);
 
-        // create a luminosity keylist, sorted by size of string (reduces pattern-matching ambiguity)
+        // create a luminosity keylist, sorted by string size (reduces pattern-matching ambiguity)
         this.dStarLumClassKeys = Object.keys(this.dStarLumClass).sort((a,b) => b.length - a.length);
 
-        // create a keylist for .dStarMods, sorted by size (reduces pattern-matching ambiguity)
+        // create a keylist for .dStarMods, sorted by string size (reduces pattern-matching ambiguity)
         this.dStarModKeys = Object.keys(this.dStarMods).sort((a,b) => b.length - a.length);
-
-        this.spectLookupKeys = {}; // initialized on loading, since it dependes on loaded JSON
 
     };
 
@@ -120,147 +118,11 @@ var PSpectrum = (function () {
         'P': {mass: 0.001, luminosity: 1E-6, radius:0.1, temp:150, ci:0, absmag: 19, bolo:0, r: 0.403, g: 0.27153, b: 0.1235} // brown, a gas giant
     };
 
-    /**
-     * Weighted values for stars which have a luminosity but not a range.
-     * NOTE: luminosity varies so much that there's no point in making a weighting for missing range
-     * for non-white dwarfs like A7, G5
-     *
-     * NOTE: this table is NOT used in spectrum parsing, only property computation.
-     */
-    PSpectrum.prototype.dStarWeightedProps = {
-        'WN-III':{mass:70.2,luminosity:376000,radius:15.6,temp:36800,ci:-0.32,absmag:-5.5,bolo:-3.69,r:0.6078,g:0.7020,b:1},
-        'WN-V':{mass:37,luminosity:260000,radius:12.9,temp:36800,ci:-0.32,absmag:-5.1,bolo:-3.69,r:0.5921,g:0.6823,b:1},
-        'O-Ia0':{mass: 159.7,luminosity:2.71E+07,radius:7.88E+01,temp:47600,ci:-0.35,absmag:-9.4,bolo:-4.43,r:0.5647,g:0.6510,b:1},
-        'O-Ia+':{mass: 159.7,luminosity:2.71E+07,radius:7.88E+01,temp:47600,ci:-0.35,absmag:-9.4,bolo:-4.43,r:0.5647,g:0.6510,b:1},
-        'O-Ia':{mass:63.1,luminosity:731000,radius:38.5,temp:27600,ci:-0.29,absmag:-7,bolo:-2.91,r:0.6431,g:0.7255,b:1},
-        'O-Iab':{mass:58.8,luminosity:525000,radius:32,temp:27600,ci:-0.29,absmag:-6.6,bolo:-2.91,r:6431,g:0.7255,b:1},
-        'O-Ib':{mass:54.5,luminosity:319000,radius:25.5,temp:27600,ci:-0.29,absmag:-6.1,bolo:-2.91,r:0.6431,g:0.7255,b:1},
-        'O-I':{mass:53.6,luminosity:3.13E+05,radius:1.42E+01,temp:36800,ci:-0.32,absmag:-5.3,bolo:-3.69,r:0.6118,g:0.6862,b:1},
-        'O-II':{mass:50.33,luminosity:315000,radius:19.92,temp:30933,ci:-0.303,absmag:-5.75,bolo:-3.211,r:0.6405,g:0.7229,b:1},
-        'O-III':{mass:41.58,luminosity:185500,radius:15.075,temp:31117,ci:-0.304,absmag:-5.16,bolo:-3.2275,r:0.6242,g:0.7251,b:1},
-        'O-IV':{mass:28.6,luminosity:110000,radius:12.5,temp:30200,ci:-0.3,absmag:-4.7,bolo:-3.15,r:0.6196,g:0.6941,b:1},
-        'O-V':{mass:23.73,luminosity:81571.74,radius:10.52,temp:33543,ci:-0.329,absmag:-4.53,bolo:-3.485,r:0.6594,g:0.7532,b:1},
-        'O-VI':{mass:17.5,luminosity:3.02E+05,radius:1.24E+01,temp:39000,ci:-0.33,absmag:-5.1,bolo:-3.85,r:0.6078,g:0.6902,b: 1},
-        'A-Ia0':{mass:15.18,luminosity:198500,radius:162.75,temp:9706.75,ci:-0.0574,absmag:-8.1,bolo:-0.39,r:0.7196,g:0.7843,b:1},
-        'A-Ia+':{mass:15.18,luminosity:198500,radius:162.75,temp:9706.75,ci:-0.0574,absmag:-8.1,bolo:-0.39,r:0.7196,g:0.7843,b:1},
-        'A-Ia':{mass:12.65,luminosity:129690.48,radius:138.95,temp:9495,ci:-0.0357,absmag:-7.64,bolo:-0.36,r:0.7868,g:0.842,b:1},
-        'A-Iab':{mass:11.54,luminosity:71564.75,radius:91.96,temp:9450,ci:-0.0323,absmag:-6.43,bolo:-0.35,r:0.7894,g:0.844,b:1},
-        'A-Ib':{mass:10.43,luminosity:13439.02,radius:44.97,temp:9405,ci:-0.029,absmag:-5.22,bolo:-0.344,r:0.7920,g:0.8453,b:1},
-        'A-II':{mass:7.96,luminosity:1664.23,radius:17.22,temp:8927,ci:0.0249,absmag:-2.97,bolo:-0.27,r:0.8178,g:0.8617,b:1},
-        'A-III':{mass:6,luminosity:75.73,radius:3.61,temp:8811,ci:0.044,absmag:0.48,bolo:-0.26,r:0.7545,g:0.8189,b:1},
-        'A-IV':{mass:4.24,luminosity:46.47,radius:2.70,temp:8974,ci:0.0251,absmag:1.06,bolo:-0.28,r:0.76859,g:0.8218,b:1},
-        'A-V':{mass:3.73,luminosity:54.62,radius:3.21,temp:11926,ci:0.00561,absmag:1.57,bolo:-0.41,r:0.64,g:0.75,b:1.3016},
-        'A-Va':{mass:1.9,luminosity:1.70E+01,radius:1.89E+00,temp:8650,ci:0.05,absmag:1.9,bolo:-0.23,r:0.8314,g:0.8627,b:1},
-        'A-Vb':{mass:1.7,luminosity:8.85E+00,radius:1.75E+00,temp:7650,ci:0.24,absmag:2.5,bolo:-0.12,r:0.8784,g:0.8902,b:1},
-        'A-VI':{mass:1.7,luminosity:10.58,radius:1.34,temp:8900,ci:0.020,absmag:2.6,bolo:-0.27,r:0.7569,g:0.8137,b:1},
-        'B-Ia0':{mass:17.7,luminosity:273000,radius:131,temp:11710,ci:-0.11,absmag:-8.1,bolo:-0.74,r:0.6941,g:0.7647,b:1},
-        'B-Ia+':{mass:17.7,luminosity:273000,radius:131,temp:11710,ci:-0.11,absmag:-8.1,bolo:-0.74,r:0.6941,g:0.7647,b:1},
-        'B-I':{mass:26.2,luminosity:3.38E+05,radius:4.92E+01,temp:20160,ci:-0.23,absmag:-7,bolo:-2.07,r: 0.7333,g:0.7961,b:1},
-        'B-Ia':{mass:32.10,luminosity:402627.74,radius:52.08,temp:20826,ci:-0.229,absmag:-7.06,bolo:-2.106,r:0.6912,g:0.7753,b:1},
-        'B-Iab':{mass:29.56,luminosity:267294.76,radius:40.45,temp:20583,ci:-0.226,absmag:-6.50,bolo:-2.070,r:0.6929,g:7771,b:1},
-        'B-Ib':{mass:27.02,luminosity:131961.81,radius:28.82,temp:20340,ci:-0.223,absmag:-5.77,bolo:-2.034,r:0.6946,g:0.7788,b:1},
-        'B-II':{mass:16.64,luminosity:40379.58,radius:16.56,temp:17508,ci:-0.191,absmag:-4.28,bolo:-1.615,r:0.7227,g:0.7997,b:1},
-        'B-III':{mass:12.76,luminosity:11227.15,radius:6.13,temp:17144,ci:-0.186,absmag:-1.92,bolo:-1.564,r:0.6890,g:0.7714,b:1},
-        'B-IV':{mass:9.45,luminosity:7653.59,radius:5.014,temp:17008,ci:-0.182,absmag:-1.43,bolo:-1.535,r:0.6680,g:0.7436,b:1},
-        'B-V':{mass:9.05,luminosity:5730.48,radius:5.325,temp:22555,ci:-0.242,absmag:-1.26,bolo:-2.03,r:0.9047,g:0.95,b:1},
-        'B-VI':{mass: 2.9,luminosity:6.67E+02,radius:2.47E+00,temp:18950,ci:-0.22,absmag:-0.4,bolo:-1.91,r:0.6667,g:0.7490,b:1},
-        'F-Ia':{mass:9.28,luminosity:175000,radius:287.09,temp:7074,ci:0.377,absmag:-8.22,bolo:-0.11,r:0.9219,g:0.9223,b:0.9853},
-        'F-Iab':{mass:8.38,luminosity:127279,radius:176.00,temp:6982,ci:0.397,absmag:-6.55,bolo:0.11,r:9355,g:0.9302,b:0.9852},
-        'F-Ib':{mass:7.47,luminosity:7955.88,radius:65.21,temp:6890,ci:0.417,absmag:-4.89,bolo:-0.10,r:0.9491,g:0.9381,b:0.9851},
-        'F-I':{mass:6.3,luminosity:7.82E+02,radius:1.97E+01,temp:6980,ci:0.39,absmag:-2.4,bolo: -0.08,r:0.9255,g:0.9294,b:1},
-        'F-II':{mass:6.16,luminosity:807.33,radius:20.77,temp:6870,ci:0.419,absmag:-2.43,bolo:-0.09,r:0.9168,g:0.9190,b:0.9948},
-        'F-III':{mass:4.80,luminosity:21.35,radius:3.24,temp:7027,ci:0.383,absmag:1.52,bolo:-0.09,r:0.8964,g:0.9122,b:1},
-        'F-IV':{mass:3.04,luminosity:15.58,radius:2.85,temp:6910,ci:0.41,absmag:1.89,bolo:-0.09,r:0.9277,g:0.9312,b:0.9998},
-        'F-V':{mass:2.055,luminosity:7.63,radius:2.12,temp:8259,ci:0.531,absmag:3.75,bolo:-0.11,r:0.89,g:0.90,b:1},
-        'F-Va':{mass:1.4,luminosity:3.75E+00,radius:1.48E+00,temp:6700,ci:0.46,absmag:3.4,bolo:-0.08,r:0.9451,g:0.9372,b:1},
-        'F-Vb':{mass:1.2,luminosity:2.41E+00,radius:1.35E+00,temp:6280,ci:0.56,absmag:3.9,bolo:-0.11,r:1,g:0.9882,b:0.9922},
-        'F-VI':{mass:1.11,luminosity:1.12,radius:0.79,temp:6675,ci:0.466,absmag:4.81,bolo:-0.0945,r:0.9576,g:0.9494,b:0.9964},
-        'G-Ia0':{mass:10.83,luminosity:686666.67,radius:1101.33,temp:5295,ci:0.843,absmag:-9.36,bolo:-0.40,r:1,g:0.9608,b:0.9582},
-        'G-I':{mass:7.5,luminosity:1.70E+05,radius:6.49E+02,temp:5169,ci:0.903,absmag:-8.1,bolo:-0.62,r:1,g:0.9059,b:0.7569},
-        'G-Ia':{mass:7.02,luminosity:150750,radius:546.625,temp:5108,ci:0.901,absmag:-7.7,bolo:-0.48,r:1,g:0.9174,b:0.7900},
-        'G-Iab':{mass:4.96,luminosity:8342.42,radius:273.39,temp:5066,ci:0.9260,absmag:-5.83,bolo:-502,r:1,g:0.9132,b:7806},
-        'G-Ib':{mass:2.97,luminosity:9934.83,radius:148.32,temp:4944,ci:0.9511,absmag:-4.66,bolo:-0.544,r:1,g:0.9092,b:0.7712},
-        'G-II':{mass:2.72,luminosity:1690.99,radius:73.84,temp:4442,ci:1.12,absmag:-2.44,bolo:-0.843,r:1,g:0.8827,b:0.6974},
-        'G-IIb':{mass:2.44,luminosity:905,radius:46,remp:4354,ci:1.14,absmag:-0,bolo:-0.87,r:1,g:0.8932,b:0.7365},
-        'G-III':{mass:2.16,luminosity:120.29,radius:20.525,temp:4307,ci:1.163,absmag:0.49,bolo:-0.93,r:1,g:0.9039,b:0.7556},
-        'G-IIIa':{mass:1.92,luminosity:80,radius:15,temp:4940,ci:1.12,absmag:0.85,bolo:-0.6,r:1,g:0.9102,b:0.7854},
-        'G-IIIb':{mass:1.62,luminosity:20,radius:6,temp:5140,ci:0.97,absmag:2.25,bolo:-0.4,r:1,g:0.9177,b:0.8102},
-        'G-IV':{mass:1.48,luminosity:6.43,radius:3.04,temp:5374,ci:0.813,absmag:3.03,bolo:-0.30,r:1,g:0.9232,b:0.8296},
-        'G-IVa':{mass:1.5,luminosity:6.20E+00,radius:2.76E+00,temp:5560,ci:0.75,absmag:3,bolo:-0.23,r:1,g:0.9529,b:0.9137},
-        'G-V':{mass:1.32,luminosity:2.67,radius:1.85,temp:6899,ci:0.926,absmag:5.58,bolo:-0.29,r:1,g:9253,b:0.861},
-        'G-Va':{mass:0.9,luminosity:8.41E-01,radius:1.06E+00,temp:5450,ci:0.79,absmag:5.2,bolo:-0.26,r:1,g:0.9216,b:0.8353},
-        'G-Vb':{mass:0.8,luminosity:5.66E-01,radius:1.03E+00,temp:5010,ci:0.92,absmag:5.8,bolo:-0.43,r:1,g:0.8980,b:0.7843},
-        'G-VI':{mass:0.83,luminosity:0.3362,radius:0.616,temp:5618,ci:0.739,absmag:6.23,bolo:-0.23,r:1,g:0.9540,b:0.9302},
-        'G-VII':{mass:0.50,luminosity:2.40,radius:1.57,temp:5051,ci:0.644,absmag:7.59,bolo:-2.62,r:1,g:0.8990,b:0.7325},
-        'K-Ia0':{mass:15,luminosity:1680000,radius:3090,temp:3800,ci:1.365,absmag:-9.3,bolo:-1.505,r:1,g:0.8686,b:0.7392},
-        'K-I':{mass:9.3,luminosity:210000.33,radius:2013.33,temp:3943,ci:1.3,absmag:-8.47,bolo:-1.39,r:1,g:0.8544,b:0.6905},
-        'K-Ia':{mass:8.6,luminosity:230333.33,radius:1013.33,temp:4043,ci:1.267,absmag:-7.47,bolo:-1.19,r:1,g:0.8444,b:0.6405},
-        'K-Iab':{mass:6.74,luminosity:128067.50,radius:686.73,temp:3531,ci:1.291,absmag:-6.18,bolo:-1.275,r:1,g:0.8353,b:6118},
-        'K-Ib':{mass:4.48,luminosity:25802.56,radius:360.46,temp:3919,ci:1.3159,absmag:-4.88,bolo:-1.347,r:1,g:0.8262,b:0.5831},
-        'K-II':{mass:3.33,luminosity:2446.99,radius:105.66,temp:4021,ci:1.274,absmag:-2.5,bolo:-1.214,r:1,g:0.8453,b:0.6321},
-        'K-IIb':{mass:2.89,luminosity:1000,radius:700,temp:4010,ci:1.277,absmag:-0.5,bolo:-1.22,r:1,g:0.8566,b:0.6523},
-        'K-III':{mass:2.46,luminosity:504.32,radius:200.55,temp:4003,ci:1.282,absmag:0.28,bolo:-1.24,r:1,g:0.8738,b:0.6758},
-        'K-IIIa':{mass:2.03,luminosity:201.22,radius:90,temp:4129,ci:1.2,absmag:1,bolo:-1,r:1,g:0.9300,b:0.7210},
-        'K-IIIb':{mass:1.83,luminosity:105,radius:17,temp:4392,ci:0.54,absmag:2,bolo:-0.8,r:1,g:0.9160,b:0.7114},
-        'K-IV':{mass:1.61,luminosity:7.69,radius:4.19,temp:4782,ci:0.9973,absmag:3.10,bolo:-0.56,r:1,g:0.8780,b:0.7168},
-        'K-V':{mass:1.26,luminosity:2.89,radius:2.38,temp:6121,ci:1.395,absmag:7.54,bolo:-0.91,r:1,g:0.8287,b:0.61},
-        'K-VI':{mass:0.7,luminosity:0.15,radius:0.553,temp:4900,ci:0.96,absmag:7.3,bolo:-0.49,r:1,g:0.9333,b:0.8667},
-        'M-Ia0':{mass:14.033,luminosity:4596666.67,radius:7243.33,temp:3193,ci:1.64,absmag:-9.23,bolo:-2.66,r:1,g:0.7791,b:0.5281},
-        'M-Ia':{mass:11.95,luminosity:626916.67,radius:2615.83,temp:3257,ci:1.612,absmag:-7.09,bolo:-2.552,r:1,g:0.7598,b:0.4611},
-        'M-Iab':{mass:10.69,luminosity:674372.62,raduis:2564.5,temp:3224,ci:1.634,absmag:-6.28,bolo:-2.705,r:1,g:0.7503,b:0.4650},
-        'M-Ib':{mass:9.53,luminosity:721828.57,radius:2584.14,temp:3190,ci:1.656,absmag:-5.48,bolo:-2.858,r:1,g:0.7488,b:0.4189},
-        'M-I':{mass:7.8,luminosity:5.86E+03,radius:2.13E+02,temp:3510,ci:1.49,absmag:-2.7,bolo:-1.97,r:1,g:0.7921,b:0.5411},
-        'M-II':{mass:7.092,luminosity:27072,radius:591.125,temp:3118,ci:1.689,absmag:-2.78,bolo:-2.991,r:1,g:0.7421,b:0.4143},
-        'M-IIa':{mass:6.4,luminosity:4.62E+04,radius:9.76E+02,temp:2750,ci:1.88,absmag:-2.9,bolo:-4.01,r:1,g:0.6980,b:0.3059},
-        'M-IIb':{mass:6.49,luminosity:1478,radius:373,temp:3207,ci:1.624,absmag:-1.69,bolo:-2.77,r:4,g:0.7686,b:4215},
-        'M-III':{mass:5.06,luminosity:2489.81,radius:156.92,temp:3296,ci:1.560,absmag:-0.61,bolo:-2.54,r:1,g:0.7951,b:0.4827},
-        'M-IIIa':{mass:4.12,luminosity:1292.00,radius:94.00,temp:3273,ci:1.561,absmag:2,bolo:-2.61,r:1,g:0.7703,b:0.4884},
-        'M-IIIb':{mass:3.40,luminosity:500,radius:60,temp:3266,ci:1.58,absmag:3,bolo:-2.64,r:1,g:0.7721,b:0.4910},
-        'M-IV':{mass:2.85,luminosity:95.73,radius:32.78,temp:3250,ci:1.62,absmag:3.22,bolo:-2.68,r:1,g:0.7745,b:0.4941},
-        'M-V':{mass:0.50,luminosity:2.40,radius:1.57,temp:3351,ci:1.644,absmag:10.59,bolo:-2.62,r:1,g:0.8490,b:0.6325},
-        'M-VI':{mass:0.14,luminosity:0.0051,radius:0.26,temp:2833,ci:1.838,absmag:14.76,bolo:-3.84,r:1,g:0.7905,b:0.4829},
-        'N-V':{mass:0.2,luminosity:6.24E-03,radius:3.81E-01,temp:2667,ci:1.93,absmag:14.6,bolo:-4.34,r:1,g:0.8196,b:0.6039},
-        'C-Ia0':{mass:12,luminosity:8.13E+05,radius:1.42E+03,temp:4669,ci:1.03,absmag:-9.4,bolo:-0.62,r:1,g:0.7647,b:0.5450},
-        'C-I':{mass:8.3,luminosity:9.77E+03,radius:1.56E+02,temp:4669,ci: 1.03,absmag:-4.6,bolo:-0.62,r:1,g:0.9059,b:0.7569},
-        'C-Iab':{mass:8.1,luminosity:10.77E+03,radius:2.56E+02,temp:4269,ci:1.33,absmag:-3.6,bolo:-1.62,r:1,g:0.8059,b:0.5569},
-        'C-II':{mass:7.94,luminosity:13941.28,radius:408.53,temp:3167,ci:1.6572,absmag:-2.72,bolo:-2.759,r:1,g:0.7438,b:0.3331},
-        'C-III':{mass:5.5,luminosity:1.49E+03,radius:1.31E+02,temp:3180,ci:1.65,absmag:-0.5,bolo:-2.68,r:1,g:0.8274,b:0.5608},
-        'C-IV':{mass:3,luminosity:2.27E+01,radius:1.28E+01,temp:3582,ci:1.46,absmag:3.2,bolo:-1.84,r: 1,g:0.9294,b:0.7412},
-        'C-V':{mass: 0.5,luminosity:5.20E-03,radius: 1.93E-01,temp:3582,ci:1.46,absmag:12.3,bolo:-1.84,r:1,g:0.8745,b:0.7412},
-        'C-VI':{mass: 0.1,luminosity:4.15E-03,radius:5.53E-01,temp:2000,ci:2.39,absmag:19,bolo:-8.3,r:1,g:0.7765,b:0.4235},
-        'C-VII':{mass: 0.07, luminosity: 2E-03, radius: 0.2, temp: 2000, ci:3, absmag: 20, bolo:-9, r:1, g:0.4235, b:0}
-    };
-
-    /**
-     * weighted averages of white dwarf properties missing a range.
-     * Based on relative abundances of each type
-     * better than the generic default .dStarProps
-     * in the hyg3 data sample. For example. 'DA' above is 0.56, but in practice DA mass ranges 
-     * 0.1 - 0.9, with most DA dwarfs smaller than 0.6
-     *
-     * NOTE: this table is NOT used in spectrum parsing, only property computation.
-     *
-     */
-    PSpectrum.prototype.dWhiteDwarfWeightedProps = {
-        'DA':{mass:0.3821, luminosity:0.00115, radius:0.00889, temp:8985, ci:0.1960, absmag:13.76, bolo:-0.381, r:0.8306, g:0.8651, b:0.9965},
-        'DB':{mass:0.6, luminosity:0.00182, radius:0.00922, temp:12600,ci:-0.13, absmag:12.5, bolo:-0.9, r:0.702, g:0.7725, b:1},
-        'DC':{mass:0.1529, luminosity:0.000106, radius:0.008948, temp:6043, ci:0.6356, absmag:15.09, bolo:-0.190, r:0.9701, g:0.9534, b:0.9735},
-        'DQ':{mass:0.2823, luminosity:0.000235, radius:0.008834, temp:7303, ci:0.3618, absmag:14.35, bolo:-0.198, r:0.8902, g:0.9052, b:0.9908},
-        'DZ':{mass:0.5478, luminosity:0.4321, radius:0.008939, temp:18065, ci:-0.0175, absmag:12.85, bolo:-1.266, r:0.7729, g:0.8201, b:0.9904},
-    };
-
     /*
      * ------------------------------------------------------
      * PROPERTY TABLES, LARGE, LOADED AT RUNTIME
      * ------------------------------------------------------
      */
-
-    /** 
-     * properties are [type] + [range] + [luminosity]
-     * e.g. 'O1Ia0'
-     * {@link http://www.isthe.com/chongo/tech/astro/HR-temp-mass-table-byhrclass.html}
-     */
-    PSpectrum.prototype.spectLookup = {};
 
     /**
      * properties are [type + range]
@@ -280,6 +142,26 @@ var PSpectrum = (function () {
      */
     PSpectrum.prototype.bbColors = [];
 
+    /**
+     * [type + range + luminosity] lookup table
+     * e.g. 'O1Ia0'
+     * {@link http://www.isthe.com/chongo/tech/astro/HR-temp-mass-table-byhrclass.html}
+     */
+    PSpectrum.prototype.trlLookup = {};
+    PSpectrum.prototype.trlLookupKeys = [];
+
+    /**
+     * [type + luminosity] lookup table
+     * e.g. '0-III'
+     * Computed from the TRL table above, used when spectra don't have a range, also white dwarfs
+     * NOTE: Some types(e.g. Iab) were computed by averaging two types, e.g. AVERAGE(Ia, Ib)
+     * NOTE: Some times are merged, following the encoding tables:
+     * {@link https://archive.stsci.edu/spec_class/spec_class_tables.html)
+     */
+    PSpectrum.prototype.tlLookup = {};
+    PSpectrum.prototype.tlLookupKeys = [];
+
+
     //DEBUG
     PSpectrum.prototype.failedLookup = []; // TODO: DELETE
 
@@ -290,20 +172,63 @@ var PSpectrum = (function () {
      */
 
     /**
-     * replace some luminosity patterns in the spectrum string for easier parsing
+     * 1. replace some luminosity patterns in the spectrum string for easier parsing
+     * 2. replace obsolete spectral classes with modern ones
+     * 3. use the spectral mapping at:
+     * {@link https://archive.stsci.edu/spec_class/spec_class_tables.html}
+     * 4. NOTE: since we use .indexOf, we take the longest match
+     TODO: HAVE TO MAKE THIS WORK BETTER...
      */
-    PSpectrum.prototype.dSpectrumTrans = {
-        'Ia-0': 'Ia0',
-        'Ia-0/Ia': 'Ia0-Ia',
-        'Ia-ab': 'Ia/Iab',
-        'Ia/ab': 'Ia-Iab',
+    PSpectrum.prototype.dSpectrumTrans = { 
+        'Ia-0':'Ia0',
+        'Ia+':'Ia0',
+        '0-Ia':'Ia0',
+        'Ia-0/Ia':'Ia',
+        'Ia0-Ia':'Ia',
+        'Ia/ab':'Ia-Iab',
+        'Ib-IIa':'II', // cancel out
+        //'IIa' 'II',
+        //'IIb': 'II',
+        'IIb-III':'II-III',
+        'IIb-IIIa': 'II-III',
+        'I-II': 'Ib',
+        'I/II': 'Ib',
+        'III-V':'IV',
+        'III/V': 'IV',
+        //'IIIa': 'III', // these are slightly brighter than III
+        //'IIIb': 'III', // these are slightly dimmer than III
+        'III/III-IV':'III/IV',
         'IVb': 'Iva/V',
-        'Vb': 'V-VI',
-        'III/III-IV': 'III/IV' // small difference
-    }
+        'IVab':'IV',
+        'IVa-V':'IV/V',
+        'IVa/V': 'IV/V',
+        'Va':'V',
+        'Va+':'V',
+        'Va-':'V',
+        'Va-V':'V',
+        'Vab':'V',
+        'Vb':'V-VI',
+        'Vz':'V-VI', 
+        'Vb-Vz':'V-VI',
+        'esd':'VII',
+        'R': 'C-R', // modern notation for obsolete classes
+        'N': 'C-N',
+        'DG': 'DZ', // modern notation for obsolete classes
+        'DK': 'DZ',
+        'DM': 'DZ',
+        'DF': 'DZ',
+        'DX': 'DZ'
+    };
 
     /**
-     * Yerkes prefixes in front of primary letter type, translate to standard luminosity
+     * key array for .dSpectrumTransKeys, for rapid lookup. sorted in constructor
+     */
+    PSpectrum.prototype.dSpectrumTransKeys = [];
+
+    /**
+     * Yerkes prefixes in front of primary letter type, translate to standard luminosity from
+     * the Mt. Wilson classes. Also includes some mappings for SIMBAD from:
+     * {@link https://archive.stsci.edu/spec_class/spec_class_tables.html}
      * EXAMPLE: sdB5 -> B5VI 
      */
     PSpectrum.prototype.dLumPrefixTrans = {
@@ -311,6 +236,7 @@ var PSpectrum = (function () {
         'd': 'V',
         'sg': 'I',
         'g': 'III',
+        'c': 'Ia'
     };
 
     /**
@@ -337,14 +263,14 @@ var PSpectrum = (function () {
         'B': 'Blue-White star, 2-15 times more massive than Sun, neutral He lines', // (sub)giant or dwarf
         'F': 'Yellow-white star', // giant or dwarf
         'G': 'Yellow star', // giant or dwarf
-        'K': 'Yellow-orange star', // giant or dwarf
+        'K': 'Orange star', // giant or dwarf
         'M': 'Red star', //giant or dwarf or subdwarf
-        'MS': 'Red giant, asymptotic-giant branch carbon star, younger, transition to SC',
-        'S': 'Red giant, sub-carbon star, asymptotic-giant-branch, zirconium oxide in spectrum',
-        'SC': 'Red giant, older sub-carbon star, asymptotic-giant branch, zirconium oxide in spectrum',
-        'R': 'Red giant, carbon star equivalent of late G to early K-type stars, reclassified as C-R',
+        'MS': 'Red giant, asymptotic-giant branch carbon star, younger, intermediate between M and SC',
+        'S': 'Red giant, sub-carbon star, asymptotic-giant-branch, similar carbon and oxygen abundance, zirconium, titanium oxide in spectrum, obsolete class',
+        'SC': 'Red giant, older sub-carbon star, asymptotic-giant branch, zirconium, titanium oxide from s-process in spectrum, intermediate with S and C-N',
+        'R': 'Red giant, carbon star equivalent of late G to early K-type stars, obsolete class, reclassified as C-R',
         'C-R': 'Red giant, carbon star, equivalent of late G to early K-type stars, no enhanced Ba line',
-        'N': 'Red giant, older carbon star, giant equivalent of late K to M-type stars, reclassified as C-N',
+        'N': 'Red giant, older carbon star, giant equivalent of late K to M-type stars, obsolete class, reclassified as C-N',
         'C-N': 'Red giant, carbon star, older, giant equivalent of late K to M-type stars, diffuse blue absorption,',
         'C': 'Red star, Carbon-rich dust, often long-period variable',
         'C-J': 'Red giant, cool carbon star with a high content of carbon-13, strong isotopic bands of C2 and CN',
@@ -377,7 +303,7 @@ var PSpectrum = (function () {
 
     /**
      * Luminosity, Harvard classification:
-     * [prefix] [letter code] [numeric code 0-9] [luminosity] [suffix]
+     * [prefix + type code + numeric code (0-9) + luminosityClass + suffix (mods)]
      * NOTE: keys generated, sorted by length during spectral parsing
      * NOTE: numbers used in picking a sprite index in PCelestial
      * {@link https://amedleyofpotpourri.blogspot.com/2019/12/stellar-classification.html}
@@ -391,13 +317,13 @@ var PSpectrum = (function () {
         'Ib': ' Less Luminous Supergiant',
         'I': ' Supergiant',
         'II': ' Bright Giant',
-        'IIa': ' Luminous Bright Giant',
-        'IIb': ' Less Luminous Bright Giant',
+        'IIa': ' More luminous Bright Giant',
+        'IIb': ' Less luminous Bright Giant',
         'III': ' Giant',
-        'IIIa': ' Luminous Giant',
-        'IIIb': ' Less Luminous Giant',
+        'IIIa': ' More luminous Giant',
+        'IIIb': ' Less luminous Giant',
         'IV': ' Sub-Giant',
-        'IVa': ' Luminous Sub-Giant',
+        'IVa': ' More luminous Sub-Giant',
         'IVb': ' Less Luminous Sub-Giant',
         'VIab': ' Luminous dwarf',
         'V' : ' Dwarf (Main Sequence)',
@@ -414,6 +340,7 @@ var PSpectrum = (function () {
     };
 
     // suffix for luminosity rather than general suffix
+    // TODO: appy when it is at the end of the string
     PSpectrum.prototype.dLumSuffix = {
         ':' :  'Uncertain luminosity'
     };
@@ -484,7 +411,8 @@ var PSpectrum = (function () {
         'Mn': ', strong Manganese emission lines',
         'Si': ', strong Silicon emission lines',
         'Sr': ', strong Strontium emission lines',
-        'Tc': ', strong Technetium emission lines'
+        'Tc': ', strong Technetium emission lines',
+        'Zr': ', strong Zirconium emission lines'
     };
 
 
@@ -533,16 +461,22 @@ var PSpectrum = (function () {
 
     /**
      * transform spectra tokens as defined as Simbad, e.g.,
-     * Ia-0 -> Ia0, Ia-0/Ia -> Ia0-Ia, Ia-ab -> Ia/Iab, IVb -> Iva/V, Vb -> V-VI, Ia/ab -> Ia-Iab
+     * Ia-0 -> Ia0, Ia+ ->Ia0, Ia-0/Ia -> Ia0-Ia, Ia-ab -> Ia/Iab, IVb -> Iva/V, Vb -> V-VI, Ia/ab -> Ia-Iab
      * III/III-IV -> III/IV (small difference)
      * {@link http://simbad.u-strasbg.fr/simbad/sim-display?data=sptypes}
      * {@link https://en.wikipedia.org/wiki/Chemically_peculiar_star}
      * {@link https://heasarc.gsfc.nasa.gov/W3Browse/all/cpstars.html}
+     * transform lookup defined at:
+     * {@link https://archive.stsci.edu/spec_class/spec_class_tables.html}
      */
     PSpectrum.prototype.transformSpec = function (spect) {
-        for (let i in this.dSpectrumTrans) {
-            if(spect.indexOf(i) != -1) {
-                spect.replace(i, this.dSpectrumTrans[i]);
+
+        let s = this.dSpectrumTransKeys;
+
+        // find the key in the sorted list (largest keys at beginning)
+        for (var i = 0; i < s.length; i++) {
+            if (spect.indexOf(s[i]) !== -1) {
+              return spect.replace(s[i], this.dSpectrumTrans[s[i]]);
             }
         }
         return spect;
@@ -558,9 +492,8 @@ var PSpectrum = (function () {
             for (let i in this.dLumPrefixTrans) {
                 let l = spect.indexOf(i);
                 if (l == 0) {
-                    // check if the type is lower-case 'g' or variant, reject if so
+                    // don't replace if 'g' is a single letter (meant to be the type)
                     if (spect != 'g' && spect != 'g-') {
-                        //////////////////console.log('found Yerkes prefix for:' + spect + ': ' + i)
                         lum = this.dLumPrefixTrans[i];
                         prop.luminosity.key = this.dLumPrefixTrans[i]; // use to get desc
                         return spect.substring(i.length); // swap luminace to end
@@ -605,6 +538,7 @@ var PSpectrum = (function () {
     PSpectrum.prototype.parseSpectrumRange = function (spect, prop) {
         let r = spect.parseNumeric(); // pull the first number encountered
         if (r) {
+            if (r > 9) r = 9; // handle extremely rare stuff like 'B10'
             prop.range.key = r.num + ''; // force key to string
             prop.range.value = r.num;
             return spect.substring(r.start2);
@@ -620,7 +554,7 @@ var PSpectrum = (function () {
      */
     PSpectrum.prototype.parseSpectrumLuminosity = function (spect, prop) {
         if (spect.length) {
-            // check against the size-sorted keylist of .dStarMods (created in the constructor)
+            // check against the size-sorted keylist of .dStarLumClassKeys (created in the constructor)
             for (let i = 0; i < this.dStarLumClassKeys.length; i++) {
                 let k = this.dStarLumClassKeys[i];
                 let p = spect.indexOf(k);
@@ -630,7 +564,6 @@ var PSpectrum = (function () {
                 }
             }
         }
-
         return spect;
     };
 
@@ -646,13 +579,16 @@ var PSpectrum = (function () {
                 if (spect.indexOf(this.dStarModKeys[i]) !== -1) {
                     spect = spect.replace(this.dStarModKeys[i], ''); // remove from the spectra
                     if(prop.mods.keys.indexOf(i) == -1) { // avoid duplicates
-                        prop.mods.keys.push(this.dStarModKeys[i]);
+                        prop.mods.keys.push(this.dStarModKeys[i]); // don't break so we get all the mods
                     }
                 }
             }
         }
         return spect;
     };
+
+/////////////////////////////////////////////////////
+    PSpectrum.prototype.ab = []; //TEMP TO COLLECT HYG PROPERTIES NOT IN SPECTRUM PROPS
 
     /**
      * Use stellar spectum (Harvard/Yerkes classification) to extract stellar data
@@ -703,11 +639,38 @@ var PSpectrum = (function () {
                 s = this.parseYerkesPrefix(s, p);
                 s = this.parseSpectrumType(s, p);
                 s = this.parseSpectrumRange(s, p);
+
+                // TODO: kludge to capture failed luminosity for inclusion
+                let bob = s; ////////////////////////////////////////////
+
                 s = this.parseSpectrumLuminosity(s, p);
+
+                // TODO: if unchanged (not truncated) save the hyg record
+                if (bob != s) { //////////////////////////////////////
+                    ///console.log('failed lum lookup')
+                    let temp = 0; let radius = 0;
+                    if (hyg.ci) temp = this.computeTempFromBV(hyg.ci);
+                    if (temp) radius = this.computeRadius(temp, hyg.lum);
+                    if(s.indexOf('K2IIb') != -1) {
+                        this.ab.push(
+                            hyg.spect + ',' +
+                            hyg.mass + ',' +
+                            hyg.lum + ',' +
+                            radius + ',' +
+                            temp + ',' +
+                            hyg.ci + ',' +
+                            hyg.absmag + ',' +
+                        ''
+                        );
+                    }
+ 
+                }
+                /////////////////////////////////////////////////////////
 
                 // non white dwarf, missing luminosity class, estimate
                 if (p.type.key[0] != 'D' && !p.luminosity.key) {
                     this.lookupLuminosityClass(hyg, p);
+                    // TODO: handle single-type NO range for this
                 }
 
                 s = this.parseSpectrumMods(s, p);
@@ -753,6 +716,7 @@ var PSpectrum = (function () {
 
         // store the fact that we were computed
         hyg.computed = true;
+        hyg.computedType = true;
         this.stats.computed++;
 
         if (!util.isNumber(hyg.ci, true)) return this.lastDitchProps(hyg);
@@ -768,8 +732,8 @@ var PSpectrum = (function () {
         let oldDiff = 1E10+14; // starting difference (for picking best key)
 
         // first scan - select all types within a temperature range
-        for (let i in this.spectLookup) {
-            let s = this.spectLookup[i];
+        for (let i in this.trlLookup) {
+            let s = this.trlLookup[i];
             let td = Math.abs(temp - s.temp);
             if (td < tempRange) {
                 keys1.push(i);
@@ -784,7 +748,7 @@ var PSpectrum = (function () {
 
         // second scan - differentiate by luminosity
         for (let i = 0; i < keys1.length; i++) {
-            let s = this.spectLookup[keys1[i]];
+            let s = this.trlLookup[keys1[i]];
             let ld = Math.abs(lum - s.luminosity);
             let max = Math.max(lum, s.luminosity);
             if (ld < oldDiff) {
@@ -795,21 +759,14 @@ var PSpectrum = (function () {
             }
         }
 
-        if (!key) {
-            console.error('No key for:' + hyg.id + ' lum:' + hyg.lum + ' absmag:' + hyg.absmag + ' ci:' + hyg.ci);
-            this.failedLookup.push(hyg);
-            key = 'G9V';
-        }
-
         return key;
 
     };
 
-
     /**
      * last-ditch assignment, when:
-     *     1. No spectra in hyg record
-     * if luminosity is very low, set to Brown or Red Dwarf
+     *  1. No spectra in hyg record
+     *  2. set by luminosity, when very low, set to Brown or Red Dwarf
      * {@link https://en.wikipedia.org/wiki/Red_dwarf}
      * Otherwise, set it to a G giant or G dwarf
      * @param {PData.HygObj} hyg - hyg database record
@@ -820,10 +777,13 @@ var PSpectrum = (function () {
         let pdata = this.pdata;
 
         hyg.computed = true;
+        hyg.computedLastDitch = true;
         hyg.lastditch = true;
         this.stats.lastditch++;
 
-        if (hyg.absmag < -9.2 && hyg.dist == pdata.HYG_CONSTANTS.max_dist) return 'B0Ia';
+        if (hyg.dist == pdata.HYG_CONSTANTS.max_dist) {
+            if (hyg.absmag < -9.2) return 'B0Ia';
+        }
         else if (hyg.absmag < -3) return 'G2II';
         else if (hyg.absmag <= 0) return 'G2III';
         else if (hyg.lum < 0.2) { // red or brown dwarf
@@ -878,43 +838,61 @@ var PSpectrum = (function () {
         // if we already have a luminosity class, return
         if (l.length) return true;
 
-        prop.computed = true;
+        // no luminosity class, so create [type + range] lookup key for luminosity ranges
+        if (t.length) {
 
-        // no class, so create [type + range] lookup key for luminosity ranges
-        if (t.length && r.length && util.isNumber(r)) {
-            tr = prop.type.key + Math.round(prop.range.key); //convert 'MV5.5' to 'MV5'
-            lc = this.lumLookup[tr];
+            // if this is a white dwarf, return
+            if (t[0] == 'D') return true;
 
-            // We found the [type + range], luminosity class versus absolute magnitude
-            if (lc) {
+            prop.computed = true;
+            hyg.computedLumClass = true;
 
-                // find the closest table match to our luminosity by absolute magnitude
-                let lumMatch = util.getKeyForClosestNumericValue(lc, absmag);
+            // do a luminosity lookup by [type + range]
+            if (r.length && util.isNumber(r)) {
 
-                // luminosity class doesn't match absolute magnitude
-                if ((lumMatch.num < (lumMatch.min - 2)) || (lumMatch.num > lumMatch + 2)) {
-                    // TODO
-                }
+                tr = prop.type.key + Math.round(prop.range.key); //convert 'MV5.5' to 'MV5'
+                lc = this.lumLookup[tr];
 
-                // store luminosity class.
-                if(lumMatch.key) {
+                // We found the [type + range], luminosity class versus absolute magnitude
+                if (lc) {
 
-                    if (!prop.luminosity.key) {
+                    // find the closest table match to our luminosity by absolute magnitude
+                    let lumMatch = util.getKeyForClosestNumericValue(lc, absmag);
+
+                    // store luminosity class
+                    if(lumMatch.key) {
                         prop.luminosity.key = lumMatch.key;  // from lookup table
-                    }
-                    // if we didn't have luminosity value, put in the lookup value (might be overriden by hyg3)
-                    if (!prop.luminosity.value) {
-                        prop.luminosity.value = this.computeLuminosityFromAbsMag(absmag);
+                        prop.luminosity.value = hyg.lum;
                     }
 
                 } else {
-                    console.warn('lookupLuminosityClass: found type-key (' + tr + ') but no luminosity class:')
+                    // This fails for lum classes we don't have properties for (e.g. IIIa, IIIb)
+                    // TODO: generate these by averaging all properties for a [type + lum]
+                    console.warn('lookupLuminosityClass id:' + hyg.id + ' found type-key (' + tr + ') but no luminosity class:')
                 }
+
+            } else { // best match by type only
+            
+                let lumKeys = {};
+                let oldDiff = 1E+14;
+                for (let i in this.lumLookup) {
+                    let lum = this.lumLookup[i];
+                    if (i.indexOf(t) == 0) {
+                        lumKeys[i] = util.getKeyForClosestNumericValue(lum, absmag);
+                        if (lumKeys[i].diff < oldDiff) {
+                            oldDiff = lumKeys[i].diff;
+                            prop.luminosity.key = lumKeys[i].key;
+                        }
+                    }
+                }
+                if (prop.luminosity.key == '')
+                    console.log("NO KEY, TYPE:" + t + " KEY IS NOW:(" + prop.luminosity.key + ") DIFF:" + oldDiff + " lum:" + hyg.lum)
 
             }
 
-        }
+        } // type exists
 
+        return false;
     };
 
     /**
@@ -926,17 +904,29 @@ var PSpectrum = (function () {
         let util = this.util;
         let role = this.pdata.SPECT_ROLES;
 
+
         if (props.length) {
 
-            // set the primary spectra, getting tokens from other props as needed
+            let t, r, l;
+
             let primary = props[0]; // primary spectral type
+
+            // If we don't have a luminosity for a non-White Dwarf, estimate
+            t = primary.type.key,
+            l = primary.luminosity.key;
+            if (!l && t[0] != 'D') { // white dwarves don't have a luminosity class, 'VII' obsolete
+                hyg.computed = true;
+                this.lookupLuminosityClass(hyg, primary);
+                l = primary.luminosity.key;
+                if (!l) console.log("FAILED TO FIND L FOR id:" + hyg.id + " key:" + primary.type.key + ' lum:' + hyg.lum)
+            }
 
             // loop through all sub-spectra
             for (let i = 0; i < props.length; i++) {
                 let prop = props[i];
                 let pp, lp;
 
-                let t = prop.type.key,
+                t = prop.type.key,
                 r = prop.range.key,
                 l = prop.luminosity.key;
 
@@ -999,41 +989,41 @@ var PSpectrum = (function () {
                     }
 
                     // lookup by [type + range + luminosity class], about 1100 possible types, incd white dwarfs
-                    pp = this.spectLookup[lp];
+                    pp = this.trlLookup[lp];
 
-                    if (pp) this.stats.goodlookup++; //////////////////////////////////////
+                    if (pp) this.stats.goodlookup++; //////////////////////////////////////TODO:
                 }
 
-                // lookup by [type] only (white dwarves)
-                if (!pp && lp[0] == 'D') {
-                    pp = this.dWhiteDwarfWeightedProps[lp];
-                    // catch old classifications of white dwarfs, the following were merged into DZ
-                    if(!pp && t == 'DG' || t == 'DK' || t == 'DM' || t == 'DF') pp = this.dWhiteDwarfWeightedProps['DZ'];
-                    if (pp) this.stats.goodlookup++; ////////////////////////////////////////
-                }
+                // handle cases like 'DA/F'
+                ///////////////if (primary.type.key[0] == 'D' && prop.type.key.indexOf()
 
                 // lookup by weighted averages for [type + luminosity class]
                 if (!pp) {
+                    pp = this.tlLookup[t + '-' + l];
+                    if (pp) this.stats.oklookup++; ///////////////////////////////////////////TODO:
+                    // TODO: DIM M STARS AREN'T BEING FOUND
+                    // TODO: keep for new star entries, to see if the type + lum table is complete
 
-                    // If we don't have a luminosity, estimate
-                    if (!l) {
-                        hyg.computed = true;
-                        this.lookupLuminosityClass(hyg, primary);
-                        l = primary.luminosity.key;
-                    }
+                    ///if (pp && lp[0] == 'D') console.log('id:' + hyg.id + ' good white dwarf lookup for:' + lp)
 
-                    pp = this.dStarWeightedProps[t + '-' + l];
-                    if (pp) this.stats.oklookup++; ///////////////////////////////////////////
-                    if (!pp && l) console.log('lum lookup failed with t:' + t + ' l:' + l)
+                    // TODO: if this is generated, we need to
+                    // TODO: do substitutions, e.g. DA/F should be DA/DZ
+                    // TODO: IIIa is not being recognized
+                    // TODO: IIIb is not being recognized
+
+                    if (!pp) console.log('id:' + hyg.id + ' lum lookup failed with t:' + t + ' l:' + l + ' lum:' + hyg.lum + ' class:' + prop.luminosity.key + ' absmag:' + hyg.absmag)
                 }
 
-                // no lookup hits, assign default stellar type properties (inaccurate)
+                // no lookup hits, assign default stellar type propeFrties (inaccurate)
                 if (!pp) {
                     pp = this.dStarProps[t];
                     if (pp) this.stats.badlookup++; /////////////////////////////////////
-                    this.failedLookup.push(prop)
-                    // TODO: THIS PICKED UP VERY DIM RED DWARFS
-                    // if (prop.computed) this.failedLookup.push(prop); ///////////////////////////////////////
+                    this.failedLookup.push(prop);
+                }
+
+                // Look for strange luminosity-class combinations
+                if (hyg.lum < 0.1 && prop.type.key[0] != 'M' && prop.type.key[0] != 'D') {
+                    //////////////////////////////console.log("FUNKY lum and type, id:" + hyg.id + " type:" + prop.type.key + ' absmag:' + hyg.absmag + ' and lumclass:' + prop.luminosity.key + ' and lum:' + hyg.lum)
                 }
 
                 if (pp) {
@@ -1235,6 +1225,9 @@ var PSpectrum = (function () {
 
     /**
      * compute approx temperature from blue-violet color index
+     * Detailed Simulation
+     * {@link https://astro.unl.edu/animationsLinks.html}
+     * Discussion
      * {@link https://sites.uni.edu/morgans/astro/course/Notes/section2/spectraltemps.html}
      * @param {String} bv color index, blue-violet
      */
@@ -1244,11 +1237,13 @@ var PSpectrum = (function () {
 
     /**
      * Convert b-v (colorindex) values reported to stars to RGB color
-     * @param {Number} bv the b-v value for the star.s
+     * @param {Number} bv the b-v value for the stars
      * {@link https://stackoverflow.com/questions/21977786/star-b-v-color-index-to-apparent-rgb-color}
      * {@link https://en.it1352.com/article/cab2367e8d784310b3846a705478ace3.html}
+     * {@link https://sites.uni.edu/morgans/astro/course/Notes/section2/spectraltemps.html}
      * {@link http://www.vendian.org/mncharity/dir3/blackbody/UnstableURLs/bbr_color.html}
-     * The 2019 lookup table (more accurate)
+     * {@link http://www.vendian.org/mncharity/dir3/starcolor/details.html}
+     * The 2019 lookup table (more accurate for dwarfs)
      * {@link https://www.pas.rochester.edu/~emamajek/EEM_dwarf_UBVIJHK_colors_Teff.txt}
      */
     PSpectrum.prototype.computeColorFromBV = function (bv) {
@@ -1305,6 +1300,7 @@ var PSpectrum = (function () {
      * @return {Number} - {r, g, b}
      */
     PSpectrum.prototype.lookupColorFromBlackbody = function (temp) {
+        /////////////////////////////////////console.log('lookup blackbody color');
         let t = Math.floor(temp / 100);
         t *= 100;
         if (t < 1000) t = 1000;
@@ -1452,8 +1448,8 @@ var PSpectrum = (function () {
 
         // sample identifiers: NOTE: use the Vizer link, and can remove the %20 spaces
 
-        id = 'HD48915'; // Sirius, HD query
-        id = 'HIP'
+        //id = 'HD48915'; // Sirius, HD query
+        //id = 'HIP'
         //id = 'HIP32349';
         //id = 'HIC32349';
         //id = 'GaiaDR26423349579465419392';
@@ -1472,12 +1468,25 @@ var PSpectrum = (function () {
              * for example, a query for Sirius gets two results, Sirius and its white 
              * dwarf companion
              */
+            if (json) {
+                if (!resFn) {
+                    resFn = function (json) {
+                        console.log('JSON for id:' + id + ' is:' + json);
+                    };
+                } else resFn(json); // execute our local processing
 
-            // execute our local processing
-            if (json && resFn) resFn(json);
+            } else console.warn('loadSpectrumFromSIMBAD warning: bad JSON for id:' + id);
 
         }, true);
 
+    };
+
+    /**
+     * Gilese bright star catalog entry
+     */
+    PSpectrum.prototype.loadFromHSRC = function () {
+        // Gilese brigh star catalog
+        //https://heasarc.gsfc.nasa.gov/db-perl/W3Browse/w3table.pl?tablehead=name%3Dgliese2mas&Action=More+Options
     };
 
     /** 
@@ -1546,38 +1555,77 @@ var PSpectrum = (function () {
 
     };
 
+
     /**
-     * Load stellar colors for all stellar types from JSON data
-     * JSON file source
-     * @link {http://www.isthe.com/chongo/tech/astro/HR-temp-mass-table-byhrclass.html}
+     * load a lookup table for [type + range + luminosity]
+     * used for complete spectra, e.g., 'A8III'
+     * @param {BABYLON.AssetsManager} assetManager - the file loader
+     * @param {String} dir - the path to the data file
      */
-    PSpectrum.prototype.loadStarPropsBySpectrum = function (assetManager, dir) {
+    PSpectrum.prototype.loadTRL = function (assetManager, dir) {
 
         let spectrum = this;
         let util = this.util;
 
         console.log("------------------------------");
-        console.log('PSpectra: loading colors for all stellar types:' + dir)
+        console.log('PSpectra: loading [type + range + luminosity] lookup table:' + dir);
 
-        const loadColors = assetManager.addTextFileTask('starprops', dir);
+        const loadTRL = assetManager.addTextFileTask('[t + r + l]', dir);
 
-        loadColors.onSuccess = async function (colors) {
-            console.log('PSpectra: stellar properties loaded, parsing data...')
+        loadTRL.onSuccess = async function (trl) {
+            console.log('PSpectra: [t + r + l] stellar properties loaded, parsing data, length:' + trl.text.length);
             try {
-                spectrum.spectLookup =  JSON.parse(colors.text);
-                spectrum.spectLookupKeys = Object.keys(spectrum.spectLookup);
+                spectrum.trlLookup =  JSON.parse(trl.text);
+                spectrum.trlLookupKeys = Object.keys(spectrum.trlLookup);
+                console.log('PSpectra: [t + r + l] complete');
             } catch (e) {
-                spectrum.util.printError(e, false, 'Stellar properties by spectrum table:');
-                spectrum.spectLookup = [];
-                spectrum.spectLookupKeys = {};
+                spectrum.util.printError(e, false, 'Stellar properties by [t + r + l] table:');
+                spectrum.trlLookup = {};
+                spectrum.trlLookupKeys = [];
             }
         };
 
-        loadColors.onTaskError = function (task) {
+        loadTRL.onTaskError = function (task) {
             console.log('PSpectrum task failed', task.errorObject.message, task.errorObject.exception);
         };
 
     };
+
+    /**
+     * load a lookup table for [type + luminosity]
+     * used for spectra lacking a range, e.g. 'AIII'
+     * @param {BABYLON.AssetsManager} assetManager - the file loader
+     * @param {String} dir - the path to the data file
+     */
+    PSpectrum.prototype.loadTL = function (assetManager, dir) {
+
+        let spectrum = this;
+        let util = this.util;
+
+        console.log("------------------------------");
+        console.log('PSpectra: loading [type + luminosity] lookup table:' + dir);
+
+        const loadTL = assetManager.addTextFileTask('[t + l]', dir);
+
+        loadTL.onSuccess = async function (tl) {
+            console.log('PSpectra: [t + l] stellar properties loaded, parsing data, length:' + tl.text.length);
+            try {
+                spectrum.tlLookup =  JSON.parse(tl.text);
+                spectrum.tlLookupKeys = Object.keys(spectrum.tlLookup);
+                console.log('PSpectra: [t + l] complete');
+            } catch (e) {
+                spectrum.util.printError(e, false, 'Stellar properties by [t + l] table:');
+                spectrum.tlLookup = {};
+                spectrum.tlLookupKeys = [];
+            }
+        };
+
+        loadTL.onTaskError = function (task) {
+            console.log('PSpectrum task failed', task.errorObject.message, task.errorObject.exception);
+        };
+
+    };
+
 
     return PSpectrum;
 

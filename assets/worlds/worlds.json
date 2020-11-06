@@ -140,6 +140,8 @@
                                 "size": 256,
                                 "colors": "spectrum_props.json",
                                 "blackbody": "blackbody.json",
+                                "trl": "spectrum_props_trl.json",
+                                "tl": "spectrum_props_tl.json",
                                 "lumlookup": "luminosity_lookup.json",
                                 "active":false
                             },
@@ -149,6 +151,8 @@
                                 "size": 256,
                                 "colors": "spectrum_props.json",
                                 "blackbody": "blackbody.json",
+                                "trl": "spectrum_props_trl.json",
+                                "tl": "spectrum_props_tl.json",
                                 "lumlookup": "luminosity_lookup.json",
                                 "active":true
                             },

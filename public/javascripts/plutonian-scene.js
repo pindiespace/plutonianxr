@@ -228,6 +228,8 @@ var PWorld = (function () {
 
     /**
      * Set position of a pObj, using polar coordinates
+     * RA (right ascention) = 0-24, decimal hours
+     * Dec (declination) -90 to +90
      */
     PWorld.prototype.getPosByRADecDist = function (ra, dec, dist, units = 1) {
 
@@ -579,59 +581,11 @@ var PWorld = (function () {
             return mesh;
         }
 
-        let domeDir = dir + '/' + pObj.dname + '/'; 
-
-////////////////////
-        let old = false;
-        // TO REVERT< CHANGE WORLDS.JSON
-        // TO REVERT< CHANGE TO GLOBAL
-        // MOST SPRITES ARE NOT BEING DRAWN
-///////////////////
-
-        // Specific to hyg3 stellar database models
         if (model.hyg) {
-
-            if (old) {
-            // use the AssetsManager to load the large JSON data file
-            let assetManager = new BABYLON.AssetsManager(scene);
-            // TODO: GUI OR PERFORMANCE SELECT
-            // mod = models.sprite120; ////////////////////////////////////////
-
-            let hyg = domeDir + model.hyg;
-
-            let loadHYG = assetManager.addTextFileTask(hyg.substring(0, hyg.lastIndexOf(".")) + '-stardome', hyg);
-
-            loadHYG.onSuccess = async function(stars) {
-
-                loadHYG.stars = JSON.parse(stars.text);
-
-                const spriteMgr = await computeHygSprite(loadHYG.stars, domeDir + 'sprite/textures/' + model.spritesheet, model.size, scene).then((spriteManagerStars) => {
-                    console.log('GLOBAL Hyg stardome loaded');
-
-                    // TODO: activate stardome interaction here
-
-                }); // TODO: attach elsewhere, or delete!
-
-            };
-
-            assetManager.onProgress = function(remainingCount, totalCount, lastFinishedTask) {
-                console.log('Loading GLOBAL Hyg database files. ' + remainingCount + ' out of ' + totalCount + ' items still need to be loaded.');
-            };
-
-            assetManager.onFinish = function(tasks) {
-                console.log('All done with loading GLOBAL Hyg database');
-            };
-
-            assetManager.load();
-        } else {
-            // Load Hyg and color data
-            console.log('loading PCelestial Hyg data...')
+            let domeDir = dir + '/' + pObj.dname + '/';
             this.celestial.loadHygData(model, domeDir, scene);
-        }
-
-
         } else {
-            console.error('loadStarDome ERROR: no Hyg model data');
+            console.error('loadStarDome ERROR: no model.hyg data');
         }
 
         return mesh;
@@ -1886,7 +1840,7 @@ var PWorld = (function () {
 
             let sc = this.createScene(engine).then(returnedScene => {
 
-                //window.scene = returnedScene;
+                // set the Scene so it can be recovered from this object
                 pWorld.scene = returnedScene;
 
                 let as = pWorld.createAssets(returnedScene).then(returnedAssets => {
