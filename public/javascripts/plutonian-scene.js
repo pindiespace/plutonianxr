@@ -154,7 +154,7 @@ var PWorld = (function () {
         // this returns the active galaxy and its skybox {galaxy:xx, skybox:xx}
         let galaxies = this.getActiveGalaxy();
 
-        console.log("galaxy is a:" + galaxies + " with length:" + galaxies.length)
+        ///////////console.log("galaxy is a:" + galaxies + " with length:" + galaxies.length)
 
         if (galaxies.length > 0) {
 

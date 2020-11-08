@@ -4,10 +4,12 @@
  * 
  * Parsing a spectra provides additional properties not present in the 
  * hyg3 database, which are added to hyg3 object (our version defined in PData.HygObj)
- *
+ * Sample parser
+ * {@link https://codebox.net/pages/star-classification-parser-web-service}
+
  * {@link http://www.livingfuture.cz/stars.php}
+ * Secrets of the Harvard classification revealed
  * {@link http://archive.seattleastro.org/webfoot/feb00/pg2.htm}
- * {@link http://www.vendian.org/mncharity/dir3/blackbody/UnstableURLs/bbr_color.html}
  */
 var PSpectrum = (function () {
 
@@ -16,16 +18,10 @@ var PSpectrum = (function () {
         this.util = util;
         this.pdata = pdata;
 
-        // create a keylist for .dSpectrumTrans, sorted by string size
+        // create a keylist for sorted by string size (faster pattern-matching with .indexOf())
         this.dSpectrumTransKeys = Object.keys(this.dSpectrumTrans).sort((a,b) => b.length - a.length);
-
-        // create a keylist for .dStarType, sorted by string size (reduces pattern-matching ambiguity)
         this.dStarTypeKeys = Object.keys(this.dStarType).sort((a,b) => b.length - a.length);
-
-        // create a luminosity keylist, sorted by string size (reduces pattern-matching ambiguity)
         this.dStarLumClassKeys = Object.keys(this.dStarLumClass).sort((a,b) => b.length - a.length);
-
-        // create a keylist for .dStarMods, sorted by string size (reduces pattern-matching ambiguity)
         this.dStarModKeys = Object.keys(this.dStarMods).sort((a,b) => b.length - a.length);
 
     };
@@ -37,11 +33,8 @@ var PSpectrum = (function () {
         total:0,
         parsed:0,
         computed:0,
-        lastditch:0,
-        goodlookup:0,
-        oklookup:0,
-        badlookup:0,
-        nolookup:0
+        lastDitch:0,
+        failedLookup:[]
     };
 
     /*
@@ -160,10 +153,6 @@ var PSpectrum = (function () {
      */
     PSpectrum.prototype.tlLookup = {};
     PSpectrum.prototype.tlLookupKeys = [];
-
-
-    //DEBUG
-    PSpectrum.prototype.failedLookup = []; // TODO: DELETE
 
     /*
      * ------------------------------------------------------
@@ -318,9 +307,11 @@ var PSpectrum = (function () {
         'I': ' Supergiant',
         'II': ' Bright Giant',
         'IIa': ' More luminous Bright Giant',
+        'IIab': ' Intermediate bright Giant',
         'IIb': ' Less luminous Bright Giant',
         'III': ' Giant',
-        'IIIa': ' More luminous Giant',
+        'IIIa': ' Giant',
+        'IIIab': ' Intermediate luminous Giant',
         'IIIb': ' Less luminous Giant',
         'IV': ' Sub-Giant',
         'IVa': ' More luminous Sub-Giant',
@@ -328,21 +319,17 @@ var PSpectrum = (function () {
         'VIab': ' Luminous dwarf',
         'V' : ' Dwarf (Main Sequence)',
         'Va' : ' Luminous Dwarf (Main Sequence)',
-        'Vb' : ' Regular Dwarf (Main Sequence)',
-        'Vz' : ' Lower main sequence Dwarf',
+        'Vb' : ' Less luminous Dwarf (Main Sequence)',
+        'Vab': ' Intermediate size Dwarf (Main Sequence)',
+        'Vz' : ' Lower Main Sequence Dwarf',
         'VI' : ' Sub-Dwarf',
         'VIa' : ' Luminous Sub-Dwarf',
         'VIb' : ' Less Luminous Sub-Dwarf',
         'VII' : ' White-Dwarf',
         'VIIa' : ' Luminous White-Dwarf',
         'VIIb' : ' Less Luminous White-Dwarf',
+        ':' : 'Uncertain luminosity',
         '' : ' Unknown luminosity'
-    };
-
-    // suffix for luminosity rather than general suffix
-    // TODO: appy when it is at the end of the string
-    PSpectrum.prototype.dLumSuffix = {
-        ':' :  'Uncertain luminosity'
     };
 
     /**
@@ -384,8 +371,9 @@ var PSpectrum = (function () {
         'nn' : ', very broad absorption features (rotating fast)',
         'neb': ', a nebula spectrum is mixed in',
         'P'  : ', Magnetic white dwarf with detectable polarization',
-        'PEC': ', White dwarf, Peculiarities exist',
-        'p': ', chemically peculiar star',
+        'PEC': ', White dwarf, peculiarities exist',
+        'pec': ', White dwarf, peculiarities exist',
+        'p': ', chemically peculiar star, strong metal spectral lines',
         'pq': ', peculiar, similar to nova spectrum',
         'q': ', P Cygni profile, expanding gaseous envelope',
         's': ', narrow absorption lines',
@@ -487,7 +475,7 @@ var PSpectrum = (function () {
      * @param {String} spect the spectrum
      * @param {Object} prop the properties output object, defined in PData
      */
-    PSpectrum.prototype.parseYerkesPrefix = function (spect, prop) {
+    PSpectrum.prototype.transformYerkesPrefix = function (spect, prop) {
         if (spect.length) {
             for (let i in this.dLumPrefixTrans) {
                 let l = spect.indexOf(i);
@@ -536,7 +524,7 @@ var PSpectrum = (function () {
      * @param {Object} prop stellar property, defined in PData
      */
     PSpectrum.prototype.parseSpectrumRange = function (spect, prop) {
-        let r = spect.parseNumeric(); // pull the first number encountered
+        let r = spect.parseNumeric(); // pull the FIRST number encountered only
         if (r) {
             if (r > 9) r = 9; // handle extremely rare stuff like 'B10'
             prop.range.key = r.num + ''; // force key to string
@@ -559,7 +547,7 @@ var PSpectrum = (function () {
                 let k = this.dStarLumClassKeys[i];
                 let p = spect.indexOf(k);
                 if (p == 0) { // MUST start at position zero
-                    prop.luminosity.key = k;   // type, key for description
+                    prop.luminosity.key = k; // type, key for description
                     return spect.replace(k, ''); // remove from the spectra
                 }
             }
@@ -636,7 +624,7 @@ var PSpectrum = (function () {
                 let p = props[i];
                 let s = p.spect;
 
-                s = this.parseYerkesPrefix(s, p);
+                s = this.transformYerkesPrefix(s, p);
                 s = this.parseSpectrumType(s, p);
                 s = this.parseSpectrumRange(s, p);
 
@@ -664,13 +652,6 @@ var PSpectrum = (function () {
                         );
                     }
  
-                }
-                /////////////////////////////////////////////////////////
-
-                // non white dwarf, missing luminosity class, estimate
-                if (p.type.key[0] != 'D' && !p.luminosity.key) {
-                    this.lookupLuminosityClass(hyg, p);
-                    // TODO: handle single-type NO range for this
                 }
 
                 s = this.parseSpectrumMods(s, p);
@@ -719,6 +700,7 @@ var PSpectrum = (function () {
         hyg.computedType = true;
         this.stats.computed++;
 
+        // no spectra, no B-V color index
         if (!util.isNumber(hyg.ci, true)) return this.lastDitchProps(hyg);
 
         // parameters we need to compute the spectra
@@ -778,8 +760,7 @@ var PSpectrum = (function () {
 
         hyg.computed = true;
         hyg.computedLastDitch = true;
-        hyg.lastditch = true;
-        this.stats.lastditch++;
+        this.stats.lastDitch++;
 
         if (hyg.dist == pdata.HYG_CONSTANTS.max_dist) {
             if (hyg.absmag < -9.2) return 'B0Ia';
@@ -850,14 +831,19 @@ var PSpectrum = (function () {
             // do a luminosity lookup by [type + range]
             if (r.length && util.isNumber(r)) {
 
-                tr = prop.type.key + Math.round(prop.range.key); //convert 'MV5.5' to 'MV5'
+                if (prop.range.key > 9) r = 9; // clamp 'A10' to 'A9'
+                else r = Math.round(prop.range.key); //clamp 'MV5.5' to 'MV5'
+
+                tr = prop.type.key + r; 
                 lc = this.lumLookup[tr];
 
                 // We found the [type + range], luminosity class versus absolute magnitude
                 if (lc) {
 
                     // find the closest table match to our luminosity by absolute magnitude
+                    let flag = false;
                     let lumMatch = util.getKeyForClosestNumericValue(lc, absmag);
+                    if (hyg.id == '74958') window.lumMatch = lumMatch;
 
                     // store luminosity class
                     if(lumMatch.key) {
@@ -886,7 +872,7 @@ var PSpectrum = (function () {
                     }
                 }
                 if (prop.luminosity.key == '')
-                    console.log("NO KEY, TYPE:" + t + " KEY IS NOW:(" + prop.luminosity.key + ") DIFF:" + oldDiff + " lum:" + hyg.lum)
+                    console.log("NOVA - NO KEY, id:" + hyg.id + " TYPE:" + t + " KEY IS NOW:(" + prop.luminosity.key + ") DIFF:" + oldDiff + ' spect:' + hyg.spect + " lum:" + hyg.lum)
 
             }
 
@@ -904,7 +890,6 @@ var PSpectrum = (function () {
         let util = this.util;
         let role = this.pdata.SPECT_ROLES;
 
-
         if (props.length) {
 
             let t, r, l;
@@ -918,7 +903,7 @@ var PSpectrum = (function () {
                 hyg.computed = true;
                 this.lookupLuminosityClass(hyg, primary);
                 l = primary.luminosity.key;
-                if (!l) console.log("FAILED TO FIND L FOR id:" + hyg.id + " key:" + primary.type.key + ' lum:' + hyg.lum)
+                if (!l) console.log("FAILED TO FIND luminosity FOR id:" + hyg.id + " key:" + primary.type.key + ' lum:' + hyg.lum)
             }
 
             // loop through all sub-spectra
@@ -981,7 +966,7 @@ var PSpectrum = (function () {
                 lp = t;
 
                 // regenerate the combined type - range - luminosity key
-                if(util.isNumber(r, true)) {
+                if(util.isNumber(r)) {
                     r = Math.round(r); //convert 'MV5.5' to 'MV5'
                     lp += r; // only add range if present
                     if(l.length) {
@@ -991,39 +976,27 @@ var PSpectrum = (function () {
                     // lookup by [type + range + luminosity class], about 1100 possible types, incd white dwarfs
                     pp = this.trlLookup[lp];
 
-                    if (pp) this.stats.goodlookup++; //////////////////////////////////////TODO:
                 }
-
-                // handle cases like 'DA/F'
-                ///////////////if (primary.type.key[0] == 'D' && prop.type.key.indexOf()
 
                 // lookup by weighted averages for [type + luminosity class]
-                if (!pp) {
+                if (!pp && t[0] != 'D') {
                     pp = this.tlLookup[t + '-' + l];
-                    if (pp) this.stats.oklookup++; ///////////////////////////////////////////TODO:
-                    // TODO: DIM M STARS AREN'T BEING FOUND
-                    // TODO: keep for new star entries, to see if the type + lum table is complete
 
-                    ///if (pp && lp[0] == 'D') console.log('id:' + hyg.id + ' good white dwarf lookup for:' + lp)
-
-                    // TODO: if this is generated, we need to
-                    // TODO: do substitutions, e.g. DA/F should be DA/DZ
-                    // TODO: IIIa is not being recognized
-                    // TODO: IIIb is not being recognized
-
-                    if (!pp) console.log('id:' + hyg.id + ' lum lookup failed with t:' + t + ' l:' + l + ' lum:' + hyg.lum + ' class:' + prop.luminosity.key + ' absmag:' + hyg.absmag)
+                    // TODO: would need average type + luminosity for classes like IIb
+                    //if (!pp) {
+                    //    console.log('id:' + hyg.id + ' lum lookup failed with t:' + t + r + ' l:' + l + ' lum:' + hyg.lum + ' class:' + prop.luminosity.key + ' absmag:' + hyg.absmag)
+                    //}
                 }
 
-                // no lookup hits, assign default stellar type propeFrties (inaccurate)
+                // no lookup hits, assign default stellar type properties (inaccurate)
                 if (!pp) {
                     pp = this.dStarProps[t];
-                    if (pp) this.stats.badlookup++; /////////////////////////////////////
-                    this.failedLookup.push(prop);
+                    ////////if (pp) this.stats.failedLookup.push(prop);
                 }
 
                 // Look for strange luminosity-class combinations
                 if (hyg.lum < 0.1 && prop.type.key[0] != 'M' && prop.type.key[0] != 'D') {
-                    //////////////////////////////console.log("FUNKY lum and type, id:" + hyg.id + " type:" + prop.type.key + ' absmag:' + hyg.absmag + ' and lumclass:' + prop.luminosity.key + ' and lum:' + hyg.lum)
+                    console.log("FUNKY lum and type, id:" + hyg.id + " type:" + prop.type.key + ' absmag:' + hyg.absmag + ' and lumclass:' + prop.luminosity.key + ' and lum:' + hyg.lum)
                 }
 
                 if (pp) {
@@ -1092,13 +1065,13 @@ var PSpectrum = (function () {
                     if (hyg.ci == '' && (prop.ci != pdata.EMPTY)) hyg.ci = prop.ci.value;
 
                     // hyg doesn't have temperature, so compute/lookup temperature, assured that we have a ci
-                    if (prop.temp.value) hyg.temp = prop.temp.value;
+                    if (prop.temp.value && !hyg.temp) hyg.temp = prop.temp.value;
                     else if (hyg.ci) hyg.temp = this.computeTempFromBV(hyg.ci);
 
                     // get radius from lookup, or absmag and temperature, or defaults
                     if (prop.radius.value) {
                         hyg.radius = prop.radius.value;
-                    } else if (hyg.temp) {
+                    } else if (hyg.temp && !hyg.radius) {
                         hyg.radius = this.computeRadius(hyg.temp, hyg.lum);
                     } else {
                         hyg.radius = 1;
@@ -1192,6 +1165,10 @@ var PSpectrum = (function () {
 
         // use luminosity class to make the description more specific
         if (prop.luminosity.key.length) d = d.replace(' star', this.dStarLumClass[prop.luminosity.key]);
+        
+        if (prop.type.key[0] != 'D' && this.dStarLumClass[prop.luminosity.key].indexOf('Unknown') != -1) {
+            console.log('found unknown luminosity for: hyg.id:' + hyg.id + ' spect:' + hyg.spect + ' lum:' + hyg.lum);
+        }
 
         switch (prop.role) {
             case pdata.SPECT_ROLES.PRIMARY:

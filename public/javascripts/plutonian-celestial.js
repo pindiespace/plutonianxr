@@ -51,7 +51,6 @@ var PCelestial = (function () {
 
         // SpriteManager and scene
         this.assetManager = null;
-        this.camera = null;
 
         // we don't do this for the luminosity classes, since they are in an Array, not an Object, and pre-sorted
 
@@ -75,7 +74,7 @@ var PCelestial = (function () {
      * This gives the array index for a sprite, with combined 
      * with stellar type
      */
-    PCelestial.prototype.ddLuminosityClassIndex = [
+    PCelestial.prototype.dLuminosityClassIndex = [
         'III', // 0, giant
         'Ia',  // 1, hypergiant
         'Ib',  // 2, supergiant
@@ -104,8 +103,10 @@ var PCelestial = (function () {
         'V',   // 6, dwarf
         'D',   // 7, white dwarf
         ''     // 8, unknown
+
+        TODO: check POSITION ZERO INDEX!!!!!!!!!!!!!!!!!!!!!!!!!!!!
      */
-    PCelestial.prototype.ddSpriteIndex = {
+    PCelestial.prototype.dSpriteIndex = {
         'LBV': [ 1,  1,  1,  1,  1,  1, -1, -1,  1], //luminous blue variable
         'W':   [ 0,  0,  0,  0,  0,  0, -1, -1,  0], // Wolf-Rayet
         'WR':  [ 0,  0,  0,  0,  0,  0, -1, -1,  0], // Wolf-Rayet, young
@@ -124,17 +125,17 @@ var PCelestial = (function () {
         'G':   [ 5,  5,  5,  5,  5,  5,  5, -1,  5], // Yellow, giant or dwarf
         'K':   [ 6,  6,  6,  6,  6,  6,  6, -1,  6], // Yellow-orange, giant or dwarf
         'M':   [ 8,  9,  9,  8,  7,  7,  7, -1,  7], // Red, giant or dwarf or subdwarf
-        'MS':  [10,  9,  9,  9,  9, -1, -1, -1,  9], // Red giant, asymptotic-giant branch carbon star, younger, transition to SC
+        'MS':  [ 9,  9,  9,  9,  9, -1, -1, -1,  9], // Red giant, asymptotic-giant branch carbon star, younger, transition to SC
         'S':   [ 8,  9,  9,  9,  9, -1, -1, -1,  9], // Red giant, sub-carbon star, asymptotic-giant-branch, zirconium oxide in spectrum
-        'SC':  [ 9,  9,  9,  9,  8, -1, -1, -1,  9], // Red giant, older asymptotic-giant branch sub-carbon star, zirconium oxide in spectrum
+        'SC':  [ 8,  9,  9,  9,  8, -1, -1, -1,  9], // Red giant, older asymptotic-giant branch sub-carbon star, zirconium oxide in spectrum
         'R':   [ 9,  9,  9,  9,  9,  9,  8, -1,  9], // Red giant, carbon star equivalent of late G to early K-type stars
-        'N':   [10, 10,  8,  8,  8,  8,  8, -1, 10], // Red older carbon star, giant equivalent of late K to M-type stars
+        'N':   [ 8, 10,  8,  8,  8,  8,  8, -1, 10], // Red older carbon star, giant equivalent of late K to M-type stars
         'C':   [ 8,  9,  9,  8,  8,  8,  7, -1,  8], // Red carbon star, giant/dwarf
         'C-R': [ 9,  9,  9,  9,  9,  8,  7, -1,  9], // Red giant, carbon star, equivalent of late G to early K-type stars
-        'C-N': [10, 10,  8,  8,  8,  8,  7, -1, 10], // Red carbon star, older, giant equivalent of late K to M-type stars
-        'C-J': [10, 10, 10,  8,  2,  8, -1, -1, 10], // Red giant, cool carbon star with a high content of carbon-13
-        'C-H': [10, 10, 10,  8,  2, 10, -1, -1, 10], // Red giant, Population II equivalent of the C-R red giants
-        'C-Hd':[10, 10,  9,  8,  2, 10, -1, -1, 10], // Red giant, Hydrogen-deficient, similar to late G supergiants with CH and C2 bands added
+        'C-N': [ 9, 10, 10,  8,  8,  8,  7, -1, 10], // Red carbon star, older, giant equivalent of late K to M-type stars
+        'C-J': [ 9, 10, 10,  8,  2,  8, -1, -1, 10], // Red giant, cool carbon star with a high content of carbon-13
+        'C-H': [ 9, 10, 10,  8,  2, 10, -1, -1, 10], // Red giant, Population II equivalent of the C-R red giants
+        'C-Hd':[ 9, 10, 10,  8,  2, 10, -1, -1, 10], // Red giant, Hydrogen-deficient, similar to late G supergiants with CH and C2 bands added
         'D':   [-1, -1, -1, -1, -1, -1, -1, 11, 11], // White dwarf
         'DO':  [-1, -1, -1, -1, -1, -1, -1, 11, 11], // White Dwarf, very hot, helium-rich atmosphere, 45-120,000K
         'DAO': [-1, -1, -1, -1, -1, -1, -1, 11, 11], // White Dwarf, very hot, hydrogen and helium-rich atmosphere, ionized helium lines, >30,000K
@@ -432,19 +433,70 @@ var PCelestial = (function () {
     };
 
     /**
-     * Get a Sprite, and look at it
+     * move the camera to just in front of a Sprite by one of its identifiers
+     * - hygid - hyg3 id
+     * - hip: hipparcos
+     * - hr: 
+     * - hd: H. Draper
+     * - gaia:
+     */
+
+    /**
+     * Get a Sprite by an identifier
      * @param {String} hygid - the hyg database id of the object represented by the Sprite
      * @return {Babylon.Sprite}
      */
-    PCelestial.prototype.getSpriteByHygID = function (hygid) {
+    PCelestial.prototype.getSpriteByIdentifier = function (id) {
+        let util = this.util;
         let sprites = this.getSprites();
+        let identifier = '';
+
+        if (util.isNumber(id)) {
+            id += ''; // coerce to string
+        }
+        identifier = id.split(' ');
         for (let i = 0; i < sprites.length; i++) {
             let hyg = sprites[i].hyg;
-            if (hyg.id == hygid) {
-                console.log('found it')
-                window.sprite = sprites[i]; ////////////////////////////TODO DEBUG
-                return sprites[i];
+
+            switch (identifier[0].toLowerCase()) {
+                case 'hd':
+                    if (hyg.hd && hyg.hd == identifier[1]) {
+                        return sprites[i];
+                    }
+                    break;
+                case 'hr':
+                    if (hyg.hr && hyg.hr == identifier[1]) {
+                        return sprites[i];
+                    }
+                    break;
+                case 'gaia':
+                    if (hyg.gaia && hyg.gaia == identifier[1]) {
+                        return sprites[i];
+                    }
+                    break;
+                default:
+                    if (hyg.id == id) { // wasn't split, get back default string
+                        return sprites[i]; // just an id? use hyg.id
+                    }
+                    break; 
+
             }
+
+        }
+    };
+
+    /**
+     * move the camera to just in front of a Sprite, offset 5 units 
+     * in the z-axis
+     * @param {String} id - the hyg3 identifier (hygid, hip, hd, hr, gaia)
+     */
+    PCelestial.prototype.goToSpriteByIdentifier = function (id) {
+        let scene = this.spriteManager._scene;
+        let camera = scene.activeCamera;
+        let s = this.getSpriteByIdentifier(id);
+        if (s) {
+            camera.position = s.position.add(new BABYLON.Vector3(0, 0, 5));
+            camera.setTarget(s.position);
         }
     };
 
@@ -453,13 +505,13 @@ var PCelestial = (function () {
         let SPRITE_INDEX_DEFAULT = this.SPRITE_INDEX_DEFAULT;
 
         let pt = star.primary.type;
-        let si = this.ddSpriteIndex[pt]; // exact match to type needed
+        let si = this.dSpriteIndex[pt]; // exact match to type needed
 
         // M-K typelist, each type with a luminosity vs. spriteIndex array
         if (si) {
 
             // M-K luminosity - index lookup
-            let lc = this.ddLuminosityClassIndex; 
+            let lc = this.dLuminosityClassIndex; 
             let pl = star.primary.luminosity;
             if (pl) {
 
@@ -506,7 +558,13 @@ var PCelestial = (function () {
 
         sprite.width = w,
         sprite.height = h;
-        sprite.size = 0.69897 + (Math.log(Number(star.radius) + 1));
+        //TODO: rationalize
+        // TODO: lum < 1 is being classified too large, when there is no lumClass
+        // TODO: adjust sprites based on radius, not just type
+        // TODO: red dwarves are too big relative to G class star
+        //sprite.size = 0.69897 + (Math.log(Number(star.radius) + 1));
+        //sprite.size = 1 + (util.logWithBase(Number(star.radius) + 1, 3));
+        sprite.size = Math.pow(star.radius, 0.4);
     };
 
     /**
@@ -644,7 +702,8 @@ var PCelestial = (function () {
         let hygData = this.hygData;
         let numStars  = hygData.length; // an array of star data objects
         let TWOPI = Math.PI * 2;
-        let camera = scene.cameras[0]; // can't used scene.activeCamera, conficts with WebXR
+        //let camera = scene.cameras[0]; // can't EDIT scene.activeCamera, conficts with WebXR
+        let camera = scene.activeCamera;
 
         // The loader should already have assigned these when we enter this function.
         if (!this.checkHygData(hygData)) return false;
@@ -736,7 +795,6 @@ var PCelestial = (function () {
             function update (sprite, cam) {
 
                 /*
-
                 let dx = cam.position.x - sprite.position.x,
                 dy = cam.position.y - sprite.position.y,
                 dz = cam.position.z - sprite.position.z;

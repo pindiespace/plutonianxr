@@ -234,6 +234,8 @@ var PData = (function () {
     };
 
     PData.prototype.fixHygObj = function (hygObj = {}) {
+        let util = this.util;
+
             if (!hygObj.id) hygObj.id = this.MINUS_ONE;
             if (!hygObj.hip) hygObj.hip = this.MINUS_ONE;
             if (!hygObj.hd) hygObj.hd = this.MINUS_ONE;
@@ -241,17 +243,17 @@ var PData = (function () {
             if (!hygObj.gl) hygObj.gl = this.EMPTY;
             if (!hygObj.bf) hygObj.bf = this.EMPTY;
             if (!hygObj.proper) hygObj.proper = this.EMPTY;
-            if (!hygObj.ra) hygObj.ra = this.ZERO;
-            if (!hygObj.dec) hygObj.dec = this.ZERO;
+            if (!util.isNumber(hygObj.ra)) hygObj.ra = this.ZERO;
+            if (!util.isNumber(hygObj.dec)) hygObj.dec = this.ZERO;
             if (!hygObj.dist) hygObj.dist = this.ZERO;
             //pmra, pmdec:, rv:
-            if (!hygObj.mag) hygObj.mag = this.ZERO;
-            if (!hygObj.absmag) hygObj.absmag = this.ZERO;
+            if (!util.isNumber(hygObj.mag)) hygObj.mag = this.ZERO;
+            if (!util.isNumber(hygObj.absmag)) hygObj.absmag = this.ZERO;
             if (!hygObj.spect) hygObj.spect = this.EMPTY;
-            if (!hygObj.ci) hygObj.ci = this.EMPTY;
-            if (!hygObj.x) hygObj.x = this.ZERO;
-            if (!hygObj.y) hygObj.y = this.ZERO;
-            if (!hygObj.z) hygObj.z = this.ZERO;
+            if (!util.isNumber(hygObj.ci)) hygObj.ci = this.EMPTY;
+            if (!util.isNumber(hygObj.x)) hygObj.x = this.ZERO;
+            if (!util.isNumber(hygObj.y)) hygObj.y = this.ZERO;
+            if (!util.isNumber(hygObj.z)) hygObj.z = this.ZERO;
             //vx:, vy:, vz:, rarad:, decrad:, pmrarad:, pmdecrad:, bayer:, flam:
 
             // info about multi-star systems
@@ -263,16 +265,16 @@ var PData = (function () {
             if (!hygObj.composite) hygObj.composite = []; // list composite spectral types
 
             if (!hygObj.con) hygObj.con = this.EMPTY;
-            if (!hygObj.lum) hygObj.lum = this.ZERO;
+            if (!util.isNumber(hygObj.lum)) hygObj.lum = this.ZERO;
             if (!hygObj.var) hygObj.var = false;
             if (!hygObj.var_min) hygObj.var_min = this.NOT_FOUND;
             if (!hygObj.var_max) hygObj.var_max = this.NOT_FOUND;
 
-            if (!hygObj.temp) hygObj.temp = this.ZERO;
-            if (!hygObj.radius) hygObj.radius = this.ONE;
-            if (!hygObj.r) hygObj.r = this.ZERO;
-            if (!hygObj.g) hygObj.g = this.ZERO;
-            if (!hygObj.b) hygObj.b = this.ZERO;
+            if (!util.isNumber(hygObj.temp)) hygObj.temp = this.ZERO;
+            if (!util.isNumber(hygObj.radius)) hygObj.radius = this.ONE;
+            if (!util.isNumber(hygObj.r)) hygObj.r = this.ZERO;
+            if (!util.isNumber(hygObj.g)) hygObj.g = this.ZERO;
+            if (!util.isNumber(hygObj.b)) hygObj.b = this.ZERO;
             if (!hygObj.rot) hygObj.rot = this.HYG_CONSTANTS.ROTATION_DEFAULT;
             if (!hygObj.dust) hygObj.dust = false;
             if (!hygObj.envelope) hygObj.envelope = false;

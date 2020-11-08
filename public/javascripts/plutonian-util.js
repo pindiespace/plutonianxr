@@ -38,8 +38,11 @@ var PUtil = (function () {
 
     /** 
      * check if string is a computable number
+     * @param {Object} value - what to check if it is a number
+     * @param {Boolean} suppress - if true, don't write error messages
+     * @return {Boolean} if true, it is a Number, else false
      */
-    PUtil.prototype.isNumber = function (value, suppress = false) {
+    PUtil.prototype.isNumber = function (value, suppress = true) {
 
         let v = parseFloat(value);
 
@@ -271,6 +274,11 @@ var PUtil = (function () {
         return Number(Math.round(num + 'e' + decimals) + 'e-' + decimals);
     };
 
+    PUtil.prototype.logWithBase = function (num, base) {
+        let log = Math.log;
+        return log(num)/(base ? log(base) : 1);
+    }
+
     PUtil.prototype.getMaxValueOfArray = function (numArray) {
         return Math.max.apply(null, numArray);
     };
@@ -319,7 +327,7 @@ var PUtil = (function () {
             if (v > max) max = v;
             if (v < min) min = v;
 
-        }
+        } // end of loop
 
         // TODO: integrate into luminosity lookup
 
