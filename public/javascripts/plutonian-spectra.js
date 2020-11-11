@@ -353,6 +353,7 @@ var PSpectrum = (function () {
         'e' : ', emission lines present',
         '(e)': ', forbidden emission lines present',
         '[e]': ', forbidden emission lines present',
+        'eq': ', emission lines with P Cygni profile',
         'er': ', emission lines reversed with center of emission lines weaker than edges',
         'E'  : ', white dwarf with emission lines present',
         'f' : ', N III and He II emission',
@@ -402,7 +403,6 @@ var PSpectrum = (function () {
         'Tc': ', strong Technetium emission lines',
         'Zr': ', strong Zirconium emission lines'
     };
-
 
     // methods
 

@@ -293,6 +293,40 @@ var PData = (function () {
 
     };
 
+    /** 
+     * Using hyg data, create a pObj
+     * @param {Object.PData.HygObj} hygObj
+     * @return {Object.PData.PObj}
+     */
+    PData.prototype.convertHygToPObj = function (hygObj) {
+
+        let pObj = this.clonePObj(); // empty
+
+        pObj.key = hygObj.id;
+        pObj.dname = this.EMPTY; // TODO
+        pObj.name = hyg.proper;
+        pObj.description = hyg.description;
+        pObj.type = this.PCTYPES.STAR;
+        let d = pObj.data;
+        d.diameter = 20000; // CONVERSION, possibly determine by spectral type
+        d.ra = hyg.ra;
+        d.dec = hyg.dec;
+        d.dist = hyg.dist;
+        //d.tilt // not in hyg
+        //d.rotation = // not in hyg
+        d.color = [hyg.r, hyg.g, hyg.b];
+
+        let m = pObject.models;
+        m.default = {};
+        m.default.emissive = true;
+        m.default.specular = 0.0;
+        m.default.glow = true;
+        m.default.active = true;
+
+        return pObj;
+
+    };
+
     /*
      * ------------------------------------------------------
      * PObj (used by PScene, PCelestial)

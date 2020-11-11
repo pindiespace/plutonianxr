@@ -12,10 +12,40 @@
  * Sprites
  * Meshes
  * WebWorker to shift each data entry beween these three models
+ * References
+ * Stellar classification parser
+ * {@link https://codebox.net/pages/star-classification-parser-web-service}
+ * Sample classification from API
+ * {@link https://api.codebox.net/starclass/parse/G5V}
+ * Many userful stellar programs
+ * {@link https://github.com/codebox?tab=repositories}
+  * NASA Exoplanet Archive writer (downloads and generates diagram)
+ * {@link https://github.com/codebox/planetary-systems}
+ * Databases
+ * Hyg3 database
+ * {@link https://github.com/astronexus/HYG-Database}
+ * ARI Database for Nearby Stars cross-connected with 
+ * (Gliese, GJ, Gliese, GJ, Woolley, HIP, FK, PPM, BS, HR, HD, HDE, BD, CoD, CPD)
+ * {@link https://wwwadd.zah.uni-heidelberg.de/datenbanken/aricns/index.htm}
+ * SIMBAD
+ * {@link http://simbad.u-strasbg.fr/simbad/sim-fsam}
+ * NASA HEASARC Archive
+ * {@link https://heasarc.gsfc.nasa.gov/docs/archive.html}
+ * {@link https://heasarc.gsfc.nasa.gov/db-perl/W3Browse/w3browse.pl}
+ * HEASARSC Gliese search
+ * {@link https://heasarc.gsfc.nasa.gov/db-perl/W3Browse/w3table.pl?tablehead=name%3Dgliese2mas&Action=More+Options}
+ * Archive for space telescopes (good search function)
+ * {@link https://archive.stsci.edu/spec_class/search.php}
  * 
  * Nearby Star Systems to add:
  * {@link https://en.wikipedia.org/wiki/List_of_star_systems_within_25%E2%80%9330_light-years}
  * {@link http://phl.upr.edu/projects/nearby-stars-catalog}
+ * {@link https://www.livingfuture.cz/stars.php}
+ * 
+ * Exoplanet.eu
+ * {@link http://exoplanet.eu/catalog/all_fields}
+ * NASA Exoplanet archive
+ * {@link https://exoplanets.nasa.gov/discovery/exoplanet-catalog/}
  * 
  * Build the celestial space using Hyg3 database and other sources
  */
@@ -224,6 +254,14 @@ var PCelestial = (function () {
     PCelestial.prototype.decimalHoursToHMS = function (hours) {
         let n = new Date(0,0).setSeconds(+hours * 3600);
         document.write(n.toTimeString().slice(0, 8));
+    };
+
+    /**
+     * Convert hours, minutes, seconds to decimal hours
+     * (needed to convert SIMBAD RA to hyg3 values)
+     */
+    PCelestial.prototype.HMSToDecimalHours = function (h = 0, m = 0, s = 0) {
+        return (h + (m/60) + (s/3600));
     };
 
     /**
@@ -455,34 +493,53 @@ var PCelestial = (function () {
             id += ''; // coerce to string
         }
         identifier = id.split(' ');
+        let iden = identifier[0];
+        identifier.splice(0, 1);
+        let val = identifier.join(' ');
+        let s;
         for (let i = 0; i < sprites.length; i++) {
             let hyg = sprites[i].hyg;
 
-            switch (identifier[0].toLowerCase()) {
+            switch (iden.toLowerCase()) {
                 case 'hd':
-                    if (hyg.hd && hyg.hd == identifier[1]) {
-                        return sprites[i];
+                    if (hyg.hd && hyg.hd == val) {
+                        s = sprites[i];
                     }
                     break;
                 case 'hr':
-                    if (hyg.hr && hyg.hr == identifier[1]) {
-                        return sprites[i];
+                    if (hyg.hr && hyg.hr == val) {
+                        s = sprites[i];
                     }
                     break;
+                case 'gl': 
+                    if (hyg.gl && hyg.gl == iden + ' ' + val) {
+                        s = sprites[i];
+                    }
                 case 'gaia':
-                    if (hyg.gaia && hyg.gaia == identifier[1]) {
-                        return sprites[i];
+                    if (hyg.gaia && hyg.gaia == val) {
+                        s = sprites[i];
                     }
                     break;
+                case 'proper':
+                    if (hyg.proper && hyg.proper == val) {
+                        s = sprites[i];
+                    }
                 default:
                     if (hyg.id == id) { // wasn't split, get back default string
-                        return sprites[i]; // just an id? use hyg.id
+                        s =  sprites[i]; // just an id? use hyg.id
                     }
                     break; 
 
             }
 
         }
+
+        // TODO: debug
+        window.sprite = s;
+
+        if (!s) console.warn('.getSpriteByIdentifier: failed to find:' + id);
+        
+        return s;
     };
 
     /**
@@ -720,8 +777,18 @@ var PCelestial = (function () {
 
         // by default, make them all pickable
         this.spriteManager.isPickable = true;
+        
+         let sManager = this.spriteManager;
 
-        let sManager = this.spriteManager;
+        //this.spriteManager.disableDepthWrite = true;
+
+//////////////////////////////////////////
+        // TODO: change red giant equtorial band
+        // TODO: integrate shader for star, planet
+        // TODO: UI for visiting star (on topmost panels?)
+        // TODO: VR Gaze selection
+        // TODO: Sprite to pObj conversion
+/////////////////////////////////////////
 
         console.log("COMPUTING HygSprite")
 
@@ -747,6 +814,7 @@ var PCelestial = (function () {
             let p = this.spectra.spectrumToStellarData(hyg);
 
             let name = this.getHygSpriteName(hyg);
+
 
             // create the Sprite
             let sprite = new BABYLON.Sprite(name, sManager); 
