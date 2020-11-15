@@ -12,15 +12,6 @@
  * Sprites
  * Meshes
  * WebWorker to shift each data entry beween these three models
- * References
- * Stellar classification parser
- * {@link https://codebox.net/pages/star-classification-parser-web-service}
- * Sample classification from API
- * {@link https://api.codebox.net/starclass/parse/G5V}
- * Many userful stellar programs
- * {@link https://github.com/codebox?tab=repositories}
-  * NASA Exoplanet Archive writer (downloads and generates diagram)
- * {@link https://github.com/codebox/planetary-systems}
  * Databases
  * Hyg3 database
  * {@link https://github.com/astronexus/HYG-Database}
@@ -36,12 +27,15 @@
  * {@link https://heasarc.gsfc.nasa.gov/db-perl/W3Browse/w3table.pl?tablehead=name%3Dgliese2mas&Action=More+Options}
  * Archive for space telescopes (good search function)
  * {@link https://archive.stsci.edu/spec_class/search.php}
- * 
  * Nearby Star Systems to add:
  * {@link https://en.wikipedia.org/wiki/List_of_star_systems_within_25%E2%80%9330_light-years}
  * {@link http://phl.upr.edu/projects/nearby-stars-catalog}
  * {@link https://www.livingfuture.cz/stars.php}
+ * {@link http://solstation.com/index.html#sthash.dXOO2F6I.dpbs}
+ * T-Dwarf Page
+ * {@link http://web.mit.edu/ajb/www/tdwarf/}
  * 
+ * Exoplanets
  * Exoplanet.eu
  * {@link http://exoplanet.eu/catalog/all_fields}
  * NASA Exoplanet archive
@@ -243,6 +237,8 @@ var PCelestial = (function () {
 
     /**
      * Convert degrees 0-360 to 0-24
+     * @param {Number} degrees - 0-360
+     * @returns {Number} degree value, scaled 0-24
      */
     PCelestial.prototype.degToDecimalHMS = function (degrees) {
         return parseFloat(degrees) / 24;
@@ -250,22 +246,42 @@ var PCelestial = (function () {
 
     /** 
      * Convert decimal hours to HH:MM:SS
+     * @param {Number} hours, 0-24, in decimal format
+     * @returns {String} string formatted 'HH MM SS'
      */
     PCelestial.prototype.decimalHoursToHMS = function (hours) {
         let n = new Date(0,0).setSeconds(+hours * 3600);
-        document.write(n.toTimeString().slice(0, 8));
+        return (n.toTimeString().slice(0, 8));
     };
 
     /**
      * Convert hours, minutes, seconds to decimal hours
      * (needed to convert SIMBAD RA to hyg3 values)
+     * @param {Number} h - hours, 0-24
+     * @param {Number} m - minutes, 0-60
+     * @param {Number} s - seconds, 0-60
+     * @returns {Number} decimal hours
      */
     PCelestial.prototype.HMSToDecimalHours = function (h = 0, m = 0, s = 0) {
-        return (h + (m/60) + (s/3600));
+        let util = this.util;
+        return parseFloat(h + (m/60) + (s/3600));
+    };
+
+    /**
+     * 
+     * @param {String} s - string formatted HH MM SS, with spaces between
+     * @returns {Number} decimal hours, 0-24
+     */
+    PCelestial.prototype.HMSToDecimalHoursFromString = function (s) {
+        let util = this.util;
+        let str = s.split(' ');
+        return this.HMSToDecimalHours(parseFloat(str[0]), parseFloat(str[1]), parseFloat(str[2]));
     };
 
     /**
      * Convert seconds to HH:MM:SS
+     * @param {Number} seconds - seconds of time
+     * @returns {String} - hours, minutes, and seconds as a string
      */
     PCelestial.prototype.secondsToHMS = function (seconds) {
         return (seconds * 1000).toISOString().substr(11, 8);
@@ -273,6 +289,10 @@ var PCelestial = (function () {
 
     /**
      * Returns decimal degrees for degrees written as degrees, minutes, seconds
+     * @param {Number} d - degrees, 0-360
+     * @param {Number} m - minutes
+     * @param {Number} s - seconds
+     * @returns {Number} degrees, as a decimal number
      */
     PCelestial.prototype.dmsToDecimal = function (d = 0, m = 0, s = 0) {
         if (m < 0) m = -m;
@@ -290,6 +310,33 @@ var PCelestial = (function () {
      * compute satistics
      */
     PCelestial.prototype.stats = function () {
+
+    };
+
+    /**
+     * 
+     * @param {Number} ly - distance, in light years
+     * @returns {Number} distance, in parsecs
+     */
+    PCelestial.lightYearsToParsecs = function (ly) {
+        return ly* 0.30660139;
+    };
+
+    /**
+     * 
+     * @param {Number} ps - distance, in parsecs
+     * @returns {Number} distance, in light years
+     */
+    PCelestial.parsecsToLightYears = function (ps) {
+        return ps * 3.26156378;
+    };
+
+    /**
+     * 
+     * @param {Number} parallax in arcseconds
+     * @returns {Number} distance, in parsecs
+     */
+    PCelestial.prototype.parallaxToDistance = function (parallax) {
 
     };
 

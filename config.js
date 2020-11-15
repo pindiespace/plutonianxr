@@ -11,7 +11,7 @@
 
 const config = {
     port: 3000,
-    portSecure: 443,
+    portSecure: 4430,
     useSSL: true, // off for heroku
     useCookie: true,  // off for heroku
     appName: 'Plutonian XR',

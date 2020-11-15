@@ -4,9 +4,14 @@
  * 
  * Parsing a spectra provides additional properties not present in the 
  * hyg3 database, which are added to hyg3 object (our version defined in PData.HygObj)
- * Sample parser
+ * Stellar classification parser
  * {@link https://codebox.net/pages/star-classification-parser-web-service}
-
+ * Sample classification from API
+ * {@link https://api.codebox.net/starclass/parse/G5V}
+ * Many useful stellar programs
+ * {@link https://github.com/codebox?tab=repositories}
+  * NASA Exoplanet Archive writer (downloads and generates diagram)
+ * {@link https://github.com/codebox/planetary-systems}
  * {@link http://www.livingfuture.cz/stars.php}
  * Secrets of the Harvard classification revealed
  * {@link http://archive.seattleastro.org/webfoot/feb00/pg2.htm}

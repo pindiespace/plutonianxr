@@ -139,7 +139,7 @@ var PUtil = (function () {
         let len = ch.length;
         if (!len) return false;
         let k = ch.charCodeAt(0);
-        if (ch.charCodeAt(0) < 48 || ch.charCodeAt(0) > 57) return false; // ',33'
+        if ((k < 48 || k > 57) && k != 43 && k != 45) return false; // ',33', '+33' is ok
         for(let i = 1; i < len; i++) {
             k = ch.charCodeAt(i);
             if ((k < 48 && k != 46 && k != 44) || k > 57) return false;

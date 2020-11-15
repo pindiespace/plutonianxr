@@ -40,7 +40,7 @@ server.on('error', onError);
 server.on('listening', onListening);
 
 /**
- * Create HTTP server. Need to create valid keys and certificate in 
+ * Create HTTPS server. Need to create valid keys and certificate in 
  * the ./certs folder of this app using openssl. Note that this is a locally-generated 
  * certificate, so you'll still get warnings in modern browsers. Replace with authenticated
  * certificate in production.
@@ -58,10 +58,12 @@ server.on('listening', onListening);
 if (config.useSSL) {
   var securePort = config.portSecure;
 
+  console.log('using SSL on port:' + securePort);
+
   //Read the certificate and key
 
   var sslkey  = fs.readFileSync('./certs/ssl-key.pem');
-  var sslcert = fs.readFileSync('./certs/ssl-cert.pem')
+  var sslcert = fs.readFileSync('./certs/ssl-cert.pem');
 
   var options = {
       key: sslkey,
